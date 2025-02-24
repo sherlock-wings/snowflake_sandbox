@@ -19,7 +19,7 @@ DROP ROLE "PROD_SYSADMIN";
 DROP ROLE "QA_SYSADMIN";
 
 --
--- QA Environment
+-- SANDBOX Environment
 --
 
 DROP ROLE "SANDBOX_SYSADMIN";
