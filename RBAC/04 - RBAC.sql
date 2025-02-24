@@ -1590,7 +1590,7 @@ GRANT ROLE PROD_EDW_DB_MODEL_R_AR TO ROLE QA_ADMIN_FR;
 
 /*
 
-RBAC SECTION 4: "Utilities" Database
+RBAC SECTION 4: "Utilities" Database and other needed RBAC
 LAST EDITED 2025-02-24 14:36 -0500
 
 This database will contain objects meant to support quality-of-life features like
@@ -1609,6 +1609,17 @@ SYSADMIN, SECURITYADMIN will have CREATE PROCEDURE and some other privs in here 
 support the privs I need for that sproc. 
 
 */
+USE ROLE SECURITYADMIN;
 grant usage on database sherlock_wings to role securityadmin;
 grant usage on schema sherlock_wings.util to role securityadmin;
 grant create procedure on schema sherlock_wings.util to role securityadmin;
+
+/*
+Because SECURITYADMIN will be invoked when this clone-to-sandbox sproc is called, and 
+because that sproc will be running CREATE.. CLONE and GRANT.. statements agaihst any/all envs,
+we need to give SECURITYADMIN read-only rights in all envs.
+*/
+USE ROLE SECURITYADMIN;
+grant role dev_analyst_fr to role securityadmin;
+grant role qa_analyst_fr to role securityadmin;
+grant role prod_analyst_fr to role securityadmin;
