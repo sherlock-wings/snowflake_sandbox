@@ -1634,5 +1634,6 @@ On a real project, we'd probably just name this db after the company who the pro
 is for or something. 
 
 */
+grant usage on database sherlock_wings to role securityadmin;
 grant usage on schema sherlock_wings.util to role securityadmin;
 grant create procedure on schema sherlock_wings.util to role securityadmin;
