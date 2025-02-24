@@ -1603,18 +1603,22 @@ GRANT ROLE PROD_EDW_DB_MODEL_R_AR TO ROLE QA_ADMIN_FR;
 /*
 
 RBAC SECTION 4: "Utilities" Database
+LAST EDITED 2025-02-24 14:36 -0500
 
 This database will contain objects meant to support quality-of-life features like
 easy copying from env to env and bundling complex RBAC setup into one-command sprocs.
-
 None of the objects in this database will be specific to any data layer or any business
 related entity.
 
 Calling this "SHERLOCK_WINGS" for now since that's my name and I don't have a better idea
-for a specific name at the moment.
+for a specific name at the moment. On a real project, we'd probably just name this db after 
+the company who the project is for or something. 
 
-On a real project, we'd probably just name this db after the company who the project
-is for or something. 
+I am not 100% sure what kind of RBAC is appropriate here. However, I know I want the 
+clone-to-sandbox sproc to live here. That sproc has to execute GRANT statements on the fly.
+The proper role to be doing GRANTs is SECURITYADMIN. So while the owner of this DB will be 
+SYSADMIN, SECURITYADMIN will have CREATE PROCEDURE and some other privs in here so I can 
+support the privs I need for that sproc. 
 
 */
 grant usage on database sherlock_wings to role securityadmin;
