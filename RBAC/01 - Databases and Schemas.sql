@@ -44,3 +44,15 @@ The only built-in RBAC for Sandbox will be at the DB level.
 */
 USE ROLE "SANDBOX_SYSADMIN";
 CREATE DATABASE IF NOT EXISTS "SANDBOX_EDW_DB";
+
+/*
+
+Need a DB that holds quality-of-life stuff, like the Clone-To-Sandbox Sproc, or a log table that 
+records every SQL statement executed by user-created Stored Procedures 
+
+SYSADMIN will own this for now-- not sure how involved the RBAC needs to be yet
+*/
+
+use role sysadmin;
+create database if not exists sherlock_wings;
+create schema if not exists sherlock_wings.util;
