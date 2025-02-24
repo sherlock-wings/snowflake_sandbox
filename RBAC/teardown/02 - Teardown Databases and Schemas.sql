@@ -1,0 +1,20 @@
+--
+-- DEV Environment
+--
+
+USE ROLE SYSADMIN;
+DROP DATABASE "DEV_EDW_DB";
+
+--
+-- PROD Environment
+--
+
+USE ROLE SYSADMIN;
+DROP DATABASE "PROD_EDW_DB";
+
+--
+-- QA Environment
+--
+
+USE ROLE SYSADMIN;
+DROP DATABASE "QA_EDW_DB";
