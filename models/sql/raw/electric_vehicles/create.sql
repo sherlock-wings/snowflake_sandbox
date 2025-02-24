@@ -3,6 +3,7 @@ use schema dev_edw_db.raw;
 
 create table if not exists electric_vehicles (
  vehicle_identification_number varchar(10)
+,state_abbreviation varchar(2)
 ,county_name varchar(200)
 ,city_name varchar(200)
 ,postal_code number(5,0)
