@@ -1624,3 +1624,15 @@ GRANT ROLE PROD_EDW_DB_MODEL_R_AR TO ROLE QA_ENGINEER_FR;
 GRANT ROLE PROD_EDW_DB_RAW_R_AR TO ROLE QA_ADMIN_FR;
 GRANT ROLE PROD_EDW_DB_STAGE_R_AR TO ROLE QA_ADMIN_FR;
 GRANT ROLE PROD_EDW_DB_MODEL_R_AR TO ROLE QA_ADMIN_FR;
+
+
+/*
+
+Utility Schema-- calling this "SHERLOCK_WINGS" for now since that's my name.
+
+On a real project, we'd probably just name this db after the company who the project
+is for or something. 
+
+*/
+grant usage on schema sherlock_wings.util to role securityadmin;
+grant create procedure on schema sherlock_wings.util to role securityadmin;
