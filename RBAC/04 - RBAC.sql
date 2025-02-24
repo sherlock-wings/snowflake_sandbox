@@ -468,6 +468,10 @@ GRANT ROLE "DEV_EDW_DB_RAW_RW_AR" TO ROLE "DEV_ENGINEER_FR";
 GRANT ROLE "DEV_EDW_DB_STAGE_RW_AR" TO ROLE "DEV_ENGINEER_FR";
 GRANT ROLE "DEV_COMPUTE_WH_UM_AR" TO ROLE "DEV_ENGINEER_FR";
 
+-- One more add for SECURITYADMIN; this is necessary so this role can be used to run certain sprocs
+grant role dev_compute_wh_full_ar to role securityadmin;
+
+
 --
 -- PROD Environment
 --
