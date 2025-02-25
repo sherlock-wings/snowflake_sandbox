@@ -45,10 +45,11 @@ You may also apply any DDL or DML to any of the following objects:
 
 ---
 ## Other Objects you can NOT read/write with
-1. [Masking Policies](https://docs.snowflake.com/user-guide/security-column-ddm-intro)
-2. [Row-Access Policies](https://docs.snowflake.com/en/user-guide/security-row-intro)
-3. [External Functions](https://docs.snowflake.com/en/sql-reference/external-functions-introduction)
-4. [Tags](https://docs.snowflake.com/en/user-guide/object-tagging)
+1. [Pipes](https://docs.snowflake.com/en/user-guide/data-load-snowpipe-intro)
+2. [Masking Policies](https://docs.snowflake.com/user-guide/security-column-ddm-intro)
+3. [Row-Access Policies](https://docs.snowflake.com/en/user-guide/security-row-intro)
+4. [External Functions](https://docs.snowflake.com/en/sql-reference/external-functions-introduction)
+5. [Tags](https://docs.snowflake.com/en/user-guide/object-tagging)
 
 ---
 # SQL Definition
