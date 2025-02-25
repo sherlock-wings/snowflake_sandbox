@@ -16,7 +16,7 @@ Each of these roles are combined to create *Functional Roles* (ex. `DEV_ENGINEER
 # "Full" Access: Plain-Language Definition
 
 - "Full" access means you generally have the ability to utilize all features that your Account Administrator has approved for usage
-    - Note that this of course does not mean you can automatically do anything. You are only able to create a Snowpipe or Iceberg table, for example, if your Account Admin has already approved usage of these objects in general 
+    - Note that this of course does not mean you can automatically do anything. You are only able to create a [Snowpipe](https://docs.snowflake.com/en/user-guide/data-load-snowpipe-intro) or [Iceberg table](https://docs.snowflake.com/en/user-guide/tables-iceberg), for example, if your Account Admin has already approved usage of these objects in general 
 - As with all access on this Data Project, access is granted at the **schema level**. So, anyone with "Full" access will have that acces in the context of a specific schema.
 
 The details of this definition are object-specific and are enumerated below.
