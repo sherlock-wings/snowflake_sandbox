@@ -10,6 +10,7 @@ B) As with all access on this Data Project, access is granted at the **schema le
 
 The details of this definition are object-specific and are enumerated below.
 
+---
 ## Tables
 
 You may apply any DDL or DML to tables of the following types:
