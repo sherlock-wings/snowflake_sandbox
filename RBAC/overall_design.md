@@ -89,6 +89,40 @@ Each of the prototype schemas and their associated functional roles are duplicat
 5. PROD
    - This is where the final product of all our work lives for the whole world (or at least the business) to see 
 
+### UTIL Environment
+
+I said we have four "full" environments because we sort of technically have a fifth environment, but it doesn't work like the other four. 
+
+This environment consists of a single database containing a schema called `UTIL`. In diagrams, I refer to this database as `NAMED_DATABASE` because its exact name is arbitrary. In practice, I usually just name it after whatever company I'm doing the given project for.
+
+The point of this schema is to hold all important quality-of-life objects that are not actual business data. Things like stored procedures (such as the one used to populate the Sandbox environment-- see below), data definitions, etc. will be kept here. 
+
+## How the Sandbox works
+
+The point of the sandbox is to give developers a place where they can execute even the most destructive of SQL operations without causing any problems in any other environment. We enable this by giving each developer their own "workspace". This is done by running many `CREATE SCHEMA... CLONE` statements, essentially. 
+
+### Sandbox Schema Naming Conventions
+
+`<sandbox-db-name>.<developer-name>_<prototype-schema-name>`
+
+Example:
+1. `SANDBOX_EDW_DB.PCALLAHAN_STAGE`
+2. `SANDBOX_EDW_DB.BJONES_MODEL`
+
+### Multiple schemas
+
+While its tempting to think of "your sandbox" as a single object, one's Sandbox (at least when using our Project's data model) is actually 3 objects. In my case, it would be 
+
+1. `SANDBOX_EDW_DB.PCALLAHAN_RAW`
+1. `SANDBOX_EDW_DB.PCALLAHAN_STAGE`
+2. `SANDBOX_EDW_DB.PCALLAHAN_MODEL`
+
+### Populating the Sandbox
+
+This is never done manually. It is done by using a stored procedure (name TBD). The sproc works by cloning from a target environment (specified by the caller) and into the Sandbox. The sproc knows automatically to generate the schemas as clones, using the correct name. Also, it correctly "rebuilds" the RBAC so the schema is is usable as expected post-execution. 
+
+# Environment Summary
+
 # Object Naming Conventions
 
 ## Databases
@@ -139,5 +173,4 @@ Note that for permanent tables, there is no object type suffix. The trailing `'_
 
 
 
-![Fig 2. Environment Structure and Data Flow](https://github.com/sherlock-wings/snowflake_sandbox/blob/bug_fix/reconfigure_rbac_scripts/RBAC/miro/environment_structure.jpg)
 ![Fig 3. Role Distribution across Environments](https://github.com/sherlock-wings/snowflake_sandbox/blob/bug_fix/reconfigure_rbac_scripts/RBAC/miro/roles_across_environments.jpg)
