@@ -5,6 +5,7 @@ This document is meant to provide a clear definition of what "Read-Write" access
 # Plain-Language Definition
 
 A) "Read-Write" access means you generally have the ability to read from or use existing objects, as well as create new objects, in a given schema. 
+
 B) As with all access on this Data Project, access is granted at the **schema level**. So, anyone with "Read-Write" access will have that acces in the context of a specific schema.
 
 The details of this definition are object-specific and are enumerated below.
