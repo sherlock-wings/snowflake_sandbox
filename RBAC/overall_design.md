@@ -29,7 +29,7 @@ Each of these roles are combined to create *Functional Roles* (ex. `DEV_ENGINEER
 
 For detailed documentation on what "Read", "Read-Write" and "Full" access actually means, and how specifically it is implemented, see the directory `*RBAC/access_definitions`. 
 
-## Four Personals/Functional Roles in this Project
+## Four Personas/Functional Roles in this Project
 
 We use all the various access roles to sum together four functional roles, each corresponding to one "persona" in this project.
 
