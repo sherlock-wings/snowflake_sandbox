@@ -16,7 +16,8 @@ Each of these roles are combined to create *Functional Roles* (ex. `DEV_ENGINEER
 # "Full" Access: Plain-Language Definition
 
 - "Full" access means you generally have the ability to utilize all features that your Account Administrator has approved for usage
-    - Note that this does not mean you can automatically do anything. You are only able to create a [Snowpipe](https://docs.snowflake.com/en/user-guide/data-load-snowpipe-intro) or [Iceberg table](https://docs.snowflake.com/en/user-guide/tables-iceberg), for example, if your Account Admin has already approved usage of these objects in general 
+    - Note that this does not mean you can automatically do anything. You are only able to create a [Snowpipe](https://docs.snowflake.com/en/user-guide/data-load-snowpipe-intro) or [Iceberg table](https://docs.snowflake.com/en/user-guide/tables-iceberg), for example, if your Account Admin has already approved usage of these objects in general
+- It also means that you have direct or indirect `OWNERSHIP` on schema objects in most cases
 - As with all access on this Data Project, access is granted at the **schema level**. So, anyone with "Full" access will have that acces in the context of a specific schema.
 
 The details of this definition are object-specific and are enumerated below.
@@ -24,7 +25,7 @@ The details of this definition are object-specific and are enumerated below.
 
 ## Tables
 
-You may apply any DDL or DML to tables of the following types:
+For all of the below table types, you have `OWNERSHIP`. You may do any DDL or DML against any table with these types:
 1. Permanent
 2. [Transient](https://docs.snowflake.com/en/user-guide/tables-temp-transient)
 3. [Temporary](https://docs.snowflake.com/en/user-guide/tables-temp-transient)
@@ -39,14 +40,14 @@ You may apply any DDL or DML to tables of the following types:
 
 ## Views
 
-You may apply any DDL or DML to views of the following types:
+For all of the below view types, you have `OWNERSHIP`. You may do any DDL or DML against any view with these types:
 1. Standard
 2. [Materialized](https://docs.snowflake.com/en/user-guide/views-materialized)
 
 
-## Other objects you can read/write with
+## Other objects you own and can read/write with
 
-You may also apply any DDL or DML to any of the following objects:
+For all of the below object types, you have `OWNERSHIP`. You may do any DDL or DML against any object with these types:
 1. [Sequences](https://docs.snowflake.com/en/user-guide/querying-sequences)
 2. [File formats](https://docs.snowflake.com/en/sql-reference/sql/create-file-format)
 3. [Streams](https://docs.snowflake.com/en/user-guide/streams-intro)
@@ -64,10 +65,9 @@ You may also apply any DDL or DML to any of the following objects:
 
 
 
-# "Read" Access: SQL Definition
+# "Full" Access: SQL Definition
 
 ```
--- Create and Grant Privileges to Access Role DEV_EDW_DB_MODEL_FULL_AR
 USE ROLE USERADMIN;
 
 -- Instantiate role and the environment SYSADMIN's inheritance of it
@@ -83,12 +83,6 @@ GRANT USAGE ON SCHEMA "DEV_EDW_DB"."MODEL" TO ROLE "DEV_EDW_DB_MODEL_FULL_AR";
 -- Table access
 GRANT OWNERSHIP ON ALL TABLES IN SCHEMA "DEV_EDW_DB"."MODEL" TO ROLE "DEV_EDW_DB_MODEL_FULL_AR" COPY CURRENT GRANTS;
 GRANT OWNERSHIP ON FUTURE TABLES IN SCHEMA "DEV_EDW_DB"."MODEL" TO ROLE "DEV_EDW_DB_MODEL_FULL_AR";
-
--- View access
-GRANT OWNERSHIP ON ALL VIEWS IN SCHEMA "DEV_EDW_DB"."MODEL" TO ROLE "DEV_EDW_DB_MODEL_FULL_AR" COPY CURRENT GRANTS;
-GRANT OWNERSHIP ON FUTURE VIEWS IN SCHEMA "DEV_EDW_DB"."MODEL" TO ROLE "DEV_EDW_DB_MODEL_FULL_AR";
-GRANT OWNERSHIP ON ALL MATERIALIZED VIEWS IN SCHEMA "DEV_EDW_DB"."MODEL" TO ROLE "DEV_EDW_DB_MODEL_FULL_AR" COPY CURRENT GRANTS;
-GRANT OWNERSHIP ON FUTURE MATERIALIZED VIEWS IN SCHEMA "DEV_EDW_DB"."MODEL" TO ROLE "DEV_EDW_DB_MODEL_FULL_AR";
 GRANT INSERT ON ALL TABLES IN SCHEMA "DEV_EDW_DB"."MODEL" TO ROLE "DEV_EDW_DB_MODEL_FULL_AR";
 GRANT UPDATE ON ALL TABLES IN SCHEMA "DEV_EDW_DB"."MODEL" TO ROLE "DEV_EDW_DB_MODEL_FULL_AR";
 GRANT DELETE ON ALL TABLES IN SCHEMA "DEV_EDW_DB"."MODEL" TO ROLE "DEV_EDW_DB_MODEL_FULL_AR";
@@ -97,6 +91,13 @@ GRANT INSERT ON FUTURE TABLES IN SCHEMA "DEV_EDW_DB"."MODEL" TO ROLE "DEV_EDW_DB
 GRANT UPDATE ON FUTURE TABLES IN SCHEMA "DEV_EDW_DB"."MODEL" TO ROLE "DEV_EDW_DB_MODEL_FULL_AR";
 GRANT DELETE ON FUTURE TABLES IN SCHEMA "DEV_EDW_DB"."MODEL" TO ROLE "DEV_EDW_DB_MODEL_FULL_AR";
 GRANT REFERENCES ON FUTURE TABLES IN SCHEMA "DEV_EDW_DB"."MODEL" TO ROLE "DEV_EDW_DB_MODEL_FULL_AR";
+
+
+-- View access
+GRANT OWNERSHIP ON ALL VIEWS IN SCHEMA "DEV_EDW_DB"."MODEL" TO ROLE "DEV_EDW_DB_MODEL_FULL_AR" COPY CURRENT GRANTS;
+GRANT OWNERSHIP ON FUTURE VIEWS IN SCHEMA "DEV_EDW_DB"."MODEL" TO ROLE "DEV_EDW_DB_MODEL_FULL_AR";
+GRANT OWNERSHIP ON ALL MATERIALIZED VIEWS IN SCHEMA "DEV_EDW_DB"."MODEL" TO ROLE "DEV_EDW_DB_MODEL_FULL_AR" COPY CURRENT GRANTS;
+GRANT OWNERSHIP ON FUTURE MATERIALIZED VIEWS IN SCHEMA "DEV_EDW_DB"."MODEL" TO ROLE "DEV_EDW_DB_MODEL_FULL_AR";
 
 
 -- Sequence access
@@ -130,6 +131,8 @@ GRANT OWNERSHIP ON ALL TASKS IN SCHEMA "DEV_EDW_DB"."MODEL" TO ROLE "DEV_EDW_DB_
 GRANT OWNERSHIP ON FUTURE TASKS IN SCHEMA "DEV_EDW_DB"."MODEL" TO ROLE "DEV_EDW_DB_MODEL_FULL_AR";
 GRANT MONITOR ON ALL TASKS IN SCHEMA "DEV_EDW_DB"."MODEL" TO ROLE "DEV_EDW_DB_MODEL_FULL_AR";
 GRANT OPERATE ON ALL TASKS IN SCHEMA "DEV_EDW_DB"."MODEL" TO ROLE "DEV_EDW_DB_MODEL_FULL_AR";
+GRANT MONITOR ON FUTURE TASKS IN SCHEMA "DEV_EDW_DB"."MODEL" TO ROLE "DEV_EDW_DB_MODEL_FULL_AR";
+GRANT OPERATE ON FUTURE TASKS IN SCHEMA "DEV_EDW_DB"."MODEL" TO ROLE "DEV_EDW_DB_MODEL_FULL_AR";
 GRANT MONITOR ON FUTURE TASKS IN SCHEMA "DEV_EDW_DB"."MODEL" TO ROLE "DEV_EDW_DB_MODEL_FULL_AR";
 GRANT OPERATE ON FUTURE TASKS IN SCHEMA "DEV_EDW_DB"."MODEL" TO ROLE "DEV_EDW_DB_MODEL_FULL_AR";
 ```
