@@ -4,6 +4,42 @@ This document is meant to provide a clear definition of what "Read-Write" access
 
 # Summarized Definition
 
-*As with all access on this Data Project, access is granted at the *schema level*. So, anyone with "Read-Write" access will have that acces in the context of a specific schema.*
+*As with all access on this Data Project, access is granted at the **schema level**. So, anyone with "Read-Write" access will have that acces in the context of a specific schema.*
 
-"Read-Write" access means you have the ability to read from or use existing objects, as well as create new objects, in a given schema. The ability to 
+"Read-Write" access means you generally have the ability to read from or use existing objects, as well as create new objects, in a given schema. The details of this definition are object-specific and are enumerated below:
+
+## Tables
+
+You may apply any DDL or DML to tables of the following types:
+1. Permanent
+2. [Transient](https://docs.snowflake.com/en/user-guide/tables-temp-transient)
+3. [Temporary](https://docs.snowflake.com/en/user-guide/tables-temp-transient)
+
+***You do not have access*** to the following table types:
+1. [External](https://docs.snowflake.com/en/user-guide/tables-external-intro)
+2. [Dynamic](https://docs.snowflake.com/en/user-guide/dynamic-tables-intro)
+3. [Event](https://docs.snowflake.com/en/developer-guide/logging-tracing/event-table-setting-up)
+4. [Hybrid](https://docs.snowflake.com/en/user-guide/tables-hybrid)
+5. [Iceberg](https://docs.snowflake.com/en/user-guide/tables-iceberg)
+
+## Views
+
+You may apply any DDL or DML to views of the following types:
+1. Standard
+2. [Materialized](https://docs.snowflake.com/en/user-guide/views-materialized)
+
+## Other objects you can read/write with
+
+You may also apply any DDL or DML to any of the following objects:
+1. [Sequences](https://docs.snowflake.com/en/user-guide/querying-sequences)
+2. [File formats](https://docs.snowflake.com/en/sql-reference/sql/create-file-format)
+3. [Streams](https://docs.snowflake.com/en/user-guide/streams-intro)
+4. [Stored Procedures](https://docs.snowflake.com/en/developer-guide/stored-procedure/stored-procedures-usage)
+5. [Functions (a.k.a. UDFs)](https://docs.snowflake.com/en/developer-guide/udf/udf-overview)
+6. [Tasks](https://docs.snowflake.com/en/user-guide/tasks-intro)
+
+## Other Objects you can NOT read/write with
+1. [Masking Policies](https://docs.snowflake.com/user-guide/security-column-ddm-intro)
+2. [Row-Access Policies](https://docs.snowflake.com/en/user-guide/security-row-intro)
+3. [External Functions](https://docs.snowflake.com/en/sql-reference/external-functions-introduction)
+4. [Tags](https://docs.snowflake.com/en/user-guide/object-tagging)
