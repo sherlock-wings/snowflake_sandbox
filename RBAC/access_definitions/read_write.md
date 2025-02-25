@@ -63,7 +63,7 @@ GRANT ROLE <read_write_access_role_name> TO ROLE "DEV_SYSADMIN";
 USE ROLE SECURITYADMIN;
 
 -- Schema access
-GRANT USAGE ON DATABASE "SHERLOCK_WINGS" TO ROLE <read_write_access_role_name>;
+GRANT USAGE ON DATABASE <database_name> TO ROLE <read_write_access_role_name>;
 GRANT USAGE ON SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
 GRANT CREATE TABLE ON SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
 GRANT CREATE VIEW ON SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
