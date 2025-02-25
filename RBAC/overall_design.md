@@ -1,3 +1,9 @@
+# Table of Contents 
+
+1. [Project RBAC](#project-rbac)
+2. [Data Model](#data-model)
+3. [Object Naming Conventions](#object-naming-conventions)
+
 # Project RBAC 
 This project will use Role-Based Access Control(RBAC) that mostly leverages [managed schema](https://docs.snowflake.com/en/user-guide/security-access-control-configure#label-managed-access-schemas) in Snowflake. 
 
@@ -59,9 +65,9 @@ Our prototype schema are:
   
 Each of these schemas will exist in each environment. There is one environment per database.
 
-## Object Naming Conventions
+# Object Naming Conventions
 
-### Databases
+## Databases
 
 `<environment-prefix>_EDW_DB`
 
@@ -69,16 +75,16 @@ Examples:
 1. `QA_EDW_DB`
 2. `PROD_EDW_DB`
 
-### Roles
+## Roles
 
-#### Access Roles
+### Access Roles
 `<environment_prefix>_<database-name>_<schema-name>_<access-type>_AR`
 
 Examples:
 1. `DEV_EDW_DB_MODEL_RW_AR`
 2. `PROD_EDW_RAW_R_AR`
 
-#### Functional Roles
+### Functional Roles
 
 `<persona-name>_FR`
 
@@ -86,7 +92,7 @@ Examples:
 1. `QA_ADMIN_FR`
 2. `SANDBOX_ENGINEER_FR`
 
-#### Schema Children
+### Schema Children
 
 `<object-name>_<object-type-suffix>`
 
