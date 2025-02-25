@@ -1602,11 +1602,10 @@ Calling this "SHERLOCK_WINGS" for now since that's my name and I don't have a be
 for a specific name at the moment. On a real project, we'd probably just name this db after 
 the company who the project is for or something. 
 
-I am not 100% sure what kind of RBAC is appropriate here. However, I know I want the 
-clone-to-sandbox sproc to live here. That sproc has to execute GRANT statements on the fly.
-The proper role to be doing GRANTs is SECURITYADMIN. So while the owner of this DB will be 
-SYSADMIN, SECURITYADMIN will have CREATE PROCEDURE and some other privs in here so I can 
-support the privs I need for that sproc. 
+This DB will be kind of similar to the SANDBOX DB in that it will have Read-Write and Full
+ARs, but no read-only AR. 
+
+It will also NOT be triplicated across envs. So there's only one. 
 
 */
 USE ROLE SECURITYADMIN;
@@ -1624,3 +1623,5 @@ grant role dev_analyst_fr to role securityadmin;
 grant role qa_analyst_fr to role securityadmin;
 grant role prod_analyst_fr to role securityadmin;
 grant select on all views in snowflake.account_usage to role securityadmin;
+
+
