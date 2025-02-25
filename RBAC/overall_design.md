@@ -128,11 +128,17 @@ This is never done manually. It is done by using a stored procedure (name TBD). 
 
 # Environment Summary Diagram
 
+For a summary of how the roles, schemas, and environments discussed above all work together, see Figure 2 below:
+
 ![Fig 2. Environment Summary Diagram](https://github.com/sherlock-wings/snowflake_sandbox/blob/bug_fix/reconfigure_rbac_scripts/RBAC/miro/environment_structure.jpg)
 
 # Role Distribution by Enviornment
 
-Supporting this architecture the right way means that many roles have many "copies" of themselves so their copies can be used in higher or lower environments as needed. 
+Supporting this architecture the right way means that the role for a given persona has many "copies" of itself. This is so each persona can be implemented in higher or lower environments as needed. However, it is not as simple as one role per persona and environment. In some environments, certain personas should not have access.
+
+These details are summarized in Figure 3 below:
+![Fig 3. Role Distribution across Environments](https://github.com/sherlock-wings/snowflake_sandbox/blob/bug_fix/reconfigure_rbac_scripts/RBAC/miro/roles_across_environments.jpg)
+
 
 # Object Naming Conventions
 
@@ -181,7 +187,3 @@ Note that for permanent tables, there is no object type suffix. The trailing `'_
 | Stored Procedures    | `STP`   |
 | User Defined Functions (UDFs)    | `UDF`   |
 | Tasks | `TSK` |
-
-
-
-![Fig 3. Role Distribution across Environments](https://github.com/sherlock-wings/snowflake_sandbox/blob/bug_fix/reconfigure_rbac_scripts/RBAC/miro/roles_across_environments.jpg)
