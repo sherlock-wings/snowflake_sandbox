@@ -21,7 +21,7 @@ B) As with all access on this Data Project, access is granted at the **schema le
 
 The details of this definition are object-specific and are enumerated below.
 
----
+
 ## Tables
 
 You may apply any DDL or DML to tables of the following types:
@@ -36,14 +36,14 @@ You may apply any DDL or DML to tables of the following types:
 4. [Hybrid](https://docs.snowflake.com/en/user-guide/tables-hybrid)
 5. [Iceberg](https://docs.snowflake.com/en/user-guide/tables-iceberg)
 
----
+
 ## Views
 
 You may apply any DDL or DML to views of the following types:
 1. Standard
 2. [Materialized](https://docs.snowflake.com/en/user-guide/views-materialized)
 
----
+
 ## Other objects you can read/write with
 
 You may also apply any DDL or DML to any of the following objects:
@@ -54,7 +54,7 @@ You may also apply any DDL or DML to any of the following objects:
 5. [Functions (a.k.a. UDFs)](https://docs.snowflake.com/en/developer-guide/udf/udf-overview)
 6. [Tasks](https://docs.snowflake.com/en/user-guide/tasks-intro)
 
----
+
 ## Other Objects you can NOT read/write with
 1. [Pipes](https://docs.snowflake.com/en/user-guide/data-load-snowpipe-intro)
 2. [Masking Policies](https://docs.snowflake.com/user-guide/security-column-ddm-intro)
@@ -62,7 +62,7 @@ You may also apply any DDL or DML to any of the following objects:
 4. [External Functions](https://docs.snowflake.com/en/sql-reference/external-functions-introduction)
 5. [Tags](https://docs.snowflake.com/en/user-guide/object-tagging)
 
----
+
 # "Read-Write" Access: SQL Definition
 
 ```
