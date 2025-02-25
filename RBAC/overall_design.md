@@ -24,6 +24,10 @@ For each of the three access types, a specific access role exists for each schem
 
 Each of these roles are combined to create *Functional Roles* (ex. `DEV_ENGINEER_FR`), which can have highly-configurable privileges. The flexibility these roles have is achieved by granting one or more access roles to a functional role. 
 
+## Access rights definitions
+
+For detailed documentation on what "Read", "Read-Write" and "Full" access actually means, and how specifically it is implemented, see the directory `*RBAC/access_definitions`. 
+
 ## Four Personals/Functional Roles in this Project
 
 We use all the various access roles to sum together four functional roles, each corresponding to one "persona" in this project.
@@ -126,6 +130,9 @@ This is never done manually. It is done by using a stored procedure (name TBD). 
 
 ![Fig 2. Environment Summary Diagram](https://github.com/sherlock-wings/snowflake_sandbox/blob/bug_fix/reconfigure_rbac_scripts/RBAC/miro/environment_structure.jpg)
 
+# Role Distribution by Enviornment
+
+Supporting this architecture the right way means that many roles have many "copies" of themselves so their copies can be used in higher or lower environments as needed. 
 
 # Object Naming Conventions
 
