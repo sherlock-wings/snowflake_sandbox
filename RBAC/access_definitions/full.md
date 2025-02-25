@@ -4,14 +4,14 @@ This document is meant to provide a clear definition of what "Full" access means
 
 ## Context
 
-This project applies Role-based Access Control (RBAC) by creating a series of *access roles*, each of which apply to a specific schema. An access role creates the its holder with Read Access, Read-Write Access, or Full access, to the given schema.
+This project uses Role-based Access Control (RBAC) by creating many *access roles*. An access role grants its holder with "Read" Access, "Read-Write" Access, or "Full" access, depending on the role. 
 
 So if you had one schema caleld `EDW_DB.RAW`, for example, you could have three access roles for that:
 1. `EDW_DB_RAW_R_AR` ("Read" access role)
 1. `EDW_DB_RAW_RW_AR` ("Read-Write" access role)
 1. `EDW_DB_RAW_FULL_AR` ("Full" access role)
 
-Each of these roles are combined to create *Functional Roles* (ex. `DEV_ENGINEER_FR`), which can have complex and highly-configurable privileges. The flexibility these roles have comes out of the ability to grant (or withhold granting) many access roles to the functional role. 
+Each of these roles are combined to create *Functional Roles* (ex. `DEV_ENGINEER_FR`), which can have highly-configurable privileges. The flexibility these roles have is achieved by granting one or more access roles to a functional role. 
 
 # "Full" Access: Plain-Language Definition
 
