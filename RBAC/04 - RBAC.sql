@@ -1535,27 +1535,15 @@ GRANT ROLE DEV_EDW_DB_RAW_R_AR TO ROLE SANDBOX_ENGINEER_FR;
 GRANT ROLE DEV_EDW_DB_STAGE_R_AR TO ROLE SANDBOX_ENGINEER_FR;
 GRANT ROLE DEV_EDW_DB_MODEL_R_AR TO ROLE SANDBOX_ENGINEER_FR;
 
-GRANT ROLE DEV_EDW_DB_RAW_R_AR TO ROLE SANDBOX_ADMIN_FR;
-GRANT ROLE DEV_EDW_DB_STAGE_R_AR TO ROLE SANDBOX_ADMIN_FR;
-GRANT ROLE DEV_EDW_DB_MODEL_R_AR TO ROLE SANDBOX_ADMIN_FR;
-
--- Allow "read ups" from Sandbox Engineer & Admin to QA
+-- ...from Sandbox to QA
 GRANT ROLE QA_EDW_DB_RAW_R_AR TO ROLE SANDBOX_ENGINEER_FR;
 GRANT ROLE QA_EDW_DB_STAGE_R_AR TO ROLE SANDBOX_ENGINEER_FR;
 GRANT ROLE QA_EDW_DB_MODEL_R_AR TO ROLE SANDBOX_ENGINEER_FR;
 
-GRANT ROLE QA_EDW_DB_RAW_R_AR TO ROLE SANDBOX_ADMIN_FR;
-GRANT ROLE QA_EDW_DB_STAGE_R_AR TO ROLE SANDBOX_ADMIN_FR;
-GRANT ROLE QA_EDW_DB_MODEL_R_AR TO ROLE SANDBOX_ADMIN_FR;
-
--- Allow "read ups" from Sandbox Engineer & Admin to Prod
+-- ...from Sandbox to Prod
 GRANT ROLE PROD_EDW_DB_RAW_R_AR TO ROLE SANDBOX_ENGINEER_FR;
 GRANT ROLE PROD_EDW_DB_STAGE_R_AR TO ROLE SANDBOX_ENGINEER_FR;
 GRANT ROLE PROD_EDW_DB_MODEL_R_AR TO ROLE SANDBOX_ENGINEER_FR;
-
-GRANT ROLE PROD_EDW_DB_RAW_R_AR TO ROLE SANDBOX_ADMIN_FR;
-GRANT ROLE PROD_EDW_DB_STAGE_R_AR TO ROLE SANDBOX_ADMIN_FR;
-GRANT ROLE PROD_EDW_DB_MODEL_R_AR TO ROLE SANDBOX_ADMIN_FR;
 
 
 -- Allow "read ups" from Dev Analyst, Engineer, Admin to QA
@@ -1602,7 +1590,7 @@ GRANT ROLE PROD_EDW_DB_MODEL_R_AR TO ROLE QA_ADMIN_FR;
 
 /*
 
-RBAC SECTION 4: "Utilities" Database
+RBAC SECTION 4: "Utilities" Database and other needed RBAC
 LAST EDITED 2025-02-24 14:36 -0500
 
 This database will contain objects meant to support quality-of-life features like
@@ -1614,13 +1602,26 @@ Calling this "SHERLOCK_WINGS" for now since that's my name and I don't have a be
 for a specific name at the moment. On a real project, we'd probably just name this db after 
 the company who the project is for or something. 
 
-I am not 100% sure what kind of RBAC is appropriate here. However, I know I want the 
-clone-to-sandbox sproc to live here. That sproc has to execute GRANT statements on the fly.
-The proper role to be doing GRANTs is SECURITYADMIN. So while the owner of this DB will be 
-SYSADMIN, SECURITYADMIN will have CREATE PROCEDURE and some other privs in here so I can 
-support the privs I need for that sproc. 
+This DB will be kind of similar to the SANDBOX DB in that it will have Read-Write and Full
+ARs, but no read-only AR. 
+
+It will also NOT be triplicated across envs. So there's only one. 
 
 */
+USE ROLE SECURITYADMIN;
 grant usage on database sherlock_wings to role securityadmin;
 grant usage on schema sherlock_wings.util to role securityadmin;
 grant create procedure on schema sherlock_wings.util to role securityadmin;
+
+/*
+Because SECURITYADMIN will be invoked when this clone-to-sandbox sproc is called, and 
+because that sproc will be running CREATE.. CLONE and GRANT.. statements agaihst any/all envs,
+we need to give SECURITYADMIN read-only rights in all envs.
+*/
+USE ROLE SECURITYADMIN;
+grant role dev_analyst_fr to role securityadmin;
+grant role qa_analyst_fr to role securityadmin;
+grant role prod_analyst_fr to role securityadmin;
+grant select on all views in snowflake.account_usage to role securityadmin;
+
+
