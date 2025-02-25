@@ -1623,3 +1623,4 @@ USE ROLE SECURITYADMIN;
 grant role dev_analyst_fr to role securityadmin;
 grant role qa_analyst_fr to role securityadmin;
 grant role prod_analyst_fr to role securityadmin;
+grant select on all views in snowflake.account_usage to role securityadmin;
