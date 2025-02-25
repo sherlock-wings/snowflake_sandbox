@@ -13,7 +13,7 @@ So if you had one schema caleld `EDW.RAW_DB`, for example, you could have three 
 
 Each of these roles are combined to create *Functional Roles* (ex. `DEV_ENGINEER_FR`), which can have complex and highly-configurable privileges. The flexibility these roles have comes out of the ability to grant (or withhold granting) many access roles to the functional role. 
 
-# Plain-Language Definition
+# "Read-Write" Access: Plain-Language Definition
 
 A) "Read-Write" access means you generally have the ability to read from or use existing objects, as well as create new objects, in a given schema. 
 
@@ -63,7 +63,7 @@ You may also apply any DDL or DML to any of the following objects:
 5. [Tags](https://docs.snowflake.com/en/user-guide/object-tagging)
 
 ---
-# SQL Definition
+# "Read-Write" Access: SQL Definition
 
 ```
 USE ROLE USERADMIN;
