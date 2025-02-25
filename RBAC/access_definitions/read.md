@@ -24,7 +24,6 @@ Unlike with Read-write access, there are not many fine details with this definit
 # "Read" Access: SQL Definition
 
 ```
--- Create and Grant Privileges to Access Role DEV_EDW_DB_MODEL_R_AR
 USE ROLE USERADMIN;
 
 -- Instantiate role and the environment SYSADMIN's inheritance of it
