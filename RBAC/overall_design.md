@@ -1,17 +1,43 @@
 # Project RBAC 
-This project will use Role-Based Access Control(RBAC) that mostly leverages [managed schema](https://docs.snowflake.com/en/user-guide/security-access-control-configure#label-managed-access-schemas) in Snowflake. Grants on these managed schema will be given to one of three types of access roles. These types are
+This project will use Role-Based Access Control(RBAC) that mostly leverages [managed schema](https://docs.snowflake.com/en/user-guide/security-access-control-configure#label-managed-access-schemas) in Snowflake. 
+
+## Access Roles and their Types
+Grants on these managed schema will be given to one of three types of access roles. These types are
 - "Read" Access Role
 - "Read-Write" Access Role
 - "Full" Access Role
 
 Every functional role in this project will have some combination of read, read-write, and/or full access roles granted to it. Each access role applies to one and only one schema. While the access roles possess grants on data objects and schema children, only the functional roles can access Warehouses. This ensures that only Functional Roles and never Access Roles are used for SQL Statements that require compute of any kind. 
 
-Each type of access has its own dedicated access role for each schema in our Data Models. For example, if you had one schema caleld `EDW_DB.RAW`, for example, you could have three access roles for that:
+## Access Roles & Functional Roles
+For each of the three access types, a specific access role exists for each schema in our Data Models. For example, if you had one schema caleld `EDW_DB.RAW`, for example, you could have three access roles for that:
 1. `EDW_DB_RAW_R_AR` ("Read" access role)
 1. `EDW_DB_RAW_RW_AR` ("Read-Write" access role)
 1. `EDW_DB_RAW_FULL_AR` ("Full" access role)
 
 Each of these roles are combined to create *Functional Roles* (ex. `DEV_ENGINEER_FR`), which can have highly-configurable privileges. The flexibility these roles have is achieved by granting one or more access roles to a functional role. 
+
+## Four Personals/Functional Roles in this Project
+
+We use all the various access roles to sum together four functional roles, each corresponding to one "persona" in this project.
+
+1. `*_ADMIN_FR`
+    - This role is dedicated to anyone who serves an administrative role on the project
+    - Persons with this role will have ownership over most schema-child objects and will have the the most permissive access out of all Functional Roles
+3. `*_ENGINEER_FR`
+    - This role is dedicated to anyone who is developing code on the project
+    - Persons with this role can create and modify most objects, but they do not have ownership over anything
+    - Persons with this role will be able to read from higher environments, but cannot write to any environment but the one that applies to their current role
+        - This feature is called "read ups" and will be discussed in detail further below
+1. `*_SVCTRANSFORM_FR`
+    - Service account role
+    - This role should be used by orchestrators or any sort of non-human application that will refresh data pipelines on a regular schedule
+    - This role is very similar to the `*_ENGINEER_FR` role, with two important exceptions:
+        1. This role does not support read ups
+        2. This role *does* have production write access, whereas the human-facing *_ENGINEER_FR` role, for obvious reasons, does not
+4. `*_ANALYST_FR`
+    - Read-only persona
+    - Used for any person or application that needs to query the data but does not need to change it in any way
 
 ![Fig 1. Basic Access rights by Schema and Functional Role](https://github.com/sherlock-wings/snowflake_sandbox/blob/bug_fix/reconfigure_rbac_scripts/RBAC/miro/functional_role_diagram.jpg)
 ![Fig 2. Environment Structure and Data Flow](https://github.com/sherlock-wings/snowflake_sandbox/blob/bug_fix/reconfigure_rbac_scripts/RBAC/miro/environment_structure.jpg)
