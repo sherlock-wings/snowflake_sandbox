@@ -19,7 +19,7 @@ if ( !SCHEMA_NAME.includes('SANDBOX') ) {
 
 env_full_ar_name += '_FULL_AR';
 
-// Remove existing RBAC-- the "bare" OWNERSHIP privs will be filled out with additional privs in the application 
+// Remove existing RBAC. The "bare" OWNERSHIP privs will be filled out with additional privs in the application 
 // of a subsequent sproc 
 var revoke_ls = [
      'grant ownership on all tables in schema <SCHEMA_NAME> to role <ROLE_NAME> revoke current grants;'
