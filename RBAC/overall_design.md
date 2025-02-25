@@ -3,7 +3,8 @@
 1. [Project RBAC](#project-rbac)
 2. [Data Model](#data-model)
 3. [Environment Summary Diagram](#environment-summary-diagram)
-4. [Object Naming Conventions](#object-naming-conventions)
+4. [Role Distribution by Enviornment](#role-distribution-by-environment)
+5. [Object Naming Conventions](#object-naming-conventions)
 
 # Project RBAC 
 This project will use Role-Based Access Control(RBAC) that mostly leverages [managed schema](https://docs.snowflake.com/en/user-guide/security-access-control-configure#label-managed-access-schemas) in Snowflake. 
