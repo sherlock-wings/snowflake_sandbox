@@ -31,6 +31,7 @@ var revoke_ls = [
     ,'grant ownership on all streams in schema <SCHEMA_NAME> to role <ROLE_NAME> revoke current grants;'
     ,'grant ownership on all stages in schema <SCHEMA_NAME> to role <ROLE_NAME> revoke current grants;'
     ,'grant ownership on all sequences in schema <SCHEMA_NAME> to role <ROLE_NAME> revoke current grants;'
+    ,'grant ownership on all tasks in schema <SCHEMA_NAME> to role <ROLE_NAME> revoke current grants;'
     ,'grant ownership on schema <SCHEMA_NAME> to role <ROLE_NAME> revoke current grants;'
 ];
 
