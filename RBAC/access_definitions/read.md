@@ -1,24 +1,6 @@
 # What is this document? 
 
-This document is meant to provide a clear definition of what "Read" access means in this data project. This definition will be expressed both in plain english and as executable SQL Statements.
-
-## Context
-
-This project uses Role-based Access Control (RBAC) by creating many *access roles*. An access role grants its holder with "Read" Access, "Read-Write" Access, or "Full" access, depending on the role. 
-
-So if you had one schema caleld `EDW_DB.RAW`, for example, you could have three access roles for that:
-1. `EDW_DB_RAW_R_AR` ("Read" access role)
-1. `EDW_DB_RAW_RW_AR` ("Read-Write" access role)
-1. `EDW_DB_RAW_FULL_AR` ("Full" access role)
-
-Each of these roles are combined to create *Functional Roles* (ex. `DEV_ENGINEER_FR`), which can have highly-configurable privileges. The flexibility these roles have is achieved by granting one or more access roles to a functional role. 
-
-# "Read" Access: Plain-Language Definition
-
-- "Read" access means you generally have the ability to read from or use existing objects, but you may not alter existing objects in any way. You also may not create new objects of your own.
-- As with all access on this Data Project, access is granted at the **schema level**. So, anyone with "Read" access will have that acces in the context of a specific schema.
-
-Unlike with Read-write access, there are not many fine details with this definition. So long as an object exists within a schema, and you have "Read" access on that schema, you can read from or use any existing object without altering it.
+This document is meant to provide a clear definition of what "Read" access means in this data project. This definition will be expressed both in plain english and as executable SQL Statements. For more context on access rights, what they mean, and how they are used in this project, see `*/RBAC/overall_design.md`.
 
 # "Read" Access: SQL Definition
 
