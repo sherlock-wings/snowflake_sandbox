@@ -1,6 +1,6 @@
 # What is this document? 
 
-This document is meant to provide a clear definition of what "Read" access means in this data project. This definition will be expressed both in plain english and as executable SQL Statements.
+This document is meant to provide a clear definition of what "Full" access means in this data project. This definition will be expressed both in plain english and as executable SQL Statements.
 
 ## Context
 
@@ -13,13 +13,56 @@ So if you had one schema caleld `EDW_DB.RAW`, for example, you could have three 
 
 Each of these roles are combined to create *Functional Roles* (ex. `DEV_ENGINEER_FR`), which can have complex and highly-configurable privileges. The flexibility these roles have comes out of the ability to grant (or withhold granting) many access roles to the functional role. 
 
-# "Read" Access: Plain-Language Definition
+# "Full" Access: Plain-Language Definition
 
-A) "Read" access means you generally have the ability to read from or use existing objects, but you may not alter existing objects in any way. You also may not create new objects of your own.  
+- "Full" access means you generally have the ability to utilize all features that your Account Administrator has approved for usage
+    - Note that this of course does not mean you can automatically do anything. You are only able to create a Snowpipe or Iceberg table, for example, if your Account Admin has already approved usage of these objects in general 
+- As with all access on this Data Project, access is granted at the **schema level**. So, anyone with "Full" access will have that acces in the context of a specific schema.
 
-B) As with all access on this Data Project, access is granted at the **schema level**. So, anyone with "Read" access will have that acces in the context of a specific schema.
+The details of this definition are object-specific and are enumerated below.
 
-Unlike with Read-write access, there are not many fine details with this definition. So long as an object exists within a schema, and you have "Read" access on that schema, you can read from or use any existing object without altering it.
+
+## Tables
+
+You may apply any DDL or DML to tables of the following types:
+1. Permanent
+2. [Transient](https://docs.snowflake.com/en/user-guide/tables-temp-transient)
+3. [Temporary](https://docs.snowflake.com/en/user-guide/tables-temp-transient)
+
+***You do not have access*** to the following table types:
+1. [External](https://docs.snowflake.com/en/user-guide/tables-external-intro)
+2. [Dynamic](https://docs.snowflake.com/en/user-guide/dynamic-tables-intro)
+3. [Event](https://docs.snowflake.com/en/developer-guide/logging-tracing/event-table-setting-up)
+4. [Hybrid](https://docs.snowflake.com/en/user-guide/tables-hybrid)
+5. [Iceberg](https://docs.snowflake.com/en/user-guide/tables-iceberg)
+
+
+## Views
+
+You may apply any DDL or DML to views of the following types:
+1. Standard
+2. [Materialized](https://docs.snowflake.com/en/user-guide/views-materialized)
+
+
+## Other objects you can read/write with
+
+You may also apply any DDL or DML to any of the following objects:
+1. [Sequences](https://docs.snowflake.com/en/user-guide/querying-sequences)
+2. [File formats](https://docs.snowflake.com/en/sql-reference/sql/create-file-format)
+3. [Streams](https://docs.snowflake.com/en/user-guide/streams-intro)
+4. [Stored Procedures](https://docs.snowflake.com/en/developer-guide/stored-procedure/stored-procedures-usage)
+5. [Functions (a.k.a. UDFs)](https://docs.snowflake.com/en/developer-guide/udf/udf-overview)
+6. [Tasks](https://docs.snowflake.com/en/user-guide/tasks-intro)
+
+
+## Other Objects you can NOT read/write with
+1. [Pipes](https://docs.snowflake.com/en/user-guide/data-load-snowpipe-intro)
+2. [Masking Policies](https://docs.snowflake.com/user-guide/security-column-ddm-intro)
+3. [Row-Access Policies](https://docs.snowflake.com/en/user-guide/security-row-intro)
+4. [External Functions](https://docs.snowflake.com/en/sql-reference/external-functions-introduction)
+5. [Tags](https://docs.snowflake.com/en/user-guide/object-tagging)
+
+
 
 # "Read" Access: SQL Definition
 
