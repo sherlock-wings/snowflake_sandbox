@@ -111,7 +111,7 @@ Example:
 
 ### Multiple schemas
 
-While its tempting to think of "your sandbox" as a single object, one's Sandbox (at least when using our Project's data model) is actually 3 objects. In my case, it would be 
+While its tempting to think of "your sandbox" as a single object, your Sandbox is actually 3 objects (at least when using our Project's data model). In my case, "my Sandbox" would be a triplet of schemas named like: 
 
 1. `SANDBOX_EDW_DB.PCALLAHAN_RAW`
 1. `SANDBOX_EDW_DB.PCALLAHAN_STAGE`
