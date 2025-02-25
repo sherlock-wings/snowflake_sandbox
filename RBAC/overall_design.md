@@ -93,9 +93,9 @@ Each of the prototype schemas and their associated functional roles are duplicat
 
 I said we have four "full" environments because we sort of technically have a fifth environment, but it doesn't work like the other four. 
 
-This environment consists of a single database containing a schema called `UTIL`. In diagrams, I refer to this database as `NAMED_DATABASE` because its exact name is arbitrary. In practice, I usually just name it after whatever company I'm doing the given project for.
+This environment consists of a single database containing a schema called `UTIL`. In diagrams, I refer to this database as `NAMED_DATABASE` because its exact name is arbitrary. In practice, I usually just name it after whatever company I'm doing the given project for. For this project, I decided to name it after my github account-- `SHERLOCK_WINGS`. 
 
-The point of this schema is to hold all important quality-of-life objects that are not actual business data. Things like stored procedures (such as the one used to populate the Sandbox environment-- see below), data definitions, etc. will be kept here. 
+The point of this database and schema is to hold all important quality-of-life objects that are not actual business data. Things like stored procedures (such as the one used to populate the Sandbox environment-- see below), data definitions, etc. will be kept here. 
 
 ## How the Sandbox works
 
