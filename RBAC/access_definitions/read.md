@@ -4,20 +4,19 @@ This document is meant to provide a clear definition of what "Read" access means
 
 ## Context
 
-This project applies Role-based Access Control (RBAC) by creating a series of *access roles*, each of which apply to a specific schema. An access role creates the its holder with Read Access, Read-Write Access, or Full access, to the given schema.
+This project uses Role-based Access Control (RBAC) by creating many *access roles*. An access role grants its holder with "Read" Access, "Read-Write" Access, or "Full" access, depending on the role. 
 
 So if you had one schema caleld `EDW_DB.RAW`, for example, you could have three access roles for that:
 1. `EDW_DB_RAW_R_AR` ("Read" access role)
 1. `EDW_DB_RAW_RW_AR` ("Read-Write" access role)
 1. `EDW_DB_RAW_FULL_AR` ("Full" access role)
 
-Each of these roles are combined to create *Functional Roles* (ex. `DEV_ENGINEER_FR`), which can have complex and highly-configurable privileges. The flexibility these roles have comes out of the ability to grant (or withhold granting) many access roles to the functional role. 
+Each of these roles are combined to create *Functional Roles* (ex. `DEV_ENGINEER_FR`), which can have highly-configurable privileges. The flexibility these roles have is achieved by granting one or more access roles to a functional role. 
 
 # "Read" Access: Plain-Language Definition
 
-A) "Read" access means you generally have the ability to read from or use existing objects, but you may not alter existing objects in any way. You also may not create new objects of your own.  
-
-B) As with all access on this Data Project, access is granted at the **schema level**. So, anyone with "Read" access will have that acces in the context of a specific schema.
+- "Read" access means you generally have the ability to read from or use existing objects, but you may not alter existing objects in any way. You also may not create new objects of your own.
+- As with all access on this Data Project, access is granted at the **schema level**. So, anyone with "Read" access will have that acces in the context of a specific schema.
 
 Unlike with Read-write access, there are not many fine details with this definition. So long as an object exists within a schema, and you have "Read" access on that schema, you can read from or use any existing object without altering it.
 
