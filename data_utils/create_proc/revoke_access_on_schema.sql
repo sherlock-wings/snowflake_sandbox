@@ -8,7 +8,7 @@ as
 $$
 var env_full_ar_name = SCHEMA_NAME.toUpperCase().split('.')[0] 
 
-// Tiny exception with SANDBOX roles-- usually we are trying to generate a role name like 
+// Tiny exception with SANDBOX roles... usually we are trying to generate a role name like 
 // <ENVNAME>_EDW_DB_<SCHEM_NAME>_FULL_AR. However, because the Sandbox environment only gets schema rights on-the-fly
 // from sprocs, and the "native" rights are all DB level, the names for the roles in Sandbox have no <SCHEMA_NAME>
 // infix like the ones in Dev/QA/Prod do. So we do this little thingy here to get around that.
