@@ -65,6 +65,30 @@ Our prototype schema are:
   
 Each of these schemas will exist in each environment. There is one environment per database.
 
+## Access rights for Prototype Schema
+
+While our real schema will always exist in the context of an environment, it is simplest to demonstrate what access types apply to what role in which schema if we look at the prototype schemas. See figure 1, below:
+
+![Fig. 1: Access Types for all Functional Roles across Prototype Schema](https://github.com/sherlock-wings/snowflake_sandbox/blob/bug_fix/reconfigure_rbac_scripts/RBAC/miro/functional_role_diagram.jpg)
+
+## Environment Structure
+
+Each of the prototype schemas and their associated functional roles are duplicated across each of our environments. We have four "full" environments:
+1. SANDBOX
+    - When the team sets out to deliver a new feature or fix a bug, the first lines of code and the first SQL statements executed always happen here
+    - Each developer has their own **set of sandbox schemas**, where each schema's name contains the name of the developer the schema is meant for
+    - More details on this in the following section 
+1. DEV
+    - This is where integration testing takes place
+    - After several Pull requests have been approved and merged, this is the environment they will "land" in
+    - Here, all those features are tested together to ensure they are compatible with each other
+3. QA
+   - This is where User-Acceptance testing takes place
+   - After a new feature or bug fix makes it to QA, it should already have been thoroughly tested for bugs by the developer
+   - QA is where some sort of stakeholder, such as the person who requested the feature in the first place, can inspect the latest changes and ensure they fit expectations and requirements
+5. PROD
+   - This is where the final product of all our work lives for the whole world (or at least the business) to see 
+
 # Object Naming Conventions
 
 ## Databases
@@ -114,6 +138,6 @@ Note that for permanent tables, there is no object type suffix. The trailing `'_
 | Tasks | `TSK` |
 
 
-![Fig 1. Basic Access rights by Schema and Functional Role](https://github.com/sherlock-wings/snowflake_sandbox/blob/bug_fix/reconfigure_rbac_scripts/RBAC/miro/functional_role_diagram.jpg)
+
 ![Fig 2. Environment Structure and Data Flow](https://github.com/sherlock-wings/snowflake_sandbox/blob/bug_fix/reconfigure_rbac_scripts/RBAC/miro/environment_structure.jpg)
 ![Fig 3. Role Distribution across Environments](https://github.com/sherlock-wings/snowflake_sandbox/blob/bug_fix/reconfigure_rbac_scripts/RBAC/miro/roles_across_environments.jpg)
