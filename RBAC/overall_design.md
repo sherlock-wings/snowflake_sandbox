@@ -86,6 +86,27 @@ Examples:
 1. `QA_ADMIN_FR`
 2. `SANDBOX_ENGINEER_FR`
 
+#### Schema Children
+
+`<object-name>_<object-type-suffix>`
+
+Note that for permanent tables, there is no object type suffix. The trailing `'_'` is omitted from the object name in those cases.
+
+| Object Type    | Suffix |
+| -------- | ------- | 
+| Permanent Table  | None    | 
+| Transient Table  | `TRN`     |
+| Temporary Table    | `TMP`   |
+| View    | `VW`   |
+| Materialized View    | `MVW`   |
+| Sequences    | `SQN`   |
+| File Formats    | `FFM`   |
+| Stages    | `STG`   |
+| Streams    | `STM`   |
+| Stored Procedures    | `STP`   |
+| User Defined Functions (UDFs)    | `UDF`   |
+| Tasks | `TSK` |
+
 
 ![Fig 1. Basic Access rights by Schema and Functional Role](https://github.com/sherlock-wings/snowflake_sandbox/blob/bug_fix/reconfigure_rbac_scripts/RBAC/miro/functional_role_diagram.jpg)
 ![Fig 2. Environment Structure and Data Flow](https://github.com/sherlock-wings/snowflake_sandbox/blob/bug_fix/reconfigure_rbac_scripts/RBAC/miro/environment_structure.jpg)
