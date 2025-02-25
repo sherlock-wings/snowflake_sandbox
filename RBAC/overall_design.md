@@ -138,8 +138,20 @@ For a summary of how the roles, schemas, and environments discussed above all wo
 Supporting this architecture the right way means that the role for a given persona has many "copies" of itself. This is so each persona can be implemented in higher or lower environments as needed. However, it is not as simple as one role per persona and environment. In some environments, certain personas should not have access.
 
 These details are summarized in Figure 3 below:
+
 ![Fig 3. Role Distribution across Environments](https://github.com/sherlock-wings/snowflake_sandbox/blob/bug_fix/reconfigure_rbac_scripts/RBAC/miro/roles_across_environments.jpg)
 
+## Things to note
+
+*The only persona that has a functional role across all 5 enviornments is ADMIN.*
+1. ANALYST does not need to read access to SANDBOX or UTIL since it is meant only for the consumption of business-data
+2. ENGINEER must not have any access in Prod for basic security reasons
+3. ENGINEER is the only role with support for Readups
+    - This is because basic Development often requires reading from a higher environment so data in a lower environment can be compared or overwritten
+    - Read downs are never supported, regardless
+    - For example, `QA_ENGINEER_FR` can read from Prod and QA but can only write to QA
+    - `SANDBOX_ENGINEER_FR` can read from Dev, QA, and Prod, but can only write to Sandbox. It has no access to UTIL
+5. SVCTRANFORMER does not need read/write access to SANDBOX or UTIL like ANALYST-- it is only meant for executing orchestrated jobs. These should never be created in SANDBOX or UTIL
 
 # Object Naming Conventions
 
