@@ -2,7 +2,8 @@
 
 1. [Project RBAC](#project-rbac)
 2. [Data Model](#data-model)
-3. [Object Naming Conventions](#object-naming-conventions)
+3. [Environment Summary Diagram](#environment-summary-diagram)
+4. [Object Naming Conventions](#object-naming-conventions)
 
 # Project RBAC 
 This project will use Role-Based Access Control(RBAC) that mostly leverages [managed schema](https://docs.snowflake.com/en/user-guide/security-access-control-configure#label-managed-access-schemas) in Snowflake. 
@@ -121,7 +122,10 @@ While its tempting to think of "your sandbox" as a single object, your Sandbox i
 
 This is never done manually. It is done by using a stored procedure (name TBD). The sproc works by cloning from a target environment (specified by the caller) and into the Sandbox. The sproc knows automatically to generate the schemas as clones, using the correct name. Also, it correctly "rebuilds" the RBAC so the schema is is usable as expected post-execution. 
 
-# Environment Summary
+# Environment Summary Diagram
+
+![Fig 2. Environment Summary Diagram](https://github.com/sherlock-wings/snowflake_sandbox/blob/bug_fix/reconfigure_rbac_scripts/RBAC/miro/environment_structure.jpg)
+
 
 # Object Naming Conventions
 
