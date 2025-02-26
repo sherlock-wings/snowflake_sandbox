@@ -43,7 +43,8 @@ For all of the below object types, you have `OWNERSHIP`. You may do any DDL or D
 4. [Stored Procedures](https://docs.snowflake.com/en/developer-guide/stored-procedure/stored-procedures-usage)
 5. [Functions (a.k.a. UDFs)](https://docs.snowflake.com/en/developer-guide/udf/udf-overview)
 6. [Tasks](https://docs.snowflake.com/en/user-guide/tasks-intro)
-
+7. [Stages](https://docs.snowflake.com/en/sql-reference/sql/create-stage)
+    - Includes Internal stages (named, user, table) and External stages 
 
 ## Other Objects you can NOT read/write with
 1. [Pipes](https://docs.snowflake.com/en/user-guide/data-load-snowpipe-intro)
