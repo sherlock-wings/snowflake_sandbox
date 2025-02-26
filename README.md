@@ -1,6 +1,6 @@
 # Table of Contents 
 
-2. [Data Model](#data-model)
+1. [Data Model](#data-model)
 1. [Project RBAC](#project-rbac)
 3. [Environment Summary Diagram](#environment-summary-diagram)
 4. [Role Distribution by Enviornment](#role-distribution-by-environment)
