@@ -39,25 +39,42 @@ The below diagram depicts the typical architecture for environments like Dev, QA
 # Project RBAC 
 The above Role-access Control (RBAC) setup will be achieved with `GRANT` statements that leverage [managed schema](https://docs.snowflake.com/en/user-guide/security-access-control-configure#label-managed-access-schemas) in Snowflake. 
 
-## Access Roles and their Types
-Grants on these managed schema will be given to one of three types of access roles. These types are
+## Schema Access Roles and their Types
+Grants on these managed schema will be given to one of three types of schema-based access roles. These types are
 - "Read" Access Role
 - "Read-Write" Access Role
 - "Full" Access Role
 
-Every functional role in this project will have some combination of read, read-write, and/or full access roles granted to it. Each access role applies to one and only one schema. While the access roles possess grants on data objects and schema children, only the functional roles can access Warehouses. This ensures that only Functional Roles and never Access Roles are used for SQL Statements that require compute of any kind. 
+Every functional role in this project will have some combination of read, read-write, and/or full access roles granted to it. Each schema-based access role applies to one and only one schema. 
+
+## Warehouse Access Roles and their Types
+To use compute to process any data in the above-mentioned schemas, a warehouse is required. Like with schema-based access roles, warehouse-based access roles come in three types: 
+
+- "Use" Access Role
+    - This access role grants `USAGE` on the warehouse 
+- "Use-Watch" Access Role
+    - This access role grants both `USAGE` and `MONITOR` on the warehouse 
+- "Owner" Access Role
+    - This access role grants ultimate `OWNERSHIP` on the warehouse 
+
 
 ## Access Roles & Functional Roles
-For each of the three access types, a specific access role exists for each schema in our Data Models. For example, if you had one schema caleld `EDW_DB.RAW`, for example, you could have three access roles for that:
+For each of the three access types, a specific access role exists for each schema in our Data Models. For example, if you had one schema caleld `EDW_DB.RAW`, for example, you would have three access roles for that:
 1. `EDW_DB_RAW_R_AR` ("Read" access role)
 1. `EDW_DB_RAW_RW_AR` ("Read-Write" access role)
 1. `EDW_DB_RAW_FULL_AR` ("Full" access role)
+
+For the warehouses, you would have roles like:
+1. `COMPUTE_WH_U_AR` ("Use" access role)
+1. `COMPUTE_WH_UW_AR` ("Use-Watch" access role)
+1. `COMPUTE_WH_O_AR` ("Owner" access role)
+ 
 
 Each of these roles are combined to create *Functional Roles* (ex. `DEV_ENGINEER_FR`), which can have highly-configurable privileges. The flexibility these roles have is achieved by granting one or more access roles to a functional role. 
 
 ## Access rights definitions
 
-For detailed documentation on what "Read", "Read-Write" and "Full" access actually means, and how specifically it is implemented, see the directory `*RBAC/access_definitions`. 
+For detailed documentation on what "Read", "Read-Write", "Full", etc. access actually means, and how specifically it is implemented for warehouses and schemas, see the directory `*RBAC/access_definitions`. 
 
 ## Personas/Functional Roles in this Project
 
