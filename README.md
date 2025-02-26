@@ -156,7 +156,7 @@ This is never done manually. It is done by using a stored procedure (name TBD). 
 
 For a summary of how the roles, schemas, and environments discussed above all work together, see Figure 2 below:
 
-![Fig 2. Environment Summary Diagram](https://github.com/sherlock-wings/snowflake_sandbox/blob/bug_fix/realign_rbac/RBAC/miro/environment_structure.jpg)
+![Fig 2. Environment Summary Diagram](https://github.com/sherlock-wings/snowflake_sandbox/blob/bug_fix/realign_rbac/RBAC/miro/structure_between_environments.jpg)
 
 # Role Distribution by Enviornment
 
