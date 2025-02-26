@@ -10,12 +10,10 @@ This document is meant to provide a clear definition of what "Owner" access to a
     1. `MONITOR`
         - Allows the role to view and monitor usage statistics and performance metrics related to the warehouse. This includes querying warehouse activity (e.g., through views like `WAREHOUSE_LOAD_HISTORY`), monitoring the credits consumed, and viewing other warehouse-related metadata.  
     1. `OWNERSHIP`
-        - With OWNERSHIP, a role has complete control over the warehouse. This includes the ability to perform any administrative actions, such as:
-        - Transferring ownership of the warehouse to another role.
-        - Modifying all warehouse properties, including resizing the warehouse or changing its suspend time.
-        - Granting or revoking any privileges, including USAGE, MONITOR, and OWNERSHIP, to other roles.
-        - Dropping the warehouse.
-        - Renaming the warehouse.
+        - Transfer ownership of the warehouse to another role.
+        - Modify all warehouse properties, including resizing the warehouse or changing its suspend time.
+        - Drop the warehouse.
+        - Rename the warehouse.
 
 # "Owner" Schema Access: SQL Definition
 
