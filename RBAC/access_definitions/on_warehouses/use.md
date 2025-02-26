@@ -11,7 +11,9 @@ This document is meant to provide a clear definition of what "Use" access to a W
 # "Use" Schema Access: SQL Definition
 
 ```
+USE ROLE USERADMIN;
+CREATE ROLE IF NOT EXISTS <use-access-role-name>;
+GRANT ROLE <use-access-role-name> TO ROLE SHERLOCKWINGS_SYSADMIN;
 USE ROLE SECURITYADMIN;
-
-GRANT USAGE ON WAREHOUSE <warehouse-name> TO ROLE <Use-access-role-name>;
+GRANT USAGE ON WAREHOUSE <environment-warehouse-name> TO ROLE <use-access-role-name>;
 ```
