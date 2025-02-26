@@ -31,7 +31,7 @@ Our prototype schema are:
 
 The below diagram depicts the typical architecture for environments like Dev, QA, and Prod. 
 
-![Fig. 1: Access Types for all Functional Roles across Prototype Schema](https://github.com/sherlock-wings/snowflake_sandbox/blob/bug_fix/realign_rbac/RBAC/miro/functional_role_diagram.jpg)
+![Fig. 1: Access Types for all Functional Roles across Prototype Schema](https://github.com/sherlock-wings/snowflake_sandbox/blob/bug_fix/realign_rbac/RBAC/miro/structure_within_an_environment.jpg)
 
 *Exceptions to this general architecture for specific environments such as Prod, Sandbox, etc. are detailed in further sections.
 
