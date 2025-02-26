@@ -41,6 +41,8 @@ You may also apply any DDL or DML to any of the following objects:
 4. [Stored Procedures](https://docs.snowflake.com/en/developer-guide/stored-procedure/stored-procedures-usage)
 5. [Functions (a.k.a. UDFs)](https://docs.snowflake.com/en/developer-guide/udf/udf-overview)
 6. [Tasks](https://docs.snowflake.com/en/user-guide/tasks-intro)
+7. [Stages](https://docs.snowflake.com/en/sql-reference/sql/create-stage)
+    - Includes Internal stages (named, user, table) and External stages 
 
 
 ## Other Objects you can NOT read/write with
@@ -57,83 +59,82 @@ You may also apply any DDL or DML to any of the following objects:
 USE ROLE USERADMIN;
 
 -- Instantiate role and the environment SYSADMIN's inheritance of it
-CREATE ROLE IF NOT EXISTS <read_write_access_role_name>;
-GRANT ROLE <read_write_access_role_name> TO ROLE <environment_sysadmin_role_name>;
+CREATE ROLE IF NOT EXISTS <read-write-access-role-name>;
+GRANT ROLE <read-write-access-role-name> TO ROLE <environment-sysadmin-role-name>;
 
 USE ROLE SECURITYADMIN;
 
 -- Schema access
-GRANT USAGE ON DATABASE <database_name> TO ROLE <read_write_access_role_name>;
-GRANT USAGE ON SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT CREATE TABLE ON SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT CREATE VIEW ON SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
+GRANT USAGE ON DATABASE SHERLOCKWINGS_EDW_DB TO ROLE <read-write-access-role-name>;
+GRANT USAGE ON SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT CREATE TABLE ON SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT CREATE VIEW ON SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
 
 -- No privs to run this on my bozo free account!  ( ﾟ，_ゝ｀)
--- GRANT CREATE MATERIALIZED VIEW ON SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
+-- GRANT CREATE MATERIALIZED VIEW ON SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
 
-GRANT CREATE SEQUENCE ON SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT CREATE STAGE ON SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT CREATE FILE FORMAT ON SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT CREATE STREAM ON SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT CREATE PROCEDURE ON SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT CREATE FUNCTION ON SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT CREATE TASK ON SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-
+GRANT CREATE SEQUENCE ON SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT CREATE STAGE ON SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT CREATE FILE FORMAT ON SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT CREATE STREAM ON SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT CREATE PROCEDURE ON SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT CREATE FUNCTION ON SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT CREATE TASK ON SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
 
 
 -- Table access
-GRANT CREATE TABLE ON SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT SELECT ON ALL TABLES IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT SELECT ON FUTURE TABLES IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT INSERT ON ALL TABLES IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT UPDATE ON ALL TABLES IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT DELETE ON ALL TABLES IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT REFERENCES ON ALL TABLES IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT INSERT ON FUTURE TABLES IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT UPDATE ON FUTURE TABLES IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT DELETE ON FUTURE TABLES IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT REFERENCES ON FUTURE TABLES IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
+GRANT CREATE TABLE ON SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT SELECT ON ALL TABLES IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT SELECT ON FUTURE TABLES IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT INSERT ON ALL TABLES IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT UPDATE ON ALL TABLES IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT DELETE ON ALL TABLES IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT REFERENCES ON ALL TABLES IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT INSERT ON FUTURE TABLES IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT UPDATE ON FUTURE TABLES IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT DELETE ON FUTURE TABLES IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT REFERENCES ON FUTURE TABLES IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
 
 -- View access
-GRANT SELECT ON ALL VIEWS IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT SELECT ON FUTURE VIEWS IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
+GRANT SELECT ON ALL VIEWS IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT SELECT ON FUTURE VIEWS IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
 
 -- Sequence access
-GRANT USAGE ON ALL SEQUENCES IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT USAGE ON FUTURE SEQUENCES IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT USAGE ON FUTURE SEQUENCES IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
 
 -- Stage access
-GRANT USAGE ON ALL STAGES IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT READ ON ALL STAGES IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT USAGE ON FUTURE STAGES IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT READ ON FUTURE STAGES IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT WRITE ON FUTURE STAGES IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT WRITE ON ALL STAGES IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
+GRANT USAGE ON ALL STAGES IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT READ ON ALL STAGES IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT USAGE ON FUTURE STAGES IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT READ ON FUTURE STAGES IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT WRITE ON FUTURE STAGES IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT WRITE ON ALL STAGES IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
 
 
 -- File format access
-GRANT USAGE ON ALL FILE FORMATS IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT USAGE ON FUTURE FILE FORMATS IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
+GRANT USAGE ON ALL FILE FORMATS IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT USAGE ON FUTURE FILE FORMATS IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
 
 -- Stream access
-GRANT SELECT ON ALL STREAMS IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT SELECT ON FUTURE STREAMS IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
+GRANT SELECT ON ALL STREAMS IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT SELECT ON FUTURE STREAMS IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
 
 -- Sproc access
-GRANT USAGE ON ALL PROCEDURES IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT USAGE ON FUTURE PROCEDURES IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
+GRANT USAGE ON ALL PROCEDURES IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT USAGE ON FUTURE PROCEDURES IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
 
 -- UDF access
-GRANT USAGE ON ALL FUNCTIONS IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT USAGE ON FUTURE FUNCTIONS IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
+GRANT USAGE ON ALL FUNCTIONS IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT USAGE ON FUTURE FUNCTIONS IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
 
 -- Materialized view access
-GRANT SELECT ON ALL MATERIALIZED VIEWS IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT SELECT ON FUTURE MATERIALIZED VIEWS IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
+GRANT SELECT ON ALL MATERIALIZED VIEWS IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT SELECT ON FUTURE MATERIALIZED VIEWS IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
 
 -- Task Access
-GRANT MONITOR ON ALL TASKS IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT OPERATE ON ALL TASKS IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT MONITOR ON FUTURE TASKS IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
-GRANT OPERATE ON FUTURE TASKS IN SCHEMA <schema_name> TO ROLE <read_write_access_role_name>;
+GRANT MONITOR ON ALL TASKS IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT OPERATE ON ALL TASKS IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT MONITOR ON FUTURE TASKS IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
+GRANT OPERATE ON FUTURE TASKS IN SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
 ```
