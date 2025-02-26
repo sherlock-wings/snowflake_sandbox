@@ -1,6 +1,11 @@
 # What is this document? 
 
-This document is meant to provide a clear definition of what "Read" access to a schema means in this data project. This definition will be expressed both in plain english and as executable SQL Statements. For more context on access rights, what they mean, and how they are used in this project, see `*/RBAC/overall_design.md`.
+This document is meant to provide a clear definition of what "Read" access to a schema means in this data project. This definition will be expressed both in plain english and as executable SQL Statements. For more context on access rights, what they mean, and how they are used in this project, see the project README.
+
+# "Read" Schema Access: Plain-Language Definition
+
+- "Read" access means you generally have the ability to read from or use existing objects, but you may not alter existing objects in any way. You also may not create new objects of your own.
+- As with all access on this Data Project, access is granted at the **schema level**. So, anyone with "Read" access will have that acces in the context of a specific schema.
 
 # "Read" Schema Access: SQL Definition
 
