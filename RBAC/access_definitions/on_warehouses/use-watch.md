@@ -10,9 +10,6 @@ This document is meant to provide a clear definition of what "Use-Watch" access 
     1. `MONITOR`
         - Allows the role to view and monitor usage statistics and performance metrics related to the warehouse. This includes querying warehouse activity (e.g., through views like `WAREHOUSE_LOAD_HISTORY`), monitoring the credits consumed, and viewing other warehouse-related metadata.  
 
-**Note that there is no concept of a "Full" or "Owner" access role with warehouses. Ownership of warehouses is held directly by the `*_SYSADMIN` role for each environment.**
-
-
 
 # "Use-Watch" Schema Access: SQL Definition
 
