@@ -166,7 +166,7 @@ These details are summarized in Figure 3 below:
 
 ![Fig 3. Role Distribution across Environments](https://github.com/sherlock-wings/snowflake_sandbox/blob/dev/RBAC/miro/roles_across_environments.jpg)
 
-## Roles only Exist Where Needed
+## Role Access by Environment
 
 *The only persona that has a functional role across all 5 enviornments is ADMIN.*
 1. ANALYST does not need to read access to SANDBOX or UTIL since it is meant only for the consumption of business-data
