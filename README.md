@@ -29,7 +29,7 @@ Each of these roles are combined to create *Functional Roles* (ex. `DEV_ENGINEER
 
 For detailed documentation on what "Read", "Read-Write" and "Full" access actually means, and how specifically it is implemented, see the directory `*RBAC/access_definitions`. 
 
-## Four Personas/Functional Roles in this Project
+## Personas/Functional Roles in this Project
 
 We use all the various access roles to sum together four functional roles, each corresponding to one "persona" in this project.
 
@@ -50,6 +50,10 @@ We use all the various access roles to sum together four functional roles, each 
 1. `*_ANALYST_FR`
     - Read-only persona
     - Used for any person or application that needs to query the data but does not need to change it in any way
+  
+### One `*_SYSADMIN` to own them all
+
+### 
 
 # Data Model
 
@@ -151,7 +155,7 @@ These details are summarized in Figure 3 below:
 
 ![Fig 3. Role Distribution across Environments](https://github.com/sherlock-wings/snowflake_sandbox/blob/dev/RBAC/miro/roles_across_environments.jpg)
 
-## Things to note
+## Roles only Exist Where Needed
 
 *The only persona that has a functional role across all 5 enviornments is ADMIN.*
 1. ANALYST does not need to read access to SANDBOX or UTIL since it is meant only for the consumption of business-data
