@@ -1,35 +1,82 @@
 # Table of Contents 
 
+1. [Data Model](#data-model)
 1. [Project RBAC](#project-rbac)
-2. [Data Model](#data-model)
 3. [Environment Summary Diagram](#environment-summary-diagram)
 4. [Role Distribution by Enviornment](#role-distribution-by-environment)
 5. [Object Naming Conventions](#object-naming-conventions)
 
-# Project RBAC 
-This project will use Role-Based Access Control(RBAC) that mostly leverages [managed schema](https://docs.snowflake.com/en/user-guide/security-access-control-configure#label-managed-access-schemas) in Snowflake. 
+# Data Model
 
-## Access Roles and their Types
-Grants on these managed schema will be given to one of three types of access roles. These types are
+Our data model consists of three simple schema. This schema-triplet will exist across multiple environments, and each environment will be held in a single database.
+
+When referring to these schema outside of the context of any specific environment, we refer to them as "Prototype schema".
+
+Our prototype schema are:
+
+1. `RAW`
+    - Here we will keep all of our source data
+    - Data should be as close to as it existed in the source system as possible
+    - Stages and other ingestion constructs (pipes, streams, etc) will be kept here as well
+3. `STAGE`
+    - Light-touch transforms on source data, (usually) instantiated as views
+    - Intermediate persisted tables & views
+5. `MODEL`
+    - Reporting parent layer
+    - Model constructs (as persisted tables) are kept here
+    - For kimball, this means your dimensions, facts, fact aggregates, and other entities like bridge/mapping tables are kept here
+  
+
+## Access rights within a single Environment
+
+The below diagram depicts the typical architecture for environments like Dev, QA, and Prod. 
+
+![Fig. 1: Access Types for all Functional Roles across Prototype Schema](https://github.com/sherlock-wings/snowflake_sandbox/blob/bug_fix/realign_rbac/RBAC/miro/structure_within_an_environment.jpg)
+
+*Exceptions to this general architecture for specific environments such as Prod, Sandbox, etc. are detailed in further sections.
+
+
+# Project RBAC 
+The above Role-access Control (RBAC) setup will be achieved with `GRANT` statements that leverage [managed schema](https://docs.snowflake.com/en/user-guide/security-access-control-configure#label-managed-access-schemas) in Snowflake. 
+
+## Schema Access Roles and their Types
+Grants on these managed schema will be given to one of three types of schema-based access roles. These types are
 - "Read" Access Role
 - "Read-Write" Access Role
 - "Full" Access Role
 
-Every functional role in this project will have some combination of read, read-write, and/or full access roles granted to it. Each access role applies to one and only one schema. While the access roles possess grants on data objects and schema children, only the functional roles can access Warehouses. This ensures that only Functional Roles and never Access Roles are used for SQL Statements that require compute of any kind. 
+Every functional role in this project will have some combination of read, read-write, and/or full access roles granted to it. Each schema-based access role applies to one and only one schema. 
+
+## Warehouse Access Roles and their Types
+To use compute to process any data in the above-mentioned schemas, a warehouse is required. Like with schema-based access roles, warehouse-based access roles come in three types: 
+
+- "Use" Access Role
+    - This access role grants `USAGE` on the warehouse 
+- "Use-Watch" Access Role
+    - This access role grants both `USAGE` and `MONITOR` on the warehouse 
+- "Owner" Access Role
+    - This access role grants ultimate `OWNERSHIP` on the warehouse 
+
 
 ## Access Roles & Functional Roles
-For each of the three access types, a specific access role exists for each schema in our Data Models. For example, if you had one schema caleld `EDW_DB.RAW`, for example, you could have three access roles for that:
+For each of the three access types, a specific access role exists for each schema in our Data Models. For example, if you had one schema caleld `EDW_DB.RAW`, for example, you would have three access roles for that:
 1. `EDW_DB_RAW_R_AR` ("Read" access role)
 1. `EDW_DB_RAW_RW_AR` ("Read-Write" access role)
 1. `EDW_DB_RAW_FULL_AR` ("Full" access role)
+
+For the warehouses, you would have roles like:
+1. `COMPUTE_WH_U_AR` ("Use" access role)
+1. `COMPUTE_WH_UW_AR` ("Use-Watch" access role)
+1. `COMPUTE_WH_O_AR` ("Owner" access role)
+ 
 
 Each of these roles are combined to create *Functional Roles* (ex. `DEV_ENGINEER_FR`), which can have highly-configurable privileges. The flexibility these roles have is achieved by granting one or more access roles to a functional role. 
 
 ## Access rights definitions
 
-For detailed documentation on what "Read", "Read-Write" and "Full" access actually means, and how specifically it is implemented, see the directory `*RBAC/access_definitions`. 
+For detailed documentation on what "Read", "Read-Write", "Full", etc. access actually means, and how specifically it is implemented for warehouses and schemas, see the directory `*RBAC/access_definitions`. 
 
-## Four Personas/Functional Roles in this Project
+## Personas/Functional Roles in this Project
 
 We use all the various access roles to sum together four functional roles, each corresponding to one "persona" in this project.
 
@@ -50,32 +97,27 @@ We use all the various access roles to sum together four functional roles, each 
 1. `*_ANALYST_FR`
     - Read-only persona
     - Used for any person or application that needs to query the data but does not need to change it in any way
-
-# Data Model
-
-As mentioned earlier, the rights given to each of the access roles we will use are *schema specific*. To give our schemas a regular structure across environments, we establish our **prototype schemas**. These will describe the naming and purpose for each schema that we will replicate across most environments. 
-
-Our prototype schema are:
-
-1. `RAW`
-    - Here we will keep all of our source data
-    - Data should be as close to as it existed in the source system as possible
-    - Stages and other ingestion constructs (pipes, streams, etc) will be kept here as well
-3. `STAGE`
-    - Light-touch transforms on source data, (usually) instantiated as views
-    - Intermediate persisted tables & views
-5. `MODEL`
-    - Reporting parent layer
-    - Model constructs (as persisted tables) are kept here
-    - For kimball, this means your dimensions, facts, fact aggregates, and other entities like bridge/mapping tables are kept here
   
-Each of these schemas will exist in each environment. There is one environment per database.
+### One `*_SYSADMIN` to own them all
 
-## Access rights for Prototype Schema
+To consolidate high-level privileges for a single environment, we establish one final "persona" called `*_SYSADMIN`. This is analogous to the Snowflake system role called [`SYSADMIN`](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system), except that its permissions apply to a single environment. 
 
-While our real schema will always exist in the context of an environment, it is simplest to demonstrate what access types apply to what role in which schema if we look at the prototype schemas. See figure 1, below:
+Each environment will have such a role. This role will ultimately inherit:
+1. All the read, read-write, and full-access roles in the environment
+2. Ownership of the Warehouse dedicated to that environment
 
-![Fig. 1: Access Types for all Functional Roles across Prototype Schema](https://github.com/sherlock-wings/snowflake_sandbox/blob/dev/RBAC/miro/functional_role_diagram.jpg)
+To complete the inheritance cycle, all `*_SYSADMIN` roles are granted to the Snowflake-default `SYSADMIN` role.  
+
+## On Warehouses
+
+I try to keep the approach for warehouses as simple as possible. The only rules we follow on this project with respect to warehouses are:
+
+1. Warehouses should be sized appropriately.
+    - Anything bigger than an X-Small ought to have a documented justification for why the extra compute is necessary
+3. One warehouse per environment
+    - Warehouses are where most daily compute is spent. If you're spending money, you ought to know what environments are costing you the most
+    - Splitting Warehouses by enviornment achieves this 
+
 
 ## Environment Structure
 
@@ -131,7 +173,7 @@ This is never done manually. It is done by using a stored procedure (name TBD). 
 
 For a summary of how the roles, schemas, and environments discussed above all work together, see Figure 2 below:
 
-![Fig 2. Environment Summary Diagram](https://github.com/sherlock-wings/snowflake_sandbox/blob/dev/RBAC/miro/environment_structure.jpg)
+![Fig 2. Environment Summary Diagram](https://github.com/sherlock-wings/snowflake_sandbox/blob/bug_fix/realign_rbac/RBAC/miro/structure_between_environments.jpg)
 
 # Role Distribution by Enviornment
 
@@ -139,14 +181,15 @@ Supporting this architecture the right way means that the role for a given perso
 
 These details are summarized in Figure 3 below:
 
-![Fig 3. Role Distribution across Environments](https://github.com/sherlock-wings/snowflake_sandbox/blob/dev/RBAC/miro/roles_across_environments.jpg)
+![Fig 3. Role Distribution across Environments](https://github.com/sherlock-wings/snowflake_sandbox/blob/bug_fix/realign_rbac/RBAC/miro/roles_across_environments.jpg)
 
-## Things to note
+## Role Access by Environment
 
-*The only persona that has a functional role across all 5 enviornments is ADMIN.*
+***No** single functional role has uniform access across all 5 enviornments!*
 1. ANALYST does not need to read access to SANDBOX or UTIL since it is meant only for the consumption of business-data
-2. ENGINEER must not have any access in Prod for basic security reasons
-3. ENGINEER is the only role with support for Readups
+2. Personas used by humans (i.e. not `SVCTRANSFORMER`) who also generally get read-write access must **not** have any access in Prod for basic security reasons
+    - That means no Prod-Facing ENGINEER or ADMIN functional roles    
+4. ENGINEER is the only role with support for Readups
     - This is because basic Development often requires reading from a higher environment so data in a lower environment can be compared or overwritten
     - Read downs are never supported, regardless
     - For example, `QA_ENGINEER_FR` can read from Prod and QA but can only write to QA
