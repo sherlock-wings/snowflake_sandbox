@@ -14,8 +14,10 @@ This document is meant to provide a clear definition of what "Use-Watch" access 
 # "Use-Watch" Schema Access: SQL Definition
 
 ```
+USE ROLE USERADMIN;
+CREATE ROLE IF NOT EXISTS <use-watch-access-role-name>;
+GRANT ROLE <use-watch-access-role-name> TO ROLE <environment-sysadmin-role-name>;
 USE ROLE SECURITYADMIN;
-
-GRANT USAGE ON WAREHOUSE <warehouse-name> TO ROLE <use-watch-access-role-name>;
-GRANT MONITOR ON WAREHOUSE <warehouse-name> TO ROLE <use-watch-access-role-name>;
+GRANT USAGE ON WAREHOUSE <environment-warehouse-name> TO ROLE <use-watch-access-role-name>;
+GRANT MONITOR ON WAREHOUSE <environment-warehouse-name> TO ROLE <use-watch-access-role-name>;
 ```
