@@ -13,7 +13,7 @@ This document is meant to provide a clear definition of what "Use" access to a W
 ```
 USE ROLE USERADMIN;
 CREATE ROLE IF NOT EXISTS <use-access-role-name>;
-GRANT ROLE <use-access-role-name> TO ROLE SHERLOCKWINGS_SYSADMIN;
+GRANT ROLE <use-access-role-name> TO ROLE <environment-sysadmin-role-name>;
 USE ROLE SECURITYADMIN;
 GRANT USAGE ON WAREHOUSE <environment-warehouse-name> TO ROLE <use-access-role-name>;
 ```
