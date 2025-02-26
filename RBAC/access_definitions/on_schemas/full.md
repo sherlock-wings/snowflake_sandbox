@@ -61,7 +61,7 @@ USE ROLE USERADMIN;
 
 -- Instantiate role and the environment SYSADMIN's inheritance of it
 CREATE ROLE IF NOT EXISTS <full_access_role_name>;
-GRANT ROLE <full_access_role_name> TO ROLE "DEV_SYSADMIN";
+GRANT ROLE <full_access_role_name> TO ROLE <environment-sysadmin-role-name>;
 
 USE ROLE SECURITYADMIN;
 
