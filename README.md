@@ -181,7 +181,7 @@ Supporting this architecture the right way means that the role for a given perso
 
 These details are summarized in Figure 3 below:
 
-![Fig 3. Role Distribution across Environments](https://github.com/sherlock-wings/snowflake_sandbox/blob/dev/RBAC/miro/roles_across_environments.jpg)
+![Fig 3. Role Distribution across Environments](https://github.com/sherlock-wings/snowflake_sandbox/blob/bug_fix/realign_rbac/RBAC/miro/roles_across_environments.jpg)
 
 ## Role Access by Environment
 
