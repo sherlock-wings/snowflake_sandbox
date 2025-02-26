@@ -194,7 +194,7 @@ These details are summarized in Figure 3 below:
     - Read downs are never supported, regardless
     - For example, `QA_ENGINEER_FR` can read from Prod and QA but can only write to QA
     - `SANDBOX_ENGINEER_FR` can read from Dev, QA, and Prod, but can only write to Sandbox. It has no access to UTIL
-5. SVCTRANFORMER does not need read/write access to SANDBOX or UTIL like ANALYST-- it is only meant for executing orchestrated jobs. These should never be created in SANDBOX or UTIL
+5. SVCTRANSFORMER does not need read/write access to SANDBOX or UTIL like ANALYST-- it is only meant for executing orchestrated jobs. These should never be created in SANDBOX or UTIL
 
 # Object Naming Conventions
 
