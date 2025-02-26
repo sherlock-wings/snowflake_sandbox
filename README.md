@@ -130,10 +130,12 @@ This is never done manually. It is done by using a stored procedure (name TBD). 
 ## On Warehouses
 
 I try to keep the approach for warehouses as simple as possible. The only rules we follow on this project with respect to warehouses are:
+
 1. Warehouses should be sized appropriately.
-2.     Anything bigger than an X-Small ought to have a documented justification for why the extra compute is necessary
+    - Anything bigger than an X-Small ought to have a documented justification for why the extra compute is necessary
 3. One warehouse per environment
-4. 
+    - Warehouses are where most daily compute is spent. If you're spending money, you ought to know what environments are costing you the most
+    - Splitting Warehouses by enviornment achieves this 
 
 # Environment Summary Diagram
 
