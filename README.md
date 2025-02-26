@@ -185,10 +185,11 @@ These details are summarized in Figure 3 below:
 
 ## Role Access by Environment
 
-*The only persona that has a functional role across all 5 enviornments is ADMIN.*
+***No** single functional role has uniform across all 5 enviornments!*
 1. ANALYST does not need to read access to SANDBOX or UTIL since it is meant only for the consumption of business-data
-2. ENGINEER must not have any access in Prod for basic security reasons
-3. ENGINEER is the only role with support for Readups
+2. Personas used by humans (i.e. not `SVCTRANSFORMER`) who also generally get read-write access must **not** have any access in Prod for basic security reasons
+    - That means no Prod-Facing ENGINEER or ADMIN functional roles    
+4. ENGINEER is the only role with support for Readups
     - This is because basic Development often requires reading from a higher environment so data in a lower environment can be compared or overwritten
     - Read downs are never supported, regardless
     - For example, `QA_ENGINEER_FR` can read from Prod and QA but can only write to QA
