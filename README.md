@@ -127,6 +127,14 @@ While its tempting to think of "your sandbox" as a single object, your Sandbox i
 
 This is never done manually. It is done by using a stored procedure (name TBD). The sproc works by cloning from a target environment (specified by the caller) and into the Sandbox. The sproc knows automatically to generate the schemas as clones, using the correct name. Also, it correctly "rebuilds" the RBAC so the schema is is usable as expected post-execution. 
 
+## On Warehouses
+
+I try to keep the approach for warehouses as simple as possible. The only rules we follow on this project with respect to warehouses are:
+1. Warehouses should be sized appropriately.
+2.     Anything bigger than an X-Small ought to have a documented justification for why the extra compute is necessary
+3. One warehouse per environment
+4. 
+
 # Environment Summary Diagram
 
 For a summary of how the roles, schemas, and environments discussed above all work together, see Figure 2 below:
