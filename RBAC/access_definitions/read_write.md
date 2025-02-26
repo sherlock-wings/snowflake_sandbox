@@ -1,8 +1,8 @@
 # What is this document? 
 
-This document is meant to provide a clear definition of what "Read-Write" access means in this data project. This definition will be expressed both in plain english and as executable SQL Statements. For more context on access rights, what they mean, and how they are used in this project, see `*/RBAC/overall_design.md`. 
+This document is meant to provide a clear definition of what "Read-Write" access to a schema means in this data project. This definition will be expressed both in plain english and as executable SQL Statements. For more context on access rights, what they mean, and how they are used in this project, see `*/RBAC/overall_design.md`. 
 
-# "Read-Write" Access: Plain-Language Definition
+# "Read-Write" Schema Access: Plain-Language Definition
 
 - "Read-Write" access means you generally have the ability to read from or use existing objects, as well as create new objects, in a given schema.
 - As with all access on this Data Project, access is granted at the **schema level**. So, anyone with "Read-Write" access will have that acces in the context of a specific schema.
@@ -51,7 +51,7 @@ You may also apply any DDL or DML to any of the following objects:
 5. [Tags](https://docs.snowflake.com/en/user-guide/object-tagging)
 
 
-# "Read-Write" Access: SQL Definition
+# "Read-Write" Schema Access: SQL Definition
 
 ```
 USE ROLE USERADMIN;
