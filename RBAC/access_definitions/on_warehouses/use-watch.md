@@ -14,7 +14,7 @@ This document is meant to provide a clear definition of what "Use-Watch" access 
 
 
 
-# "Full" Schema Access: SQL Definition
+# "Use-Watch" Schema Access: SQL Definition
 
 ```
 USE ROLE SECURITYADMIN;
