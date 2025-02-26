@@ -8,7 +8,9 @@
 
 # Data Model
 
-As mentioned earlier, the rights given to each of the access roles we will use are *schema specific*. To give our schemas a regular structure across environments, we establish our **prototype schemas**. These will describe the naming and purpose for each schema that we will replicate across most environments. 
+Our data model consists of three simple schema. This schema-triplet will exist across multiple environments, and each environment will be held in a single database.
+
+When referring to these schema outside of the context of any specific environment, we refer to them as "Prototype schema".
 
 Our prototype schema are:
 
@@ -24,17 +26,18 @@ Our prototype schema are:
     - Model constructs (as persisted tables) are kept here
     - For kimball, this means your dimensions, facts, fact aggregates, and other entities like bridge/mapping tables are kept here
   
-Each of these schemas will exist in each environment. There is one environment per database.
 
-## Access rights for Prototype Schema
+## Access rights within a single Environment
 
-While our real schema will always exist in the context of an environment, it is simplest to demonstrate what access types apply to what role in which schema if we look at the prototype schemas. See figure 1, below:
+The below diagram depicts the typical architecture for environments like Dev, QA, and Prod. 
 
 ![Fig. 1: Access Types for all Functional Roles across Prototype Schema](https://github.com/sherlock-wings/snowflake_sandbox/blob/dev/RBAC/miro/functional_role_diagram.jpg)
 
+*Exceptions to this general architecture for specific environments such as Prod, Sandbox, etc. are detailed in further sections.
+
 
 # Project RBAC 
-This project will use Role-Based Access Control(RBAC) that mostly leverages [managed schema](https://docs.snowflake.com/en/user-guide/security-access-control-configure#label-managed-access-schemas) in Snowflake. 
+The above Role-access Control (RBAC) setup will be achieved with `GRANT` statements that leverage [managed schema](https://docs.snowflake.com/en/user-guide/security-access-control-configure#label-managed-access-schemas) in Snowflake. 
 
 ## Access Roles and their Types
 Grants on these managed schema will be given to one of three types of access roles. These types are
@@ -80,7 +83,24 @@ We use all the various access roles to sum together four functional roles, each 
   
 ### One `*_SYSADMIN` to own them all
 
-### 
+To consolidate high-level privileges for a single environment, we establish one final "persona" called `*_SYSADMIN`. This is analogous to the Snowflake system role called [`SYSADMIN`](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system), except that its permissions apply to a single environment. 
+
+Each environment will have such a role. This role will ultimately inherit:
+1. All the read, read-write, and full-access roles in the environment
+2. Ownership of the Warehouse dedicated to that environment
+
+To complete the inheritance cycle, all `*_SYSADMIN` roles are granted to the Snowflake-default `SYSADMIN` role.  
+
+## On Warehouses
+
+I try to keep the approach for warehouses as simple as possible. The only rules we follow on this project with respect to warehouses are:
+
+1. Warehouses should be sized appropriately.
+    - Anything bigger than an X-Small ought to have a documented justification for why the extra compute is necessary
+3. One warehouse per environment
+    - Warehouses are where most daily compute is spent. If you're spending money, you ought to know what environments are costing you the most
+    - Splitting Warehouses by enviornment achieves this 
+
 
 ## Environment Structure
 
@@ -131,16 +151,6 @@ While its tempting to think of "your sandbox" as a single object, your Sandbox i
 ### Populating the Sandbox
 
 This is never done manually. It is done by using a stored procedure (name TBD). The sproc works by cloning from a target environment (specified by the caller) and into the Sandbox. The sproc knows automatically to generate the schemas as clones, using the correct name. Also, it correctly "rebuilds" the RBAC so the schema is is usable as expected post-execution. 
-
-## On Warehouses
-
-I try to keep the approach for warehouses as simple as possible. The only rules we follow on this project with respect to warehouses are:
-
-1. Warehouses should be sized appropriately.
-    - Anything bigger than an X-Small ought to have a documented justification for why the extra compute is necessary
-3. One warehouse per environment
-    - Warehouses are where most daily compute is spent. If you're spending money, you ought to know what environments are costing you the most
-    - Splitting Warehouses by enviornment achieves this 
 
 # Environment Summary Diagram
 
