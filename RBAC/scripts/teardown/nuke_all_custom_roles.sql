@@ -15,11 +15,11 @@ use role securityadmin;
     -- R ARs
 drop role if exists util_sysadmin;
 drop role if exists util_engineer_fr;
-drop role if exists sherlock_wings_util_rw_ar;
-grant ownership on all tables in schema sherlock_wings.util to role securityadmin revoke current grants;
-grant ownership on all procedures in schema sherlock_wings.util to role securityadmin revoke current grants;
-grant ownership on schema sherlock_wings.util to role securityadmin revoke current grants;
-grant ownership on database sherlock_wings to role securityadmin revoke current grants;
+drop role if exists SHERLOCKWINGS_util_rw_ar;
+grant ownership on all tables in schema SHERLOCKWINGS.util to role securityadmin revoke current grants;
+grant ownership on all procedures in schema SHERLOCKWINGS.util to role securityadmin revoke current grants;
+grant ownership on schema SHERLOCKWINGS.util to role securityadmin revoke current grants;
+grant ownership on database SHERLOCKWINGS to role securityadmin revoke current grants;
 
 
 -- SANDBOX
