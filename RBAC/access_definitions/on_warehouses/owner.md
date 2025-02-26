@@ -18,8 +18,9 @@ This document is meant to provide a clear definition of what "Owner" access to a
 # "Owner" Schema Access: SQL Definition
 
 ```
+USE ROLE USERADMIN;
+CREATE ROLE IF NOT EXISTS <owner-access-role-name>;
 USE ROLE SECURITYADMIN;
-
-GRANT USAGE ON WAREHOUSE <warehouse-name> TO ROLE <use-watch-access-role-name>;
-GRANT MONITOR ON WAREHOUSE <warehouse-name> TO ROLE <use-watch-access-role-name>;
+GRANT OWNERSHIP ON WAREHOUSE <environment-warehouse-name> TO ROLE <owner-access-role-name>;
+GRANT ROLE <owner-access-role-name> TO ROLE <environment-sysadmin-role-name>;
 ```
