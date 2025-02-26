@@ -241,10 +241,10 @@ GRANT USAGE ON WAREHOUSE SHERLOCKWINGS_COMPUTE_WH TO ROLE SHERLOCKWINGS_COMPUTE_
 
 
 -- NAMED_DATABASE Functional Roles
-grant role sherlockwings_edw_db_util_rw_ar to role sherlockwings_engineer_fr;
-grant role sherlockwings_compute_wh_uw_ar          to role sherlockwings_engineer_fr;
-grant role sherlockwings_edw_db_util_full_ar    to role sherlockwings_admin_fr;
-grant role sherlockwings_compute_wh_o_ar           to role sherlockwings_admin_fr;
+grant role sherlockwings_edw_db_util_rw_ar   to role sherlockwings_engineer_fr;
+grant role sherlockwings_compute_wh_uw_ar    to role sherlockwings_engineer_fr;
+grant role sherlockwings_edw_db_util_full_ar to role sherlockwings_admin_fr;
+grant role sherlockwings_compute_wh_o_ar     to role sherlockwings_admin_fr;
 
 
 
@@ -306,10 +306,10 @@ GRANT USAGE ON DATABASE SANDBOX_EDW_DB TO ROLE SANDBOX_EDW_DB_FULL_AR;
 
 -- SANDBOX Warehouses
 USE ROLE USERADMIN;
-CREATE ROLE IF NOT EXISTS SANDBOX_COMPUTE_WH_U_AR;
-GRANT ROLE SANDBOX_COMPUTE_WH_U_AR TO ROLE SANDBOX_SYSADMIN;
+CREATE ROLE IF NOT EXISTS SANDBOX_COMPUTE_WH_O_AR;
 USE ROLE SECURITYADMIN;
-GRANT USAGE ON WAREHOUSE SANDBOX_COMPUTE_WH TO ROLE SANDBOX_COMPUTE_WH_U_AR;
+GRANT OWNERSHIP ON WAREHOUSE SANDBOX_COMPUTE_WH TO ROLE SANDBOX_COMPUTE_WH_O_AR;
+GRANT ROLE SANDBOX_COMPUTE_WH_O_AR TO ROLE SANDBOX_SYSADMIN;
 
 USE ROLE USERADMIN;
 CREATE ROLE IF NOT EXISTS SANDBOX_COMPUTE_WH_UW_AR;
@@ -319,17 +319,18 @@ GRANT USAGE ON WAREHOUSE SANDBOX_COMPUTE_WH TO ROLE SANDBOX_COMPUTE_WH_UW_AR;
 GRANT MONITOR ON WAREHOUSE SANDBOX_COMPUTE_WH TO ROLE SANDBOX_COMPUTE_WH_UW_AR;
 
 USE ROLE USERADMIN;
-CREATE ROLE IF NOT EXISTS SANDBOX_COMPUTE_WH_O_AR;
+CREATE ROLE IF NOT EXISTS SANDBOX_COMPUTE_WH_U_AR;
+GRANT ROLE SANDBOX_COMPUTE_WH_U_AR TO ROLE SANDBOX_SYSADMIN;
 USE ROLE SECURITYADMIN;
-GRANT OWNERSHIP ON WAREHOUSE SANDBOX_COMPUTE_WH TO ROLE SANDBOX_COMPUTE_WH_O_AR;
-GRANT ROLE SANDBOX_COMPUTE_WH_O_AR TO ROLE SANDBOX_SYSADMIN;
+GRANT USAGE ON WAREHOUSE SANDBOX_COMPUTE_WH TO ROLE SANDBOX_COMPUTE_WH_U_AR;
 
 
 -- SANDBOX Functional Roles
-grant role SANDBOX_edw_db_util_rw_ar to role SANDBOX_engineer_fr;
-grant role SANDBOX_wh_um_ar          to role SANDBOX_engineer_fr;
+grant role SANDBOX_edw_db_rw_ar      to role SANDBOX_engineer_fr;
+grant role SANDBOX_compute_wh_uw_ar  to role SANDBOX_engineer_fr;
 grant role SANDBOX_edw_db_full_ar    to role SANDBOX_admin_fr;
-grant role SANDBOX_wh_o_ar           to role SANDBOX_admin_fr;
+grant role SANDBOX_compute_wh_o_ar   to role SANDBOX_admin_fr;
+
 
 
 
