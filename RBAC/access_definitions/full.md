@@ -1,8 +1,8 @@
 # What is this document? 
 
-This document is meant to provide a clear definition of what "Full" access means in this data project. This definition will be expressed both in plain english and as executable SQL Statements. For more context on access rights, what they mean, and how they are used in this project, see `*/RBAC/overall_design.md`.
+This document is meant to provide a clear definition of what "Full" access to a schema means in this data project. This definition will be expressed both in plain english and as executable SQL Statements. For more context on access rights, what they mean, and how they are used in this project, see `*/RBAC/overall_design.md`.
 
-# "Full" Access: Plain-Language Definition
+# "Full" Schema Access: Plain-Language Definition
 
 - "Full" access means you generally have the ability to utilize all features that your Account Administrator has approved for usage
     - Note that this does not mean you can automatically do anything. You are only able to create a [Snowpipe](https://docs.snowflake.com/en/user-guide/data-load-snowpipe-intro) or [Iceberg table](https://docs.snowflake.com/en/user-guide/tables-iceberg), for example, if your Account Admin has already approved usage of these objects in general
@@ -54,7 +54,7 @@ For all of the below object types, you have `OWNERSHIP`. You may do any DDL or D
 
 
 
-# "Full" Access: SQL Definition
+# "Full" Schema Access: SQL Definition
 
 ```
 USE ROLE USERADMIN;
