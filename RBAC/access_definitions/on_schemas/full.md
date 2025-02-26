@@ -1,6 +1,6 @@
 # What is this document? 
 
-This document is meant to provide a clear definition of what "Full" access to a schema means in this data project. This definition will be expressed both in plain english and as executable SQL Statements. For more context on access rights, what they mean, and how they are used in this project, see `*/RBAC/overall_design.md`.
+This document is meant to provide a clear definition of what "Full" access to a schema means in this data project. This definition will be expressed both in plain english and as executable SQL Statements. For more context on access rights, what they mean, and how they are used in this project, see the project README.
 
 # "Full" Schema Access: Plain-Language Definition
 
