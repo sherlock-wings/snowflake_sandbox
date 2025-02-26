@@ -185,7 +185,7 @@ These details are summarized in Figure 3 below:
 
 ## Role Access by Environment
 
-***No** single functional role has uniform across all 5 enviornments!*
+***No** single functional role has uniform access across all 5 enviornments!*
 1. ANALYST does not need to read access to SANDBOX or UTIL since it is meant only for the consumption of business-data
 2. Personas used by humans (i.e. not `SVCTRANSFORMER`) who also generally get read-write access must **not** have any access in Prod for basic security reasons
     - That means no Prod-Facing ENGINEER or ADMIN functional roles    
