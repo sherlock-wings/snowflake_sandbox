@@ -1,8 +1,8 @@
 # What is this document? 
 
-This document is meant to provide a clear definition of what "Read" access means in this data project. This definition will be expressed both in plain english and as executable SQL Statements. For more context on access rights, what they mean, and how they are used in this project, see `*/RBAC/overall_design.md`.
+This document is meant to provide a clear definition of what "Read" access to a schema means in this data project. This definition will be expressed both in plain english and as executable SQL Statements. For more context on access rights, what they mean, and how they are used in this project, see `*/RBAC/overall_design.md`.
 
-# "Read" Access: SQL Definition
+# "Read" Schema Access: SQL Definition
 
 ```
 USE ROLE USERADMIN;
