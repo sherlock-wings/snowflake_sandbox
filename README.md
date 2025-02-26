@@ -1,10 +1,37 @@
 # Table of Contents 
 
-1. [Project RBAC](#project-rbac)
 2. [Data Model](#data-model)
+1. [Project RBAC](#project-rbac)
 3. [Environment Summary Diagram](#environment-summary-diagram)
 4. [Role Distribution by Enviornment](#role-distribution-by-environment)
 5. [Object Naming Conventions](#object-naming-conventions)
+
+# Data Model
+
+As mentioned earlier, the rights given to each of the access roles we will use are *schema specific*. To give our schemas a regular structure across environments, we establish our **prototype schemas**. These will describe the naming and purpose for each schema that we will replicate across most environments. 
+
+Our prototype schema are:
+
+1. `RAW`
+    - Here we will keep all of our source data
+    - Data should be as close to as it existed in the source system as possible
+    - Stages and other ingestion constructs (pipes, streams, etc) will be kept here as well
+3. `STAGE`
+    - Light-touch transforms on source data, (usually) instantiated as views
+    - Intermediate persisted tables & views
+5. `MODEL`
+    - Reporting parent layer
+    - Model constructs (as persisted tables) are kept here
+    - For kimball, this means your dimensions, facts, fact aggregates, and other entities like bridge/mapping tables are kept here
+  
+Each of these schemas will exist in each environment. There is one environment per database.
+
+## Access rights for Prototype Schema
+
+While our real schema will always exist in the context of an environment, it is simplest to demonstrate what access types apply to what role in which schema if we look at the prototype schemas. See figure 1, below:
+
+![Fig. 1: Access Types for all Functional Roles across Prototype Schema](https://github.com/sherlock-wings/snowflake_sandbox/blob/dev/RBAC/miro/functional_role_diagram.jpg)
+
 
 # Project RBAC 
 This project will use Role-Based Access Control(RBAC) that mostly leverages [managed schema](https://docs.snowflake.com/en/user-guide/security-access-control-configure#label-managed-access-schemas) in Snowflake. 
@@ -54,32 +81,6 @@ We use all the various access roles to sum together four functional roles, each 
 ### One `*_SYSADMIN` to own them all
 
 ### 
-
-# Data Model
-
-As mentioned earlier, the rights given to each of the access roles we will use are *schema specific*. To give our schemas a regular structure across environments, we establish our **prototype schemas**. These will describe the naming and purpose for each schema that we will replicate across most environments. 
-
-Our prototype schema are:
-
-1. `RAW`
-    - Here we will keep all of our source data
-    - Data should be as close to as it existed in the source system as possible
-    - Stages and other ingestion constructs (pipes, streams, etc) will be kept here as well
-3. `STAGE`
-    - Light-touch transforms on source data, (usually) instantiated as views
-    - Intermediate persisted tables & views
-5. `MODEL`
-    - Reporting parent layer
-    - Model constructs (as persisted tables) are kept here
-    - For kimball, this means your dimensions, facts, fact aggregates, and other entities like bridge/mapping tables are kept here
-  
-Each of these schemas will exist in each environment. There is one environment per database.
-
-## Access rights for Prototype Schema
-
-While our real schema will always exist in the context of an environment, it is simplest to demonstrate what access types apply to what role in which schema if we look at the prototype schemas. See figure 1, below:
-
-![Fig. 1: Access Types for all Functional Roles across Prototype Schema](https://github.com/sherlock-wings/snowflake_sandbox/blob/dev/RBAC/miro/functional_role_diagram.jpg)
 
 ## Environment Structure
 
