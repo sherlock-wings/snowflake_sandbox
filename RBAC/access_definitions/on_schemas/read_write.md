@@ -69,10 +69,6 @@ GRANT USAGE ON DATABASE SHERLOCKWINGS_EDW_DB TO ROLE <read-write-access-role-nam
 GRANT USAGE ON SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
 GRANT CREATE TABLE ON SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
 GRANT CREATE VIEW ON SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
-
--- No privs to run this on my bozo free account!  ( ﾟ，_ゝ｀)
--- GRANT CREATE MATERIALIZED VIEW ON SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
-
 GRANT CREATE SEQUENCE ON SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
 GRANT CREATE STAGE ON SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
 GRANT CREATE FILE FORMAT ON SCHEMA <schema-name> TO ROLE <read-write-access-role-name>;
