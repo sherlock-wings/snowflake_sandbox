@@ -284,6 +284,7 @@ GRANT USAGE ON WAREHOUSE SHERLOCKWINGS_COMPUTE_WH TO ROLE SHERLOCKWINGS_COMPUTE_
 
 
 -- NAMED_DATABASE Functional Roles
+grant role sherlockwings_compute_wh_u_ar     to role securityadmin;
 grant role sherlockwings_edw_db_util_rw_ar   to role sherlockwings_engineer_fr;
 grant role sherlockwings_compute_wh_uw_ar    to role sherlockwings_engineer_fr;
 grant role sherlockwings_edw_db_util_full_ar to role sherlockwings_admin_fr;
