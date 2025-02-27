@@ -1,11 +1,26 @@
-USE ROLE USERADMIN;
-
 ---
 --- NAMED_DATABASE Environment
 ---
- 
+
+/*
+Independent of the Read/Read-Write/Full access roles, I need to give SECURITYADMIN some access 
+to the NAMED_DATABASE.UTIL schema. This is because this schema will be used to hold the 
+Clone-to-Lower-Env sproc. That sproc needs to execute all kinds of grants, and the 
+SECURITYADMIN role is the best role to do that.
+
+This will be an "Execute as Owner" sproc.
+*/
+use role securityadmin;
+
+grant usage on database sherlockwings_edw_db to role securityadmin;
+grant usage on schema sherlockwings_edw_db.util to role securityadmin;
+grant usage on all procedures in schema sherlockwings_edw_db.util to role securityadmin;
+grant usage on future procedures in schema sherlockwings_edw_db.util to role securityadmin;
+
   -- Schema-based ARs
     -- Read access role
+
+USE ROLE USERADMIN;
 
 -- Instantiate role and the environment SYSADMIN's inheritance of it
 CREATE ROLE IF NOT EXISTS SHERLOCKWINGS_EDW_DB_UTIL_R_AR;
