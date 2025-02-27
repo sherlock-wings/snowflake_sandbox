@@ -69,6 +69,15 @@ USE ROLE SECURITYADMIN;
 -- Schema access
 GRANT USAGE ON DATABASE <database_name> TO ROLE <full_access_role_name>;
 GRANT USAGE ON SCHEMA <schema_name> TO ROLE <full_access_role_name>;
+GRANT CREATE TABLE ON SCHEMA <schema-name> TO ROLE <full_access_role_name>;
+GRANT CREATE VIEW ON SCHEMA <schema-name> TO ROLE <full_access_role_name>;
+GRANT CREATE SEQUENCE ON SCHEMA <schema-name> TO ROLE <full_access_role_name>;
+GRANT CREATE STAGE ON SCHEMA <schema-name> TO ROLE <full_access_role_name>;
+GRANT CREATE FILE FORMAT ON SCHEMA <schema-name> TO ROLE <full_access_role_name>;
+GRANT CREATE STREAM ON SCHEMA <schema-name> TO ROLE <full_access_role_name>;
+GRANT CREATE PROCEDURE ON SCHEMA <schema-name> TO ROLE <full_access_role_name>;
+GRANT CREATE FUNCTION ON SCHEMA <schema-name> TO ROLE <full_access_role_name>;
+GRANT CREATE TASK ON SCHEMA <schema-name> TO ROLE <full_access_role_name>;
 
 -- Table access
 GRANT OWNERSHIP ON ALL TABLES IN SCHEMA <schema_name> TO ROLE <full_access_role_name> COPY CURRENT GRANTS;
