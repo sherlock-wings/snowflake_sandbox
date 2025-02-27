@@ -1,5 +1,5 @@
 ,,,,,,,,
-command_id,command_ordinal,command_text,access_type,first_time_command_setup_ind,created_at_timestamp,created_by_user,updated_at_timestamp,updated_by_user
+command_id,command_ordinal,command_text,access_type,first_time_setup_ind,created_at_timestamp,created_by_user,updated_at_timestamp,updated_by_user
 POST_CREATE_UPDATE,1,CREATE ROLE IF NOT EXISTS <read-access-role-name>;,READ,TRUE,,,,
 POST_CREATE_UPDATE,2,GRANT ROLE <read-access-role-name> TO ROLE <environment-sysadmin-role-name>;,READ,TRUE,,,,
 POST_CREATE_UPDATE,3,USE ROLE SECURITYADMIN;,READ,TRUE,,,,
