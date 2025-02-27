@@ -31,7 +31,7 @@ Our prototype schema are:
 
 The below diagram depicts the typical architecture for environments like Dev, QA, and Prod. 
 
-![Fig. 1: Access Types for all Functional Roles across Prototype Schema](/RBAC/miro/structure_within_an_environment.jpg)
+![Fig. 1: Access Types for all Functional Roles across Prototype Schema](feature/proper_clone_sprocs/RBAC/miro/structure_within_an_environment.jpg)
 
 *Exceptions to this general architecture for specific environments such as Prod, Sandbox, etc. are detailed in further sections. The above architecture is most accurate for the Dev and QA Environments. 
 
