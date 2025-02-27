@@ -7,5 +7,5 @@ FIELD_DELIMITER  = ','
 skip_header = 1
 null_if = ('NULL', 'null')
 empty_field_as_null = true
-compression = gzip
+compression = 'none'
 field_optionally_enclosed_by = '"';
