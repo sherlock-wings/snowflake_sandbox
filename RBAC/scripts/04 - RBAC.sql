@@ -16,6 +16,7 @@ grant usage on database sherlockwings_edw_db to role securityadmin;
 grant usage on schema sherlockwings_edw_db.util to role securityadmin;
 grant usage on all procedures in schema sherlockwings_edw_db.util to role securityadmin;
 grant usage on future procedures in schema sherlockwings_edw_db.util to role securityadmin;
+grant create procedure on schema sherlockwings_edw_db.util tol role securityadmin;
 
   -- Schema-based ARs
     -- Read access role
