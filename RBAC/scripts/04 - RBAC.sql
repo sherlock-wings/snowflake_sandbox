@@ -1088,20 +1088,23 @@ GRANT USAGE ON WAREHOUSE DEV_COMPUTE_WH TO ROLE DEV_COMPUTE_WH_U_AR;
 grant role dev_edw_db_raw_r_ar      to role dev_analyst_fr;
 grant role dev_edw_db_stage_r_ar    to role dev_analyst_fr;
 grant role dev_edw_db_model_r_ar    to role dev_analyst_fr;
+grant role dev_compute_wh_u_ar      to role dev_analyst_fr;
 
 grant role dev_edw_db_raw_rw_ar     to role dev_engineer_fr;
 grant role dev_edw_db_stage_rw_ar   to role dev_engineer_fr;
 grant role dev_edw_db_model_rw_ar   to role dev_engineer_fr;
+grant role dev_compute_wh_uw_ar      to role dev_engineer_fr;
 
 grant role dev_edw_db_raw_rw_ar     to role dev_svctransform_fr;
 grant role dev_edw_db_stage_rw_ar   to role dev_svctransform_fr;
 grant role dev_edw_db_model_rw_ar   to role dev_svctransform_fr;
+grant role dev_compute_wh_uw_ar      to role dev_svctransform_fr;
 
 grant role dev_edw_db_raw_full_ar   to role dev_admin_fr;
 grant role dev_edw_db_stage_full_ar to role dev_admin_fr;
 grant role dev_edw_db_model_full_ar to role dev_admin_fr;
-
-
+grant role dev_compute_wh_o_ar      to role dev_admin_fr;
+ 
 -- Readups for UTIL and SANDBOX engineers
 grant role dev_edw_db_raw_r_ar   to role sherlockwings_engineer_fr;
 grant role dev_edw_db_stage_r_ar to role sherlockwings_engineer_fr;
@@ -1851,19 +1854,22 @@ GRANT USAGE ON WAREHOUSE QA_COMPUTE_WH TO ROLE QA_COMPUTE_WH_U_AR;
 grant role QA_edw_db_raw_r_ar      to role QA_analyst_fr;
 grant role QA_edw_db_stage_r_ar    to role QA_analyst_fr;
 grant role QA_edw_db_model_r_ar    to role QA_analyst_fr;
+grant role qa_compute_wh_u_ar      to role qa_analyst_fr;
 
 grant role QA_edw_db_raw_rw_ar     to role QA_engineer_fr;
 grant role QA_edw_db_stage_rw_ar   to role QA_engineer_fr;
 grant role QA_edw_db_model_rw_ar   to role QA_engineer_fr;
+grant role qa_compute_wh_uw_ar     to role QA_engineer_fr;
 
 grant role QA_edw_db_raw_rw_ar     to role QA_svctransform_fr;
 grant role QA_edw_db_stage_rw_ar   to role QA_svctransform_fr;
 grant role QA_edw_db_model_rw_ar   to role QA_svctransform_fr;
+grant role qa_compute_wh_uw_ar      to role QA_svctransform_fr;
 
 grant role QA_edw_db_raw_full_ar   to role QA_admin_fr;
 grant role QA_edw_db_stage_full_ar to role QA_admin_fr;
 grant role QA_edw_db_model_full_ar to role QA_admin_fr;
-
+grant role qa_compute_wh_o_ar      to role QA_admin_fr;
 
 -- Readups for UTIL and SANDBOX engineers
 grant role qa_edw_db_raw_r_ar   to role sherlockwings_engineer_fr;
@@ -2620,10 +2626,12 @@ GRANT USAGE ON WAREHOUSE PROD_COMPUTE_WH TO ROLE PROD_COMPUTE_WH_U_AR;
 grant role PROD_edw_db_raw_r_ar      to role PROD_analyst_fr;
 grant role PROD_edw_db_stage_r_ar    to role PROD_analyst_fr;
 grant role PROD_edw_db_model_r_ar    to role PROD_analyst_fr;
+grant role prod_compute_wh_u_ar      to role prod_analyst_fr;
 
 grant role PROD_edw_db_raw_rw_ar     to role PROD_svctransform_fr;
 grant role PROD_edw_db_stage_rw_ar   to role PROD_svctransform_fr;
 grant role PROD_edw_db_model_rw_ar   to role PROD_svctransform_fr;
+grant role prod_compute_wh_u_ar      to role PROD_svctransform_fr;
 
 
 -- Readups for UTIL and SANDBOX engineers
