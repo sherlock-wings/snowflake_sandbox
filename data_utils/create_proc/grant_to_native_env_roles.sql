@@ -1,4 +1,4 @@
-use role sherlockwings_admin_fr;
+use role securityadmin;
 use warehouse sherlockwings_compute_wh;
 use schema sherlockwings_edw_db.util;
 
