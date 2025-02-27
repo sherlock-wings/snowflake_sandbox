@@ -290,6 +290,7 @@ grant role sherlockwings_edw_db_util_rw_ar   to role sherlockwings_engineer_fr;
 grant role sherlockwings_compute_wh_uw_ar    to role sherlockwings_engineer_fr;
 grant role sherlockwings_edw_db_util_full_ar to role sherlockwings_admin_fr;
 grant role sherlockwings_compute_wh_o_ar     to role sherlockwings_admin_fr;
+grant role sherlockwings_admin_fr            to role securityadmin; -- This is so SecurityAdmin can invoke the Clone-to-Sandbox sproc
 
 
 
