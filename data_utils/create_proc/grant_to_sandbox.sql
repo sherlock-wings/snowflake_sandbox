@@ -51,4 +51,4 @@ $$
 ;
 
 -- example call
--- call grant_to_native_env_roles('SANDBOX_EDW_DB.RAW');
+-- call grant_to_sandbox('SANDBOX_EDW_DB.RAW');
