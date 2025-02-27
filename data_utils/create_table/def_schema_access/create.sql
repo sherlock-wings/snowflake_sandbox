@@ -2,7 +2,7 @@ use role sherlockwings_admin_fr;
 use warehouse sherlockwings_compute_wh;
 use schema sherlockwings_edw_db.util;
 
-create or replace table def_schema_read (
+create or replace table def_schema_access_read (
  command_id varchar(40)
 ,command_ordinal number(10)
 ,command_text varchar(1000)
@@ -15,8 +15,8 @@ create or replace table def_schema_read (
 );
 
 
-create or replace table def_schema_readwrite like def_schema_read;
-create or replace table def_schema_full like def_schema_read;
+create or replace table def_schema_access_readwrite like def_schema_access_read;
+create or replace table def_schema_access_full like def_schema_access_read;
 
 
 /* STOP SCRIPT HERE. UPLOAD DATA FROM CSV. 
@@ -28,19 +28,21 @@ create or replace table def_schema_full like def_schema_read;
 
 
 
--- update def_schema_read
+-- update def_schema_access_read
 -- set command_id = sha1(command_text)
 --    ,created_at_timestamp = current_timestamp()
 --    ,created_by_user = current_user();
 
 
--- update def_schema_readwrite
+-- update def_schema_access_readwrite
 -- set command_id = sha1(command_text)
 --    ,created_at_timestamp = current_timestamp()
 --    ,created_by_user = current_user();
 
    
--- update def_schema_full
+-- update def_schema_access_full
 -- set command_id = sha1(command_text)
 --    ,created_at_timestamp = current_timestamp()
---    ,created_by_user = current_user();
+--    ,created_by_user = current_user();.
+
+-- select * from def_schema_access_full limit 10;
