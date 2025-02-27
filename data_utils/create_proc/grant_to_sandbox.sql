@@ -2,7 +2,7 @@ use role securityadmin;
 use warehouse sherlockwings_compute_wh;
 use schema sherlockwings_edw_db.util;
 
-create or replace procedure sherlockwings_edw_db.util.grant_to_native_env_roles(SCHEMA_NAME varchar)
+create or replace procedure sherlockwings_edw_db.util.grant_to_sandbox(SCHEMA_NAME varchar)
 returns varchar
 language javascript
 execute as owner
