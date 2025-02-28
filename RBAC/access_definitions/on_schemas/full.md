@@ -61,68 +61,98 @@ For all of the below object types, you have `OWNERSHIP`. You may do any DDL or D
 USE ROLE USERADMIN;
 
 -- Instantiate role and the environment SYSADMIN's inheritance of it
-CREATE ROLE IF NOT EXISTS <full_access_role_name>;
-GRANT ROLE <full_access_role_name> TO ROLE <environment-sysadmin-role-name>;
+CREATE ROLE IF NOT EXISTS <full-access-role-name>;
+GRANT ROLE <full-access-role-name> TO ROLE <environment-sysadmin-role-name>;
 
 USE ROLE SECURITYADMIN;
 
 -- Schema access
-GRANT USAGE ON DATABASE <database_name> TO ROLE <full_access_role_name>;
-GRANT USAGE ON SCHEMA <schema_name> TO ROLE <full_access_role_name>;
+GRANT USAGE ON DATABASE SHERLOCKWINGS_EDW_DB TO ROLE <full-access-role-name>;
+GRANT USAGE ON SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT CREATE TABLE ON SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT CREATE VIEW ON SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT CREATE SEQUENCE ON SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT CREATE STAGE ON SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT CREATE FILE FORMAT ON SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT CREATE STREAM ON SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT CREATE PROCEDURE ON SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT CREATE FUNCTION ON SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT CREATE TASK ON SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+
 
 -- Table access
-GRANT OWNERSHIP ON ALL TABLES IN SCHEMA <schema_name> TO ROLE <full_access_role_name> COPY CURRENT GRANTS;
-GRANT OWNERSHIP ON FUTURE TABLES IN SCHEMA <schema_name> TO ROLE <full_access_role_name>;
-GRANT INSERT ON ALL TABLES IN SCHEMA <schema_name> TO ROLE <full_access_role_name>;
-GRANT UPDATE ON ALL TABLES IN SCHEMA <schema_name> TO ROLE <full_access_role_name>;
-GRANT DELETE ON ALL TABLES IN SCHEMA <schema_name> TO ROLE <full_access_role_name>;
-GRANT REFERENCES ON ALL TABLES IN SCHEMA <schema_name> TO ROLE <full_access_role_name>;
-GRANT INSERT ON FUTURE TABLES IN SCHEMA <schema_name> TO ROLE <full_access_role_name>;
-GRANT UPDATE ON FUTURE TABLES IN SCHEMA <schema_name> TO ROLE <full_access_role_name>;
-GRANT DELETE ON FUTURE TABLES IN SCHEMA <schema_name> TO ROLE <full_access_role_name>;
-GRANT REFERENCES ON FUTURE TABLES IN SCHEMA <schema_name> TO ROLE <full_access_role_name>;
-
+GRANT OWNERSHIP ON ALL TABLES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT OWNERSHIP ON FUTURE TABLES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT CREATE TABLE ON SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT SELECT ON ALL TABLES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT SELECT ON FUTURE TABLES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT INSERT ON ALL TABLES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT UPDATE ON ALL TABLES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT DELETE ON ALL TABLES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT REFERENCES ON ALL TABLES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT INSERT ON FUTURE TABLES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT UPDATE ON FUTURE TABLES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT DELETE ON FUTURE TABLES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT REFERENCES ON FUTURE TABLES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
 
 -- View access
-GRANT OWNERSHIP ON ALL VIEWS IN SCHEMA <schema_name> TO ROLE <full_access_role_name> COPY CURRENT GRANTS;
-GRANT OWNERSHIP ON FUTURE VIEWS IN SCHEMA <schema_name> TO ROLE <full_access_role_name>;
-GRANT OWNERSHIP ON ALL MATERIALIZED VIEWS IN SCHEMA <schema_name> TO ROLE <full_access_role_name> COPY CURRENT GRANTS;
-GRANT OWNERSHIP ON FUTURE MATERIALIZED VIEWS IN SCHEMA <schema_name> TO ROLE <full_access_role_name>;
-
+GRANT OWNERSHIP ON ALL VIEWS IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT OWNERSHIP ON FUTURE VIEWS IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT SELECT ON ALL VIEWS IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT SELECT ON FUTURE VIEWS IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
 
 -- Sequence access
-GRANT OWNERSHIP ON ALL SEQUENCES IN SCHEMA <schema_name> TO ROLE <full_access_role_name> COPY CURRENT GRANTS;
-GRANT OWNERSHIP ON FUTURE SEQUENCES IN SCHEMA <schema_name> TO ROLE <full_access_role_name>;
+GRANT OWNERSHIP ON ALL SEQUENCES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT OWNERSHIP ON FUTURE SEQUENCES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT USAGE ON FUTURE SEQUENCES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
 
 -- Stage access
-GRANT OWNERSHIP ON ALL STAGES IN SCHEMA <schema_name> TO ROLE <full_access_role_name> COPY CURRENT GRANTS;
-GRANT OWNERSHIP ON FUTURE STAGES IN SCHEMA <schema_name> TO ROLE <full_access_role_name>;
-GRANT WRITE ON FUTURE STAGES IN SCHEMA <schema_name> TO ROLE <full_access_role_name>;
-GRANT WRITE ON ALL STAGES IN SCHEMA <schema_name> TO ROLE <full_access_role_name>;
+GRANT OWNERSHIP ON ALL STAGES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT OWNERSHIP ON FUTURE STAGES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT USAGE ON ALL STAGES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT READ ON ALL STAGES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT USAGE ON FUTURE STAGES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT READ ON FUTURE STAGES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT WRITE ON FUTURE STAGES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT WRITE ON ALL STAGES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+
 
 -- File format access
-GRANT OWNERSHIP ON ALL FILE FORMATS IN SCHEMA <schema_name> TO ROLE <full_access_role_name> COPY CURRENT GRANTS;
-GRANT OWNERSHIP ON FUTURE FILE FORMATS IN SCHEMA <schema_name> TO ROLE <full_access_role_name>;
+GRANT OWNERSHIP ON ALL FILE FORMATS IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT OWNERSHIP ON FUTURE FILE FORMATS IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT USAGE ON ALL FILE FORMATS IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT USAGE ON FUTURE FILE FORMATS IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
 
 -- Stream access
-GRANT OWNERSHIP ON ALL STREAMS IN SCHEMA <schema_name> TO ROLE <full_access_role_name> COPY CURRENT GRANTS;
-GRANT OWNERSHIP ON FUTURE STREAMS IN SCHEMA <schema_name> TO ROLE <full_access_role_name>;
+GRANT OWNERSHIP ON ALL STREAMS IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT OWNERSHIP ON FUTURE STREAMS IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT SELECT ON ALL STREAMS IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT SELECT ON FUTURE STREAMS IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
 
 -- Sproc access
-GRANT OWNERSHIP ON ALL PROCEDURES IN SCHEMA <schema_name> TO ROLE <full_access_role_name> COPY CURRENT GRANTS;
-GRANT OWNERSHIP ON FUTURE PROCEDURES IN SCHEMA <schema_name> TO ROLE <full_access_role_name>;
+GRANT OWNERSHIP ON ALL PROCEDURES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT OWNERSHIP ON FUTURE PROCEDURES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT USAGE ON ALL PROCEDURES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT USAGE ON FUTURE PROCEDURES IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
 
--- UDF Access
-GRANT OWNERSHIP ON ALL FUNCTIONS IN SCHEMA <schema_name> TO ROLE <full_access_role_name> COPY CURRENT GRANTS;
-GRANT OWNERSHIP ON FUTURE FUNCTIONS IN SCHEMA <schema_name> TO ROLE <full_access_role_name>;
+-- UDF access
+GRANT OWNERSHIP ON ALL FUNCTIONS IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT OWNERSHIP ON FUTURE FUNCTIONS IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT USAGE ON ALL FUNCTIONS IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT USAGE ON FUTURE FUNCTIONS IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
 
--- Task access
-GRANT OWNERSHIP ON ALL TASKS IN SCHEMA <schema_name> TO ROLE <full_access_role_name> COPY CURRENT GRANTS;
-GRANT OWNERSHIP ON FUTURE TASKS IN SCHEMA <schema_name> TO ROLE <full_access_role_name>;
-GRANT MONITOR ON ALL TASKS IN SCHEMA <schema_name> TO ROLE <full_access_role_name>;
-GRANT OPERATE ON ALL TASKS IN SCHEMA <schema_name> TO ROLE <full_access_role_name>;
-GRANT MONITOR ON FUTURE TASKS IN SCHEMA <schema_name> TO ROLE <full_access_role_name>;
-GRANT OPERATE ON FUTURE TASKS IN SCHEMA <schema_name> TO ROLE <full_access_role_name>;
-GRANT MONITOR ON FUTURE TASKS IN SCHEMA <schema_name> TO ROLE <full_access_role_name>;
-GRANT OPERATE ON FUTURE TASKS IN SCHEMA <schema_name> TO ROLE <full_access_role_name>;
+-- Materialized view access
+GRANT OWNERSHIP ON ALL MATERIALIZED VIEWS IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT OWNERSHIP ON FUTURE MATERIALIZED VIEWS IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT SELECT ON ALL MATERIALIZED VIEWS IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT SELECT ON FUTURE MATERIALIZED VIEWS IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+
+-- Task Access
+GRANT OWNERSHIP ON ALL TASKS IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT OWNERSHIP ON FUTURE TASKS IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT MONITOR ON ALL TASKS IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT OPERATE ON ALL TASKS IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT MONITOR ON FUTURE TASKS IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
+GRANT OPERATE ON FUTURE TASKS IN SCHEMA <schema-name> TO ROLE <full-access-role-name>;
 ```

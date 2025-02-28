@@ -31,9 +31,9 @@ Our prototype schema are:
 
 The below diagram depicts the typical architecture for environments like Dev, QA, and Prod. 
 
-![Fig. 1: Access Types for all Functional Roles across Prototype Schema](https://github.com/sherlock-wings/snowflake_sandbox/blob/dev/RBAC/miro/structure_within_an_environment.jpg)
+![Fig. 1: Access Types for all Functional Roles across Prototype Schema](https://github.com/sherlock-wings/snowflake_sandbox/blob/feature/proper_clone_sprocs/RBAC/miro/structure_within_an_environment.jpg)
 
-*Exceptions to this general architecture for specific environments such as Prod, Sandbox, etc. are detailed in further sections.
+*Exceptions to this general architecture for specific environments such as Prod, Sandbox, etc. are detailed in further sections. The above architecture is most accurate for the Dev and QA Environments. 
 
 
 # Project RBAC 
@@ -173,7 +173,7 @@ This is never done manually. It is done by using a stored procedure (name TBD). 
 
 For a summary of how the roles, schemas, and environments discussed above all work together, see Figure 2 below:
 
-![Fig 2. Environment Summary Diagram](https://github.com/sherlock-wings/snowflake_sandbox/blob/dev/RBAC/miro/structure_between_environments.jpg)
+![Fig 2. Environment Summary Diagram](/RBAC/miro/structure_between_environments.jpg)
 
 # Role Distribution by Enviornment
 
@@ -181,7 +181,7 @@ Supporting this architecture the right way means that the role for a given perso
 
 These details are summarized in Figure 3 below:
 
-![Fig 3. Role Distribution across Environments](https://github.com/sherlock-wings/snowflake_sandbox/blob/dev/RBAC/miro/roles_across_environments.jpg)
+![Fig 3. Role Distribution across Environments](/RBAC/miro/roles_across_environments.jpg)
 
 ## Role Access by Environment
 
