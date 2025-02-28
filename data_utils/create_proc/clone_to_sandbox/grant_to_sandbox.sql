@@ -1,7 +1,7 @@
 create or replace procedure sherlockwings_edw_db.util.grant_to_sandbox(TARGET_SCHEMA varchar)
 returns variant
 language javascript
-execute as caller 
+execute as owner 
 as
 $$
 var query_counter = 0;
