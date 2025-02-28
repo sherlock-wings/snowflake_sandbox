@@ -4,7 +4,7 @@ use warehouse sherlockwings_compute_wh;
 create or replace procedure sherlockwings_edw_db.util.revoke_current_access(SOURCE_SCHEMA varchar, TARGET_SCHEMA varchar)
 returns variant
 language javascript
-execute as caller 
+execute as owner 
 as
 $$
 var query_counter = 0;
