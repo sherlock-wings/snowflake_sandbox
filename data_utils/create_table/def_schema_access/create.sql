@@ -43,6 +43,6 @@ create or replace table def_schema_access_full like def_schema_access_read;
 -- update def_schema_access_full
 -- set command_id = sha1(command_text)
 --    ,created_at_timestamp = current_timestamp()
---    ,created_by_user = current_user();.
+--    ,created_by_user = current_user();
 
 -- select * from def_schema_access_full limit 10;
