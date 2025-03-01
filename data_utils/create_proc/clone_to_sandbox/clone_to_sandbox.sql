@@ -1,3 +1,11 @@
+use role sandbox_sysadmin;
+
+create or replace procedure sandbox_edw_db.util.clone_to_sandbox(SOURCE_ENVIRONMENT varchar)
+returns variant
+language javascript
+execute as owner 
+as
+$$
 // Validate input arg
 var input_env = SOURCE_ENVIRONMENT.replace(' ', '').toUpperCase();
 var allowed_envs = ['DEV', 'QA', 'PROD'];
@@ -14,7 +22,7 @@ var qry = snowflake.createStatement({sqlText:get_schemas});
 try {
     var res = qry.execute();
     query_counter += 1;
-    snowflake.setSpanAttribute("query"+query_counter.padStart(4, '0'), qry.getSqlText()); // log all queries executed via telemetry
+    snowflake.setSpanAttribute("query"+query_counter, qry.getSqlText()); // log all queries executed via telemetry
 }
 catch (err) {
     return "Failed executing statement `"+qry.getSqlText()+"`. Error message: `" + err + "`";
@@ -31,7 +39,7 @@ var qry = snowflake.createStatement({sqlText:get_user});
 try {
     var res = qry.execute();
     query_counter += 1;
-    snowflake.setSpanAttribute("query"+query_counter.padStart(4, '0'), qry.getSqlText()); 
+    snowflake.setSpanAttribute("query"+query_counter, qry.getSqlText()); 
 }
 catch (err) {
     return "Failed executing statement `"+qry.getSqlText()+"`. Error message: `" + err + "`";
@@ -58,35 +66,52 @@ for (let i = 0; i < schema_ls.length; i++) {
     try {
         qry.execute();
         query_counter += 1;
-        snowflake.setSpanAttribute("query"+query_counter.padStart(4, '0'), qry.getSqlText()); 
+        snowflake.setSpanAttribute("query"+query_counter, qry.getSqlText()); 
     }
     catch (err) {
         return "Failed executing statement `"+qry.getSqlText()+"`. Error message: `" + err + "`";
     }
 
     // CHILD SPROC CALL: revoke src rbac 
-    var remove_old_grants = "call sherlockwings_edw_db.util.revoke_current_access('"+db_name+"."+schema_ls[i]+"', 'SANDBOX_EDW_DB."+schema_ls[i]+"');"
+    var target_schema = 'SANDBOX_EDW_DB.'+current_user+'_'+schema_ls[i];
+    var source_schema = db_name+'.'+schema_ls[i];
+    var remove_old_grants = "call sherlockwings_edw_db.util.revoke_current_access('"+source_schema+"', '"+target_schema+"');"
+    
     var qry = snowflake.createStatement({sqlText:remove_old_grants});
     try {
-        qry.execute();
+        res = qry.execute();
         query_counter += 1;
-        snowflake.setSpanAttribute("query"+query_counter.padStart(4, '0'), qry.getSqlText()); 
+        snowflake.setSpanAttribute("query"+query_counter, qry.getSqlText()); 
     }
     catch (err) {
         return "Failed executing statement `"+qry.getSqlText()+"`. Error message: `" + err + "`";
     }
-
+    
+    res.next();
+    var msg = res.getColumnValue(1).split(' ')[0];
+    if ( msg != 'Successfully') {
+        return "Error encountered during execution of procedure REVOKE_CURRENT_ACCESS. Error message: `"+res.getColumnValue(1)+"`";
+    }
+    
     // CHILD SPROC CALL: apply tgt rbac
-    var apply_new_grants = "call sherlockwings_edw_db.util.grant_to_sandbox('SANDBOX_EDW_DB."+schema_ls[i]+"');"
+    var apply_new_grants = "call sherlockwings_edw_db.util.grant_to_sandbox('"+target_schema+"');"
     var qry = snowflake.createStatement({sqlText:apply_new_grants});
     try {
         var res = qry.execute();
         query_counter += 1;
-        snowflake.setSpanAttribute("query"+query_counter.padStart(4, '0'), qry.getSqlText()); 
+        snowflake.setSpanAttribute("query"+query_counter, qry.getSqlText()); 
     }
     catch (err) {
-        return "Failed executing statement `"+qry.getSqlText()+"`. Error message: `" + err + "`";
+        return "Failed executing statement `"+qry.getSqlText()+"`. Error message: `+ " + err + "`";
     }
+    res.next();
+    var msg = res.getColumnValue(1).split(' ')[0];
+    if ( msg != 'Successfully') {
+        return "Error encountered during execution of procedure GRANT_TO_SANDBOX. Error message: `"+res.getColumnValue(1)+"`";
+    }
+    
 }
 
 return "Successfully cloned " + schema_ls + " schema from " + SOURCE_ENVIRONMENT + " to " + current_user + "'s Sandbox and transferred all access rights."
+$$
+;
