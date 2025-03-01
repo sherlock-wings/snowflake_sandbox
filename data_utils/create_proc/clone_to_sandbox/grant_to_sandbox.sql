@@ -1,3 +1,5 @@
+use role securityadmin;
+
 create or replace procedure sherlockwings_edw_db.util.grant_to_sandbox(TARGET_SCHEMA varchar)
 returns variant
 language javascript
