@@ -115,3 +115,5 @@ for (let i = 0; i < schema_ls.length; i++) {
 return "Successfully cloned " + schema_ls + " schema from " + SOURCE_ENVIRONMENT + " to " + current_user + "'s Sandbox and transferred all access rights."
 $$
 ;
+
+grant usage on procedure sandbox_edw_db.util.clone_to_sandbox(varchar) to role sandbox_engineer_fr;
