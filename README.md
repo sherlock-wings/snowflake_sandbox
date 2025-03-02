@@ -33,7 +33,7 @@ The below diagram depicts the typical architecture for environments like Dev, QA
 
 ![Fig. 1: Access Types for all Functional Roles across Prototype Schema](https://github.com/sherlock-wings/snowflake_sandbox/blob/dev/RBAC/miro/structure_within_an_environment.jpg)
 
-*Exceptions to this general architecture for specific environments such as Prod, Sandbox, etc. are detailed in further sections.
+*Exceptions to this general architecture for specific environments such as Prod, Sandbox, etc. are detailed in further sections. The above architecture is most accurate for the Dev and QA Environments. 
 
 
 # Project RBAC 

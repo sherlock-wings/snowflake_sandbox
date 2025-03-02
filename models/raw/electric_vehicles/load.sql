@@ -21,5 +21,5 @@ select
 ,t.$15
 ,t.$16
 ,t.$17
-from @%electric_vehicles (file_format => datagov_csv) t
+from @csv_stg (file_format => datagov_csv) t
 );
