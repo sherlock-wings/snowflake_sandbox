@@ -56,3 +56,5 @@ for (let i = 0; i < grant_ls.length; i++) {
 return "Successfully executed " + grant_ls.length + " SQL statements";
 $$
 ;
+
+grant usage on procedure sherlockwings_edw_db.util.grant_to_sandbox(varchar) to role sandbox_sysadmin;
