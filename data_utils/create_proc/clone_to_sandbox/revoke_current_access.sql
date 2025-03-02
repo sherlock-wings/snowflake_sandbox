@@ -60,3 +60,5 @@ for (let i = 0; i < revoke_ls.length; i++) {
 return "Successfully executed " + revoke_ls.length + " SQL statements";
 $$
 ;
+
+grant usage on procedure sherlockwings_edw_db.util.revoke_current_access(varchar, varchar) to role sandbox_sysadmin;
