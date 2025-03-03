@@ -1,4 +1,4 @@
-country_name,iso_2_letter_code,iso_3_letter_code,,source_url,data_collected_date
+country_name,iso_2_letter_code,iso_3_letter_code,numeric,source_url,data_collected_date
 Afghanistan,AF,AFG,4,https://www.iban.com/country-codes,2025-03-03
 Albania,AL,ALB,8,https://www.iban.com/country-codes,2025-03-03
 Algeria,DZ,DZA,12,https://www.iban.com/country-codes,2025-03-03
