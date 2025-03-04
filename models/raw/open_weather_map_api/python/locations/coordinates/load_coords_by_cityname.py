@@ -2,9 +2,8 @@ import os
 import requests
 import pandas as pd
 
-In order to get weather for a specific loaction from the OpenWeatherMap API, you need to pass in lat & long coordinates.
-They provide another API, the Geocoding API, to get that information. 
-
+# In order to get weather for a specific loaction from the OpenWeatherMap API, you need to pass in lat & long coordinates.
+# They provide another API, the Geocoding API, to get that information. 
 
 api_key = os.getenv("owm_brx")
 if not api_key:
