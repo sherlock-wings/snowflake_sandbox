@@ -1,4 +1,4 @@
-city_name_input,latitude,longitude,country_name,iso_2_letter_country_code
+city_name,latitude,longitude,country_name,country_code
 New York City,40.7127281,-74.0060152,United States of America (the),US
 Los Angeles,34.0536909,-118.242766,United States of America (the),US
 Chicago,41.8755616,-87.6244212,United States of America (the),US
