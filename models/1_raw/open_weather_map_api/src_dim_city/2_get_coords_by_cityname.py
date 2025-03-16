@@ -9,7 +9,7 @@ api_key = os.getenv("owm_brx")
 if not api_key:
     raise ValueError("The API Key for the OpenWeatherMap API is not set in your Environment Variables.")
 
-src_name = pd.read_csv('target_cities.csv')
+src_name = pd.read_csv('1_input_target_cities.csv')
 tgt_ls = src_name['city_name'].values
 responses = []
 
@@ -19,4 +19,4 @@ for city in tgt_ls:
     responses.append(response.json())
 
 output = pd.DataFrame({'city_name_input':tgt_ls, 'api_json_respnose':responses})
-output.to_csv('geo_api_lat_long_output.csv', index= False )
+output.to_csv('3_output_coords_by_cityname.csv', index= False )

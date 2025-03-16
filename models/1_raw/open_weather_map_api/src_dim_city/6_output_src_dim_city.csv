@@ -1,4 +1,6 @@
 city_name,latitude,longitude,country_name,country_code
+Charleston,32.7876012,-79.9402728,United States of America (the),US
+Atlanta,33.7489924,-84.3902644,United States of America (the),US
 New York City,40.7127281,-74.0060152,United States of America (the),US
 Los Angeles,34.0536909,-118.242766,United States of America (the),US
 Chicago,41.8755616,-87.6244212,United States of America (the),US
