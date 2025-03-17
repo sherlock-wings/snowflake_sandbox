@@ -5,7 +5,7 @@ import pandas as pd
 # In order to get weather for a specific loaction from the OpenWeatherMap API, you need to pass in lat & long coordinates.
 # They provide another API, the Geocoding API, to get that information. 
 
-api_key = os.getenv("owm_brx")
+api_key = os.getenv("OWM_KEY")
 if not api_key:
     raise ValueError("The API Key for the OpenWeatherMap API is not set in your Environment Variables.")
 
