@@ -1,0 +1,103 @@
+city_name,latitude,longitude,country_name,country_code
+Charleston,32.7876012,-79.9402728,United States of America (the),US
+Atlanta,33.7489924,-84.3902644,United States of America (the),US
+New York City,40.7127281,-74.0060152,United States of America (the),US
+Los Angeles,34.0536909,-118.242766,United States of America (the),US
+Chicago,41.8755616,-87.6244212,United States of America (the),US
+Toronto,43.6534817,-79.3839347,Canada,CA
+Mexico City,19.4326296,-99.1331785,Mexico,MX
+Guadalajara,20.6720375,-103.338396,Mexico,MX
+Monterrey,25.6802019,-100.315258,Mexico,MX
+Houston,29.7589382,-95.3676974,United States of America (the),US
+Phoenix,33.4484367,-112.074141,United States of America (the),US
+Philadelphia,39.9527237,-75.1635262,United States of America (the),US
+São Paulo,-23.5506507,-46.6333824,Brazil,BR
+Rio de Janeiro,-22.9110137,-43.2093727,Brazil,BR
+Buenos Aires,-34.6075682,-58.4370894,Argentina,AR
+Lima,-12.0621065,-77.0365256,Peru,PE
+Bogotá,4.6534649,-74.0836453,Colombia,CO
+Santiago,9.8694792,-83.7980749,Costa Rica,CR
+Caracas,10.5060934,-66.9146008,Venezuela (Bolivarian Republic of),VE
+Belo Horizonte,-19.9227318,-43.9450948,Brazil,BR
+Brasília,-15.7934036,-47.8823172,Brazil,BR
+Medellín,6.2443382,-75.573553,Colombia,CO
+London,51.5073219,-0.1276474,United Kingdom of Great Britain and Northern Ireland (the),GB
+Paris,48.8588897,2.3200410217200766,France,FR
+Berlin,52.5170365,13.3888599,Germany,DE
+Madrid,40.4167047,-3.7035825,Spain,ES
+Barcelona,41.3828939,2.1774322,Spain,ES
+Rome,41.8933203,12.4829321,Italy,IT
+Milan,45.4641943,9.1896346,Italy,IT
+Athens,37.9839412,23.7283052,Greece,GR
+Vienna,48.2083537,16.3725042,Austria,AT
+Warsaw,52.2319581,21.0067249,Poland,PL
+Moscow,55.7504461,37.6174943,Russian Federation (the),RU
+Saint Petersburg,59.938732,30.316229,Russian Federation (the),RU
+Istanbul,41.0091982,28.9662187,Turkey,TR
+Kyiv,50.4500336,30.5241361,Ukraine,UA
+Budapest,47.4979937,19.0403594,Hungary,HU
+Prague,50.0874654,14.4212535,Czechia,CZ
+Bucharest,44.4361414,26.1027202,Romania,RO
+Sofia,42.6977028,23.3217359,Bulgaria,BG
+Stockholm,59.3251172,18.0710935,Sweden,SE
+Copenhagen,55.6867243,12.5700724,Denmark,DK
+Cairo,30.0443879,31.2357257,Egypt,EG
+Lagos,6.4550575,3.3941795,Nigeria,NG
+Kinshasa,-4.3217055,15.3125974,Congo (the Democratic Republic of the),CD
+Johannesburg,-26.205,28.049722,South Africa,ZA
+CapeTown,40.4662424,-124.367277,United States of America (the),US
+Nairobi,-1.30326415,36.826384099341595,Kenya,KE
+Addis Ababa,9.0358287,38.7524127,Ethiopia,ET
+Dares Salaam,,,Namibia,
+Khartoum,15.5635972,32.5349123,Sudan (the),SD
+Abidjan,5.320357,-4.016107,Côte d'Ivoire,CI
+Casablanca,33.5945144,-7.6200284,Morocco,MA
+Algiers,36.7753606,3.0601882,Algeria,DZ
+Accra,5.5571096,-0.2012376,Ghana,GH
+Luanda,-8.8272699,13.2439512,Angola,AO
+Dakar,14.693425,-17.447938,Senegal,SN
+Tokyo,35.6828387,139.7594549,Japan,JP
+Delhi,28.6517178,77.2219388,India,IN
+Mumbai,19.0785451,72.878176,India,IN
+Shanghai,31.2322758,121.4692071,China,CN
+Beijing,39.906217,116.3912757,China,CN
+Karachi,24.8546842,67.0207055,Pakistan,PK
+Dhaka,23.7544529,90.393336,Bangladesh,BD
+Manila,14.5948914,120.9782618,Philippines (the),PH
+Bangkok,13.7524938,100.4935089,Thailand,TH
+Seoul,37.5666791,126.9782914,Korea (the Republic of),KR
+Jakarta,-6.175247,106.8270488,Indonesia,ID
+Kuala Lumpur,3.1516964,101.6942371,Malaysia,MY
+Ho Chi Minh City,10.7758439,106.7017555,Viet Nam,VN
+Hanoi,21.0294498,105.8544441,Viet Nam,VN
+Singapore,1.2899175,103.8519072,Singapore,SG
+Hong Kong,22.2793278,114.1628131,China,CN
+Shenzhen,22.5445741,114.0545429,China,CN
+Guangzhou,23.1301964,113.2592945,China,CN
+Chengdu,30.6598628,104.0633717,China,CN
+Tianjin,39.0856735,117.1951073,China,CN
+Osaka,34.6937569,135.5014539,Japan,JP
+Nagoya,35.1851045,136.8998438,Japan,JP
+Bangalore,12.9767936,77.590082,India,IN
+Chennai,13.0836939,80.270186,India,IN
+Hyderabad,17.360589,78.4740613,India,IN
+Kolkata,22.5414185,88.35769124388872,India,IN
+Lahore,31.5656822,74.3141829,Pakistan,PK
+Tehran,35.6892523,51.3896004,Iran (Islamic Republic of),IR
+Riyadh,24.638916,46.7160104,Saudi Arabia,SA
+Baghdad,33.3061701,44.3872213,Iraq,IQ
+Dubai,25.2653471,55.2924914,United Arab Emirates (the),AE
+Ankara,39.9207886,32.8540482,Turkey,TR
+Tashkent,41.3123363,69.2787079,Uzbekistan,UZ
+Yangon,16.7967129,96.1609916,Myanmar,MM
+PhnomPenh,11.568271,104.9224426,Cambodia,KH
+Sydney,-33.8698439,151.2082848,Australia,AU
+Melbourne,-37.8142454,144.9631732,Australia,AU
+Brisbane,-27.4689682,153.0234991,Australia,AU
+Perth,-31.9558964,115.8605801,Australia,AU
+Auckland,-36.852095,174.7631803,New Zealand,NZ
+Bogotá,4.6534649,-74.0836453,Colombia,CO
+Lima,-12.0621065,-77.0365256,Peru,PE
+Santiago,9.8694792,-83.7980749,Costa Rica,CR
+Caracas,10.5060934,-66.9146008,Venezuela (Bolivarian Republic of),VE
+Quito,-0.2201641,-78.5123274,Ecuador,EC
