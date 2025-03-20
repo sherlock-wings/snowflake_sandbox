@@ -1,0 +1,69 @@
+post=PostView(author=ProfileViewBasic(did='did:plc:bak7f4b3jsiqlpyo6o4ejaji'
+                                     ,handle='politico.eu'
+                                     ,associated=None
+                                     ,avatar='https://cdn.bsky.app/img/avatar/plain/did:plc:bak7f4b3jsiqlpyo6o4ejaji/bafkreiflm3qyniqkn4nf27yernsqk36ldosj7xvqe3aq676tcfpl5nimvu@jpeg'
+                                     ,created_at='2023-09-21T10:25:09.579Z'
+                                     ,display_name='POLITICO Europe'
+                                     ,labels=[]
+                                     ,viewer=ViewerState(blocked_by=False
+                                                        ,blocking=None
+                                                        ,blocking_by_list=None
+                                                        ,followed_by=None
+                                                        ,following='at://did:plc:pk3ngv5kofsjoet7gs4o2o7f/app.bsky.graph.follow/3lkqfcey7r52u'
+                                                        ,known_followers=None
+                                                        ,muted=False
+                                                        ,muted_by_list=None
+                                                        ,py_type='app.bsky.actor.defs#viewerState')
+                                                        ,py_type='app.bsky.actor.defs#profileViewBasic'
+                                     )
+             ,cid='bafyreidsgdrita72znpujagz6qqdzmij6wd52g2yhr4aknzo7eoez24kgq'
+             ,indexed_at='2025-03-19T16:21:32.549Z'
+             ,record=Record(created_at='2025-03-19T16:21:29.553Z'
+                           ,text='US arms-makers are being frozen out of the EU’s massive new defense spending plan, which aims to splash the cash for EU and allied countries.'
+                           ,embed=Main(external=External(description='Bloc aims to build up military-industrial complex to deter Russia and brace for the U.S. shift away from Europe.'
+                                                        ,title='EU slams the door on US in colossal defense plan', uri='https://ow.ly/b7mJ50VkS14'
+                                                        ,thumb=BlobRef(mime_type='image/jpeg'
+                                                                      ,size=974985
+                                                                      ,ref=IpldLink(link='bafkreifd7fceyibaqnqxp66kvipsczpmfbeopbebpj3a2b3wziqdhpoh5u')
+                                                                      ,py_type='blob'
+                                                                      ) 
+                                                        ,py_type='app.bsky.embed.external#external'
+                                                        ) 
+                                       ,py_type='app.bsky.embed.external'
+                                       )
+                           ,entities=None
+                           ,facets=None
+                           ,labels=None
+                           ,langs=['en']
+                           ,reply=None
+                           ,tags=None
+                           ,py_type='app.bsky.feed.post'
+                           )
+             ,uri='at://did:plc:bak7f4b3jsiqlpyo6o4ejaji/app.bsky.feed.post/3lkqloyr35c2d'
+             ,embed=View(external=ViewExternal(description='Bloc aims to build up military-industrial complex to deter Russia and brace for the U.S. shift away from Europe.'
+                                              ,title='EU slams the door on US in colossal defense plan'
+                                              ,uri='https://ow.ly/b7mJ50VkS14'
+                                              ,thumb='https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:bak7f4b3jsiqlpyo6o4ejaji/bafkreifd7fceyibaqnqxp66kvipsczpmfbeopbebpj3a2b3wziqdhpoh5u@jpeg'
+                                              ,py_type='app.bsky.embed.external#viewExternal')
+                                              ,py_type='app.bsky.embed.external#view'
+                        )
+             ,labels=[]
+             ,like_count=66
+             ,quote_count=2
+             ,reply_count=4
+             ,repost_count=19
+             ,threadgate=None
+             ,viewer=ViewerState(embedding_disabled=False
+                                ,like=None
+                                ,pinned=None
+                                ,reply_disabled=None
+                                ,repost=None
+                                ,thread_muted=False
+                                ,py_type='app.bsky.feed.defs#viewerState'
+                                )
+             ,py_type='app.bsky.feed.defs#postView'
+             ) 
+feed_context=None 
+reason=None 
+reply=None 
+py_type='app.bsky.feed.defs#feedViewPost'
