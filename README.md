@@ -167,7 +167,9 @@ While its tempting to think of "your sandbox" as a single object, your Sandbox i
 
 ### Populating the Sandbox
 
-This is never done manually. It is done by using a stored procedure (name TBD). The sproc works by cloning from a target environment (specified by the caller) and into the Sandbox. The sproc knows automatically to generate the schemas as clones, using the correct name. Also, it correctly "rebuilds" the RBAC so the schema is is usable as expected post-execution. 
+This is never done manually. It is done by using a stored procedure called `CLONE_TO_SANDBOX`. The sproc works by cloning all the schema from a source environment (such as QA, Prod, Dev, etc-- this is specified by the caller) and into the Sandbox. The sproc knows automatically to generate the schemas as clones, using the correct name. Also, it correctly "rebuilds" the RBAC so the schema is is usable as expected post-execution. Finally, every `CLONE`, `GRANT` and `REVOKE` statement ran by that sproc is stored in a view called `CLONE_TO_SANDBOX_CALL_LOG_VW`, meaning all the work done by the sproc is totally traceable. 
+
+This is done using Snowflake's in-built Telemetry features via the JavaScript. [See this article for more information](https://docs.snowflake.com/en/developer-guide/logging-tracing/tracing-javascript).
 
 # Environment Summary Diagram
 
