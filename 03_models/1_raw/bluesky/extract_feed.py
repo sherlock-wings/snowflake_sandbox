@@ -43,15 +43,13 @@ def get_followers(bsky_client: Client, bsky_handle: str) -> list:
     bsky_did = get_did(bsky_client, bsky_handle)
     return bsky_client.get_follows(actor=bsky_did).follows
 
+
 # write a chunk of post-data to CSV
 def write_chunk(df: str, bsky_username: str) -> None:
-    # filename format is <username>_<earliest_contained_post_date>_<latest_contained_post_date>
-    time = df['post_created_timestamp'].min()
-    start = f"{time.year}-{str(time.month).zfill(2)}-{str(time.day).zfill(2)}_{str(time.hour).zfill(2)}-{str(time.minute).zfill(2)}-{str(time.second).zfill(2)}"
-    
-    time = df['post_created_timestamp'].max()
-    end = f"{time.year}-{str(time.month).zfill(2)}-{str(time.day).zfill(2)}_{str(time.hour).zfill(2)}-{str(time.minute).zfill(2)}-{str(time.second).zfill(2)}"
-    
+    # filename format is posts_<extraction_date>_<file_ordinal>.csv, where <final ordinal> is an incremental int
+    # ex) If 3 files are generated on New Years Day 2025, the names are ['posts_2025-01-01_1.csv', 'posts_2025-01-01_2.csv', 'posts_2025-01-01_3.csv']
+    rn = datetime.now().strftime('%Y-%m-%d')
+    if os.path.exists('posts_output'):
     dir   = f"output_data/usr_{bsky_username}"
     if not os.path.exists(dir):
         os.makedirs(dir)
