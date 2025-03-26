@@ -37,15 +37,15 @@ You may apply any DDL or DML to views of the following types:
 You may also apply any DDL or DML to any of the following objects:
 1. [Sequences](https://docs.snowflake.com/en/user-guide/querying-sequences)
 2. [File formats](https://docs.snowflake.com/en/sql-reference/sql/create-file-format)
-3. [Streams](https://docs.snowflake.com/en/user-guide/streams-intro)
-4. [Stored Procedures](https://docs.snowflake.com/en/developer-guide/stored-procedure/stored-procedures-usage)
 5. [Functions (a.k.a. UDFs)](https://docs.snowflake.com/en/developer-guide/udf/udf-overview)
-6. [Tasks](https://docs.snowflake.com/en/user-guide/tasks-intro)
 7. [Stages](https://docs.snowflake.com/en/sql-reference/sql/create-stage)
     - Includes Internal stages (named, user, table) and External stages 
 
 
 ## Other Objects you can NOT read/write with
+6. [Tasks](https://docs.snowflake.com/en/user-guide/tasks-intro)
+3. [Streams](https://docs.snowflake.com/en/user-guide/streams-intro)
+4. [Stored Procedures](https://docs.snowflake.com/en/developer-guide/stored-procedure/stored-procedures-usage)
 1. [Pipes](https://docs.snowflake.com/en/user-guide/data-load-snowpipe-intro)
 2. [Masking Policies](https://docs.snowflake.com/user-guide/security-column-ddm-intro)
 3. [Row-Access Policies](https://docs.snowflake.com/en/user-guide/security-row-intro)
@@ -72,10 +72,7 @@ GRANT CREATE VIEW ON SCHEMA <schema-name> TO ROLE <readwrite-access-role-name>;
 GRANT CREATE SEQUENCE ON SCHEMA <schema-name> TO ROLE <readwrite-access-role-name>;
 GRANT CREATE STAGE ON SCHEMA <schema-name> TO ROLE <readwrite-access-role-name>;
 GRANT CREATE FILE FORMAT ON SCHEMA <schema-name> TO ROLE <readwrite-access-role-name>;
-GRANT CREATE STREAM ON SCHEMA <schema-name> TO ROLE <readwrite-access-role-name>;
-GRANT CREATE PROCEDURE ON SCHEMA <schema-name> TO ROLE <readwrite-access-role-name>;
 GRANT CREATE FUNCTION ON SCHEMA <schema-name> TO ROLE <readwrite-access-role-name>;
-GRANT CREATE TASK ON SCHEMA <schema-name> TO ROLE <readwrite-access-role-name>;
 
 
 -- Table access

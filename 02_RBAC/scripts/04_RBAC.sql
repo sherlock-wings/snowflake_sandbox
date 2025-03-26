@@ -288,13 +288,20 @@ GRANT USAGE ON WAREHOUSE SHERLOCKWINGS_COMPUTE_WH TO ROLE SHERLOCKWINGS_COMPUTE_
 
 
 -- NAMED_DATABASE Functional Roles
-grant role sherlockwings_compute_wh_u_ar     to role securityadmin;
+/*
+Functional Role Strategy:
+  1. Analyst role is not needed-- this is a Dev-Facing Environment
+  2. Admin FR exists and has privs over those of Engineer FR
+  3. Some additional Privs exist for SECURITY ADMIN -- This is so 
+     SecurityAdmin can invoke the Clone-to-Sandbox sproc
+*/
+
 grant role sherlockwings_edw_db_util_rw_ar   to role sherlockwings_engineer_fr;
 grant role sherlockwings_compute_wh_uw_ar    to role sherlockwings_engineer_fr;
 grant role sherlockwings_edw_db_util_full_ar to role sherlockwings_admin_fr;
 grant role sherlockwings_compute_wh_o_ar     to role sherlockwings_admin_fr;
-grant role sherlockwings_admin_fr            to role securityadmin; -- This is so SecurityAdmin can invoke the Clone-to-Sandbox sproc
-
+grant role sherlockwings_admin_fr            to role securityadmin; 
+grant role sherlockwings_compute_wh_u_ar     to role securityadmin; 
 
 
 
@@ -305,29 +312,7 @@ grant role sherlockwings_admin_fr            to role securityadmin; -- This is s
 ---
 --- SANDBOX Environment
 ---
-/*
-This environment is similar to NAMED_DATABASE, with one major difference
 
-Ways it is like NAMED_DATABASE:
-
-1. It has a UTIL schema
-2. It does not have any managed-access 
-
-How it is different: 
-
-1. The naming of its roles do not reference a specific schema
-  - e.g. instead of SANDBOX_EDW_DB_UTIL_FULL_FR, we use 
-    SANDBOX_EDW_DB_FULL_FR
-2. The Environment (that is, the SANDBOX_EDW_DB database) can have an aribitrary number of
-   schema
-   - The number of schema will usually be S * D, where S is the number of schemas per
-     Dev/QA/Prod enviornment, and D is the number of Developers working on the sandbox
-   - Schemas will always be created by a sproc (see /data_utils/create_proc/clone_to_sandbox)
-     that zero copy clones from a higher env of the user's choosing into the Sandbox
-   - The only exception is UTIL, the SANDBOX_EDW_DB schewma where the CLONE_TO_SANDBOX() sproc 
-     itself lives
-3. It has no ADMIN_FR role-- SANDBOX_ENGINEER_FR has full access here
-*/
 USE ROLE USERADMIN;
 
   -- Schema-based ARs
@@ -631,6 +616,14 @@ GRANT USAGE ON WAREHOUSE SANDBOX_COMPUTE_WH TO ROLE SANDBOX_COMPUTE_WH_U_AR;
 
 
 -- SANDBOX Functional Roles
+/*
+Functional Role Strategy: 
+  1. The Engineers have more or less free reign here-- getting "Full" access
+     instead of just "Read-Write"
+  2. While the Admin FRs still exist, the only thing they have which engineers
+     do not is OWNERSHIP on the Sandbox Warehouse (i.e. change WH size, 
+     cluster settings, auto-suspend config, etc)
+*/
 grant role SANDBOX_edw_db_full_ar    to role SANDBOX_engineer_fr;
 grant role SANDBOX_compute_wh_uw_ar  to role SANDBOX_engineer_fr;
 grant role SANDBOX_edw_db_full_ar    to role SANDBOX_admin_fr;
@@ -1426,25 +1419,36 @@ GRANT USAGE ON WAREHOUSE DEV_COMPUTE_WH TO ROLE DEV_COMPUTE_WH_U_AR;
 
 
 -- DEV Functional Roles
+/*
+Functional Role Strategy: 
+
+  1. The Engineers have more or less free reign here-- getting "Full" access
+     instead of just "Read-Write"
+  2. While the Admin FRs still exist, the only thing they have which engineers
+     do not is OWNERSHIP on the Sandbox Warehouse (i.e. change WH size, 
+     cluster settings, auto-suspend config, etc)
+*/
+
+*/
 grant role dev_edw_db_raw_r_ar      to role dev_analyst_fr;
 grant role dev_edw_db_stage_r_ar    to role dev_analyst_fr;
 grant role dev_edw_db_model_r_ar    to role dev_analyst_fr;
 grant role dev_compute_wh_u_ar      to role dev_analyst_fr;
 
-grant role dev_edw_db_raw_rw_ar     to role dev_engineer_fr;
-grant role dev_edw_db_stage_rw_ar   to role dev_engineer_fr;
-grant role dev_edw_db_model_rw_ar   to role dev_engineer_fr;
-grant role dev_compute_wh_uw_ar      to role dev_engineer_fr;
+grant role dev_edw_db_raw_full_ar   to role dev_engineer_fr;
+grant role dev_edw_db_stage_full_ar to role dev_engineer_fr;
+grant role dev_edw_db_model_full_ar to role dev_engineer_fr;
+grant role dev_compute_wh_uw_ar     to role dev_engineer_fr;
 
-grant role dev_edw_db_raw_rw_ar     to role dev_svctransform_fr;
-grant role dev_edw_db_stage_rw_ar   to role dev_svctransform_fr;
-grant role dev_edw_db_model_rw_ar   to role dev_svctransform_fr;
-grant role dev_compute_wh_uw_ar      to role dev_svctransform_fr;
+grant role dev_edw_db_raw_full_ar   to role dev_svctransform_fr;
+grant role dev_edw_db_stage_full_ar to role dev_svctransform_fr;
+grant role dev_edw_db_model_full_ar to role dev_svctransform_fr;
+grant role dev_compute_wh_uw_ar     to role dev_svctransform_fr;
 
 grant role dev_edw_db_raw_full_ar   to role dev_admin_fr;
 grant role dev_edw_db_stage_full_ar to role dev_admin_fr;
 grant role dev_edw_db_model_full_ar to role dev_admin_fr;
-grant role dev_compute_wh_o_ar      to role dev_admin_fr;
+grant role dev_compute_wh_uw_ar     to role dev_admin_fr;
  
 -- Readups for UTIL and SANDBOX engineers
 grant role dev_edw_db_raw_r_ar   to role sherlockwings_engineer_fr;
