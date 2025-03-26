@@ -182,5 +182,28 @@ def extract_feed() -> None:
         stash_feed(bsky_client=cli, bsky_did=followed_users[usr][0], bsky_username=usr)
     print(f"Feed Ingestion Complete!")
 
+from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
+import os
+
+# METHOD WIP TODO
+# def upload_file_to_azr(file_to_upload: str)
+# azr_xct_str = os.getenv('AZR_XCT_STR')
+# azr_container = 'sfsandbox'
+# azr_dir = 'bluesky_posts'
+# file_to_upload ='dat.csv'
+
+# blob_cli = BlobServiceClient.from_connection_string(azr_xct_str)
+
+# container_cli = blob_cli.get_container_client(azr_container)
+
+# blob_name = f"{azr_dir}/{os.path.basename(file_to_upload)}"
+
+# blob_cli = container_cli.get_blob_client(blob_name)
+
+# # Upload the file (supports large files via chunking)
+# with open(file_to_upload, "rb") as data:
+#     blob_cli.upload_blob(data, overwrite=True)
+#     print(f"Uploaded file: {blob_name}")
+
 if __name__ == "__main__":
     extract_feed()
