@@ -13,7 +13,7 @@ This document is meant to provide a clear definition of what "Use-Watch" access 
 
 # "Use-Watch" Schema Access: SQL Definition
 
-```
+```sql
 USE ROLE USERADMIN;
 CREATE ROLE IF NOT EXISTS <use-watch-access-role-name>;
 GRANT ROLE <use-watch-access-role-name> TO ROLE <environment-sysadmin-role-name>;

@@ -57,7 +57,7 @@ For all of the below object types, you have `OWNERSHIP`. You may do any DDL or D
 
 # "Full" Schema Access: SQL Definition
 
-```
+```sql
 USE ROLE USERADMIN;
 
 -- Instantiate role and the environment SYSADMIN's inheritance of it

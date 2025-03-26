@@ -9,7 +9,7 @@ This document is meant to provide a clear definition of what "Read" access to a 
 
 # "Read" Schema Access: SQL Definition
 
-```
+```sql
 -- Instantiate role and the environment SYSADMIN's inheritance of it
 CREATE ROLE IF NOT EXISTS <read-access-role-name>;
 GRANT ROLE <read-access-role-name> TO ROLE <environment-sysadmin-role-name>;

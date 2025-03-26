@@ -17,7 +17,7 @@ This document is meant to provide a clear definition of what "Owner" access to a
 
 # "Owner" Schema Access: SQL Definition
 
-```
+```sql
 USE ROLE USERADMIN;
 CREATE ROLE IF NOT EXISTS <owner-access-role-name>;
 USE ROLE SECURITYADMIN;
