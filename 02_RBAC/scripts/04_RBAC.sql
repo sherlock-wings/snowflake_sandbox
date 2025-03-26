@@ -1424,11 +1424,13 @@ Functional Role Strategy:
 
   1. The Engineers have more or less free reign here-- getting "Full" access
      instead of just "Read-Write"
-  2. While the Admin FRs still exist, the only thing they have which engineers
-     do not is OWNERSHIP on the Sandbox Warehouse (i.e. change WH size, 
-     cluster settings, auto-suspend config, etc)
-*/
-
+  2. SVCTRANSFORM (i.e. service account) role exists and mimics Engineers
+  3. Only difference between the Engineer and Svc roles is that Engineers have
+     "read-ups"; svc roles do not
+  4. While the Admin FRs still exist, the only thing they have which engineers/
+     svc roles do not is OWNERSHIP on the Sandbox Warehouse (i.e. change WH 
+     size, cluster settings, auto-suspend config, etc). Admin roles do not have 
+     read ups
 */
 grant role dev_edw_db_raw_r_ar      to role dev_analyst_fr;
 grant role dev_edw_db_stage_r_ar    to role dev_analyst_fr;
@@ -1448,7 +1450,7 @@ grant role dev_compute_wh_uw_ar     to role dev_svctransform_fr;
 grant role dev_edw_db_raw_full_ar   to role dev_admin_fr;
 grant role dev_edw_db_stage_full_ar to role dev_admin_fr;
 grant role dev_edw_db_model_full_ar to role dev_admin_fr;
-grant role dev_compute_wh_uw_ar     to role dev_admin_fr;
+grant role dev_compute_wh_o_ar     to role dev_admin_fr;
  
 -- Readups for UTIL and SANDBOX engineers
 grant role dev_edw_db_raw_r_ar   to role sherlockwings_engineer_fr;
@@ -2245,6 +2247,16 @@ GRANT USAGE ON WAREHOUSE QA_COMPUTE_WH TO ROLE QA_COMPUTE_WH_U_AR;
 
 
 -- QA Functional Roles
+/*
+Functional Role Strategy: 
+
+  1. The Engineers have less privs than in Dev-- only getting "Read-Write"
+     access, not "full"
+  2. SVCTRANSFORM (i.e. service account) role exists and mimics Engineers
+  3. Only difference between the Engineer and Svc roles is that Engineers have
+     "read-ups"; svc roles do not.
+  4. Admin FR has "full" access here. They do not have readups
+*/
 grant role QA_edw_db_raw_r_ar      to role QA_analyst_fr;
 grant role QA_edw_db_stage_r_ar    to role QA_analyst_fr;
 grant role QA_edw_db_model_r_ar    to role QA_analyst_fr;
@@ -3064,6 +3076,13 @@ GRANT USAGE ON WAREHOUSE PROD_COMPUTE_WH TO ROLE PROD_COMPUTE_WH_U_AR;
 
 
 -- PROD Functional Roles
+/*
+Functional Role Strategy: 
+1. Admin and Engineer FR roles do not exist in production; only
+   Analyst and Svc roles do
+2. All engineers from lower environments have readonly access
+   (i.e. readup support)
+*/
 grant role PROD_edw_db_raw_r_ar      to role PROD_analyst_fr;
 grant role PROD_edw_db_stage_r_ar    to role PROD_analyst_fr;
 grant role PROD_edw_db_model_r_ar    to role PROD_analyst_fr;
@@ -3075,7 +3094,7 @@ grant role PROD_edw_db_model_rw_ar   to role PROD_svctransform_fr;
 grant role prod_compute_wh_u_ar      to role PROD_svctransform_fr;
 
 
--- Readups for UTIL and SANDBOX engineers
+-- Readups for engineers
 grant role PROD_edw_db_raw_r_ar   to role sherlockwings_engineer_fr;
 grant role PROD_edw_db_stage_r_ar to role sherlockwings_engineer_fr;
 grant role PROD_edw_db_model_r_ar to role sherlockwings_engineer_fr;
