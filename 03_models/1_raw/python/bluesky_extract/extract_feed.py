@@ -45,25 +45,39 @@ def get_followers(bsky_client: Client, bsky_handle: str) -> list:
 
 
 # write a chunk of post-data to CSV
-def write_chunk(df: str, bsky_username: str) -> None:
+def write_chunk(df: str, bsky_username: str, output_path: str='posts_output') -> None:
     # filename format is posts_<extraction_date>_<file_ordinal>.csv, where <final ordinal> is an incremental int
     # ex) If 3 files are generated on New Years Day 2025, the names are ['posts_2025-01-01_1.csv', 'posts_2025-01-01_2.csv', 'posts_2025-01-01_3.csv']
     rn = datetime.now().strftime('%Y-%m-%d')
-    if os.path.exists('posts_output'):
+    last_filenum = -1
+    filename = ''
+
+    if os.path.exists(f"{output_path}/{rn}_1.csv"):
+        files = [int(file.split('_')[-1][0]) for file in os.listdir(output_path)]
+        files.sort()
+        last_filenum = files[-1]+1
+    # if the first file for a given day 
+    elif not os.path.exists(output_path): 
+        os.makedirs(output_path)
+    if last_filenum > 0:
+        df.to_csv(df.to_csv(filename,
+                            index=False,
+                            encoding='utf-8',
+                            quoting=csv.QUOTE_ALL,        # Wrap all fields in quotes
+                            quotechar='"',                # Standard quote character
+                            escapechar='\\',              # Escape special chars
+                            doublequote=True,             # Handle existing quotes
+                            lineterminator='\n'          # Standard line terminator
+                            )
+                 )
+
+
+
     dir   = f"output_data/usr_{bsky_username}"
     if not os.path.exists(dir):
         os.makedirs(dir)
     filename = f"{dir}/{bsky_username}.bsky.social_{start}_to_{end}.csv"
-    df.to_csv(df.to_csv(filename,
-                        index=False,
-                        encoding='utf-8',
-                        quoting=csv.QUOTE_ALL,        # Wrap all fields in quotes
-                        quotechar='"',                # Standard quote character
-                        escapechar='\\',              # Escape special chars
-                        doublequote=True,             # Handle existing quotes
-                        lineterminator='\n'          # Standard line terminator
-                        )
-             )
+    
 
 # write User Feed data as a series of one or more CSVs
 def stash_feed(bsky_client: Client, bsky_did: str, bsky_username: str) -> None:
