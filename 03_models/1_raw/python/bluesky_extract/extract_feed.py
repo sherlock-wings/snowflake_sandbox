@@ -50,35 +50,31 @@ def write_chunk(df: str, bsky_username: str, output_path: str='posts_output') ->
     # ex) If 3 files are generated on New Years Day 2025, the names are ['posts_2025-01-01_1.csv', 'posts_2025-01-01_2.csv', 'posts_2025-01-01_3.csv']
     rn = datetime.now().strftime('%Y-%m-%d')
     last_filenum = -1
-    filename = ''
+    filename = f"{rn}_"
 
     if os.path.exists(f"{output_path}/{rn}_1.csv"):
-        files = [int(file.split('_')[-1][0]) for file in os.listdir(output_path)]
+        # get a list of ints where each item is the number just before the '.csv' part in the file name-- get CSV filenames only
+        files = [int(file.split('_')[-1].split('.')[0]) for file in os.listdir(output_path) if file.split('.')[-1] == 'csv']
         files.sort()
-        last_filenum = files[-1]+1
-    # if the first file for a given day 
+        last_filenum = files[-1]+1 #increment by one
     elif not os.path.exists(output_path): 
         os.makedirs(output_path)
+
     if last_filenum > 0:
-        df.to_csv(df.to_csv(filename,
-                            index=False,
-                            encoding='utf-8',
-                            quoting=csv.QUOTE_ALL,        # Wrap all fields in quotes
-                            quotechar='"',                # Standard quote character
-                            escapechar='\\',              # Escape special chars
-                            doublequote=True,             # Handle existing quotes
-                            lineterminator='\n'          # Standard line terminator
-                            )
-                 )
-
-
-
-    dir   = f"output_data/usr_{bsky_username}"
-    if not os.path.exists(dir):
-        os.makedirs(dir)
-    filename = f"{dir}/{bsky_username}.bsky.social_{start}_to_{end}.csv"
+        filename += f"{last_filenum}.csv"
+    else:
+        filename += "1.csv"
+    df.to_csv(df.to_csv(filename,
+                        index=False,
+                        encoding='utf-8',
+                        quoting=csv.QUOTE_ALL, # Wrap all fields in quotes
+                        quotechar='"',         # Standard quote character
+                        escapechar='\\',       # Escape special chars
+                        doublequote=True,      # Handle existing quotes
+                        lineterminator='\n'    # Standard line terminator
+                        )
+                )
     
-
 # write User Feed data as a series of one or more CSVs
 def stash_feed(bsky_client: Client, bsky_did: str, bsky_username: str) -> None:
     schema = {'content_id':                       []
