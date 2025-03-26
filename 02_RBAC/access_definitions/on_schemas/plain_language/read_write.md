@@ -55,7 +55,7 @@ You may also apply any DDL or DML to any of the following objects:
 
 # "Read-Write" Schema Access: SQL Definition
 
-```
+```sql
 USE ROLE USERADMIN;
 
 -- Instantiate role and the environment SYSADMIN's inheritance of it

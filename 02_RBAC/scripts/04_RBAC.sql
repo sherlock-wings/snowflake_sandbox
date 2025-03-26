@@ -312,7 +312,6 @@ Ways it is like NAMED_DATABASE:
 
 1. It has a UTIL schema
 2. It does not have any managed-access 
-3. It has an ADMIN and ENGINEER FR, but no ANALYST or SVCTRANSFORM FR
 
 How it is different: 
 
@@ -327,6 +326,7 @@ How it is different:
      that zero copy clones from a higher env of the user's choosing into the Sandbox
    - The only exception is UTIL, the SANDBOX_EDW_DB schewma where the CLONE_TO_SANDBOX() sproc 
      itself lives
+3. It has no ADMIN_FR role-- SANDBOX_ENGINEER_FR has full access here
 */
 USE ROLE USERADMIN;
 
@@ -631,7 +631,7 @@ GRANT USAGE ON WAREHOUSE SANDBOX_COMPUTE_WH TO ROLE SANDBOX_COMPUTE_WH_U_AR;
 
 
 -- SANDBOX Functional Roles
-grant role SANDBOX_edw_db_rw_ar      to role SANDBOX_engineer_fr;
+grant role SANDBOX_edw_db_full_ar    to role SANDBOX_engineer_fr;
 grant role SANDBOX_compute_wh_uw_ar  to role SANDBOX_engineer_fr;
 grant role SANDBOX_edw_db_full_ar    to role SANDBOX_admin_fr;
 grant role SANDBOX_compute_wh_o_ar   to role SANDBOX_admin_fr;
