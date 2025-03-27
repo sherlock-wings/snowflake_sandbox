@@ -5,18 +5,19 @@ from datetime import datetime
 import os
 import pandas as pd
 import pytz
+from re import fullmatch
 from typing import Tuple
 
 # string-typed timestamps come in many formats-- one function to parse them all
 def parse_timestamp(timestamp_str: str, return_timezone: str='UTC') -> datetime:
     # if the timezone is given in the timestamp, parse that into the final return
-    if '-' in timestamp_str or '+' in timestamp_str:
+    if fullmatch('^.+:[\d\.]+(\-|\+)\d+$', timestamp_str):
         for tz_fmt in ('%Y-%m-%dT%H:%M:%S.%f%z','%Y-%m-%dT%H:%M:%S%z'):
             try:
                 return datetime.strptime(timestamp_str, tz_fmt)
             except ValueError:
                 continue
-    # if the timezone has no timestamp, apply the requested timezone if available, else default to UTC time
+    # if the timestamp has no timezone, apply the requested timezone if specified, else default to UTC time
     for no_tz_fmt in ('%Y-%m-%dT%H:%M:%S.%fZ', '%Y-%m-%dT%H:%M:%SZ', '%Y-%m-%dT%H:%M:%S'):
         try:
             ts = datetime.strptime(timestamp_str, no_tz_fmt)
@@ -45,7 +46,7 @@ def get_followers(bsky_client: Client, bsky_handle: str) -> list:
     return bsky_client.get_follows(actor=bsky_did).follows
 
 
-# write a chunk of post-data to CSV
+# write a chunk of post data to CSV
 def write_chunk(df: str, bsky_username: str, output_path: str='posts_output') -> None:
     # filename format is posts_<extraction_date>_<file_ordinal>.csv, where <final ordinal> is an incremental int
     # ex) If 3 files are generated on New Years Day 2025, the names are ['posts_2025-01-01_1.csv', 'posts_2025-01-01_2.csv', 'posts_2025-01-01_3.csv']
@@ -77,7 +78,7 @@ def write_chunk(df: str, bsky_username: str, output_path: str='posts_output') ->
                 )
     
 # write User Feed data as a series of one or more CSVs
-def stash_feed(bsky_client: Client, bsky_did: str, bsky_username: str) -> None:
+def stash_user_posts(bsky_client: Client, bsky_did: str, bsky_username: str) -> pd.DataFrame:
     schema = {'content_id':                       []
              ,'post_uri':                         []
              ,'like_count':                       []
@@ -105,8 +106,8 @@ def stash_feed(bsky_client: Client, bsky_did: str, bsky_username: str) -> None:
     # Iterate through every post in their account's post history
     while pages_remain:
         
-        # # check if the current file is already "full" (larger than 100 MB)
-        # # if it is, stash the current data object as CSV and reset a new empty one
+        # check if the current file is already "full" (larger than 100 MB)
+        # if it is, stash the current data object as CSV and reset a new empty one
         df = pd.DataFrame(data)
         if df.memory_usage(deep=True).sum() / (1024*1024) >= 100:
             filenum+=1
@@ -120,7 +121,9 @@ def stash_feed(bsky_client: Client, bsky_did: str, bsky_username: str) -> None:
         feed      = resp.feed
         print(f"Retrieving post data from page {page_num} for user @{bsky_username}.bsky.social...", end='\r')
         for item in feed:
+            #
             # i drink your data! i DRINK IT UP ლಠ益ಠ)ლ
+            # 
             data['content_id'].append(item.post.cid)
             data['post_uri'].append(item.post.uri)
             data['like_count'].append(item.post.like_count)
@@ -129,7 +132,6 @@ def stash_feed(bsky_client: Client, bsky_did: str, bsky_username: str) -> None:
             data['repost_count'].append(item.post.repost_count)
 
             # extract timestamp strings as actual timestamps, including timezone
-            # ts = datetime.strptime(item.post.record.created_at, '%Y-%m-%dT%H:%M:%S.%fZ')
             ts = parse_timestamp(item.post.record.created_at)
             data['post_created_timestamp'].append(ts)   
 
@@ -149,11 +151,11 @@ def stash_feed(bsky_client: Client, bsky_did: str, bsky_username: str) -> None:
                 data['embedded_link_uri'].append(item.post.record.embed.external.uri)
             except AttributeError:
                 data['embedded_link_uri'].append('null')
+
             data['author_username'].append(item.post.author.handle)
             data['author_displayname'].append(item.post.author.display_name)
 
             # extract timestamp strings as actual timestamps, including timezone
-            # ts = datetime.strptime(item.post.author.created_at, '%Y-%m-%dT%H:%M:%S.%fZ')
             ts = parse_timestamp(item.post.author.created_at)
             data['author_account_created_timestamp'].append(ts) 
 
@@ -166,9 +168,7 @@ def stash_feed(bsky_client: Client, bsky_did: str, bsky_username: str) -> None:
         csr = resp.cursor        # reset cursor when another page of posts is available
     
     df = pd.DataFrame(data)
-    
-    if len(df) > 0:
-        write_chunk(df, bsky_username)
+    return df
 
 # Driver function
 def extract_feed() -> None:
@@ -180,10 +180,10 @@ def extract_feed() -> None:
     for usr in followed_users:
         c += 1
         print(f"\n{str(c).zfill(3)} of {str(len(followed_users)).zfill(3)} | Parsing posts from user @{usr}...\n")
-        stash_feed(bsky_client=cli, bsky_did=followed_users[usr][0], bsky_username=usr)
+        stash_user_posts(bsky_client=cli, bsky_did=followed_users[usr][0], bsky_username=usr)
     print(f"Feed Ingestion Complete!")
 
-def upload_file_to_azr(file_to_upload: str)
+def upload_file_to_azr(file_to_upload: str):
     azr_xct_str = os.getenv('AZR_XCT_STR')
     azr_container = 'sfsandbox'
     azr_dir = 'bluesky_posts'
