@@ -78,7 +78,7 @@ def write_chunk(df: str, bsky_username: str, output_path: str='posts_output') ->
                 )
     
 # write User Feed data as a series of one or more CSVs
-def stash_user_posts(bsky_client: Client, bsky_did: str, bsky_username: str) -> pd.DataFrame:
+def stash_user_posts(bsky_client: Client, bsky_did: str, bsky_username: str, df: pd.DataFrame=None) -> pd.DataFrame:
     schema = {'content_id':                       []
              ,'post_uri':                         []
              ,'like_count':                       []
@@ -176,11 +176,15 @@ def extract_feed() -> None:
     followed_users = {item.handle: [item.did, item.display_name] for item in get_followers(cli, session_usr)}
     print(f"Detected {len(followed_users):,} BlueSky Users being followed by user @{session_usr}")
     print(f"Parsing posts...\n")
+    df = None
     c = 0
-    for usr in followed_users:
+    for i in range(len(followed_users)):
         c += 1
-        print(f"\n{str(c).zfill(3)} of {str(len(followed_users)).zfill(3)} | Parsing posts from user @{usr}...\n")
-        stash_user_posts(bsky_client=cli, bsky_did=followed_users[usr][0], bsky_username=usr)
+        print(f"\n{str(c).zfill(3)} of {str(len(followed_users)).zfill(3)} | Parsing posts from user @{followed_users[i]}...\n")
+        if i == 0:
+            df = stash_user_posts(bsky_client=cli, bsky_did=followed_users[followed_users[i]][0], bsky_username=followed_users[i])
+        else:
+            
     print(f"Feed Ingestion Complete!")
 
 def upload_file_to_azr(file_to_upload: str):
