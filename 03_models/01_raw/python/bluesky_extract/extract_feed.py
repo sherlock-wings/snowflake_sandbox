@@ -46,14 +46,15 @@ def get_followed_users(bsky_client: Client, bsky_handle: str, follows_limit: int
     bsky_did = get_did(bsky_client, bsky_handle)
     csr = None
     pages_remain = True
-    follows = []
+    followed_users = []
     # like posts, followed users are paginated
     while pages_remain:
         resp = bsky_client.get_follows(actor=bsky_did, limit=follows_limit, cursor=csr)
-        follows += resp.follows
+        followed_users += resp.follows
         if not resp.cursor:
             pages_remain = False
-        csr = resp.cursor 
+        csr = resp.cursor
+    return followed_users 
 
 
 # write a chunk of post data to CSV
