@@ -42,9 +42,18 @@ def get_did(bsky_client: Client, bksy_handle: str) -> str:
     return bsky_client.com.atproto.identity.resolve_handle({'handle': bksy_handle}).did
 
 # get all followers for the user related to a given BlueSky session
-def get_followers(bsky_client: Client, bsky_handle: str) -> list:
+def get_followed_users(bsky_client: Client, bsky_handle: str, follows_limit: int = 100) -> list:
     bsky_did = get_did(bsky_client, bsky_handle)
-    return bsky_client.get_follows(actor=bsky_did).follows
+    csr = None
+    pages_remain = True
+    follows = []
+    # like posts, followed users are paginated
+    while pages_remain:
+        resp = bsky_client.get_follows(actor=bsky_did, limit=follows_limit, cursor=csr)
+        follows += resp.follows
+        if not resp.cursor:
+            pages_remain = False
+        csr = resp.cursor 
 
 
 # write a chunk of post data to CSV
@@ -174,7 +183,7 @@ def stash_user_posts(bsky_client: Client, bsky_did: str, bsky_username: str, df:
 # Driver function
 def extract_feed() -> None:
     cli, session_usr = bluesky_login()
-    followed_users = {item.handle: [item.did, item.display_name] for item in get_followers(cli, session_usr)}
+    followed_users = {item.handle: [item.did, item.display_name] for item in get_followed_users(cli, session_usr)}
     print(f"Detected {len(followed_users):,} BlueSky Users being followed by user @{session_usr}")
     print(f"Parsing posts...")
     df = None
