@@ -11,7 +11,7 @@ from typing import Tuple
 # string-typed timestamps come in many formats-- one function to parse them all
 def parse_timestamp(timestamp_str: str, return_timezone: str='UTC') -> datetime:
     # if the timezone is given in the timestamp, parse that into the final return
-    if fullmatch('^.+:[\d\.]+(\-|\+)\d+$', timestamp_str):
+    if fullmatch(r'^.+:[\d\.]+(\-|\+)[\d:]+$', timestamp_str):
         for tz_fmt in ('%Y-%m-%dT%H:%M:%S.%f%z','%Y-%m-%dT%H:%M:%S%z'):
             try:
                 return datetime.strptime(timestamp_str, tz_fmt)
@@ -52,7 +52,7 @@ def write_chunk(df: str, bsky_username: str, output_path: str='posts_output') ->
     # ex) If 3 files are generated on New Years Day 2025, the names are ['posts_2025-01-01_1.csv', 'posts_2025-01-01_2.csv', 'posts_2025-01-01_3.csv']
     rn = datetime.now().strftime('%Y-%m-%d')
     last_filenum = -1
-    filename = f"{rn}_"
+    filename = f"{output_path}/{rn}_"
 
     if os.path.exists(f"{output_path}/{rn}_1.csv"):
         # get a list of ints where each item is the number just before the '.csv' part in the file name-- get CSV filenames only
@@ -175,18 +175,18 @@ def extract_feed() -> None:
     cli, session_usr = bluesky_login()
     followed_users = {item.handle: [item.did, item.display_name] for item in get_followers(cli, session_usr)}
     print(f"Detected {len(followed_users):,} BlueSky Users being followed by user @{session_usr}")
-    print(f"Parsing posts...\n")
+    print(f"Parsing posts...")
     df = None
     c = 0
-    for i in range(len(followed_users)):
+    for usr in followed_users:
         c += 1
-        print(f"\n{str(c).zfill(3)} of {str(len(followed_users)).zfill(3)} | Parsing posts from user @{followed_users[i]}...\n")
+        print(f"\n\n{str(c).zfill(3)} of {str(len(followed_users)).zfill(3)} | Parsing posts from user @{usr}...")
         # accumulate data across the feeds of many users
         # stash_user_posts() will save data to CSV once it hits 100 MB threshold
-        if i == 0:
-            df = stash_user_posts(bsky_client=cli, bsky_did=followed_users[followed_users[i]][0], bsky_username=followed_users[i])
+        if c == 1:
+            df = stash_user_posts(bsky_client=cli, bsky_did=followed_users[usr][0], bsky_username=usr)
         else:
-            df_next = stash_user_posts(bsky_client=cli, bsky_did=followed_users[followed_users[i]][0], bsky_username=followed_users[i])
+            df_next = stash_user_posts(bsky_client=cli, bsky_did=followed_users[usr][0], bsky_username=usr)
             df = pd.concat([df, df_next])
     if len(df) > 0:
         # ensure residual data is written
@@ -204,7 +204,6 @@ def upload_file_to_azr(file_to_upload: str):
     azr_xct_str = os.getenv('AZR_XCT_STR')
     azr_container = 'sfsandbox'
     azr_dir = 'bluesky_posts'
-    file_to_upload ='dat.csv'
     blob_cli = BlobServiceClient.from_connection_string(azr_xct_str)
     container_cli = blob_cli.get_container_client(azr_container)
     blob_name = f"{azr_dir}/{os.path.basename(file_to_upload)}"
