@@ -2,6 +2,7 @@ from atproto import Client
 from azure.storage.blob import BlobServiceClient
 import csv
 from datetime import datetime
+from dateutil import parser as timestamp_parser
 import os
 import pandas as pd
 import pytz
@@ -132,7 +133,7 @@ def stash_user_posts(bsky_client: Client, bsky_did: str, bsky_username: str, df:
             data['repost_count'].append(item.post.repost_count)
 
             # extract timestamp strings as actual timestamps, including timezone
-            ts = parse_timestamp(item.post.record.created_at)
+            ts = timestamp_parser.parse(item.post.record.created_at)
             data['post_created_timestamp'].append(ts)   
 
             data['text'].append(item.post.record.text)
@@ -156,7 +157,7 @@ def stash_user_posts(bsky_client: Client, bsky_did: str, bsky_username: str, df:
             data['author_displayname'].append(item.post.author.display_name)
 
             # extract timestamp strings as actual timestamps, including timezone
-            ts = parse_timestamp(item.post.author.created_at)
+            ts = timestamp_parser.parse(item.post.author.created_at)
             data['author_account_created_timestamp'].append(ts) 
 
             ts = datetime.now(pytz.timezone('America/New_York')).astimezone(pytz.timezone('UTC'))
