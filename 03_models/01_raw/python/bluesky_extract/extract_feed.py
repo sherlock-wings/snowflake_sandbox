@@ -181,11 +181,24 @@ def extract_feed() -> None:
     for i in range(len(followed_users)):
         c += 1
         print(f"\n{str(c).zfill(3)} of {str(len(followed_users)).zfill(3)} | Parsing posts from user @{followed_users[i]}...\n")
+        # accumulate data across the feeds of many users
+        # stash_user_posts() will save data to CSV once it hits 100 MB threshold
         if i == 0:
             df = stash_user_posts(bsky_client=cli, bsky_did=followed_users[followed_users[i]][0], bsky_username=followed_users[i])
         else:
-            
-    print(f"Feed Ingestion Complete!")
+            df_next = stash_user_posts(bsky_client=cli, bsky_did=followed_users[followed_users[i]][0], bsky_username=followed_users[i])
+            df = pd.concat([df, df_next])
+    if len(df) > 0:
+        # ensure residual data is written
+        write_chunk(df, session_usr)
+    print(f"Feed Ingestion Complete! Uploading to Azure now...\n")
+    files = [file for file in os.listdir('posts_output') if file.endswith('.csv')]
+    print(f"{len(files)} total CSV files detected.")
+    
+    for i in range(len(files)):
+        print(f"Uploading {files[i]}, {i} of {len(files)}")
+    
+    print(f"File upload complete!")
 
 def upload_file_to_azr(file_to_upload: str):
     azr_xct_str = os.getenv('AZR_XCT_STR')
