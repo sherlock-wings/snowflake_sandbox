@@ -9,24 +9,6 @@ import pytz
 from re import fullmatch
 from typing import Tuple
 
-# string-typed timestamps come in many formats-- one function to parse them all
-def parse_timestamp(timestamp_str: str, return_timezone: str='UTC') -> datetime:
-    # if the timezone is given in the timestamp, parse that into the final return
-    if fullmatch(r'^.+:[\d\.]+(\-|\+)[\d:]+$', timestamp_str):
-        for tz_fmt in ('%Y-%m-%dT%H:%M:%S.%f%z','%Y-%m-%dT%H:%M:%S%z'):
-            try:
-                return datetime.strptime(timestamp_str, tz_fmt)
-            except ValueError:
-                continue
-    # if the timestamp has no timezone, apply the requested timezone if specified, else default to UTC time
-    for no_tz_fmt in ('%Y-%m-%dT%H:%M:%S.%fZ', '%Y-%m-%dT%H:%M:%SZ', '%Y-%m-%dT%H:%M:%S'):
-        try:
-            ts = datetime.strptime(timestamp_str, no_tz_fmt)
-            return pytz.timezone(return_timezone).localize(ts) 
-        except ValueError:
-            continue
-    raise ValueError(f"Timestamp format not recognized: {timestamp_str}")
-
 # Instantiate a BlueSky session
 def bluesky_login() -> Tuple[Client, str]:
     USR = os.getenv('BSY_USR').lower()
@@ -120,6 +102,7 @@ def stash_user_posts(bsky_client: Client, bsky_did: str, bsky_username: str, df:
         # check if the current file is already "full" (larger than 100 MB)
         # if it is, stash the current data object as CSV and reset a new empty one
         df = pd.DataFrame(data)
+        print(f"Current calculated space of df is {df.memory_usage(deep=True).sum() / (1024*1024)} MB")
         if df.memory_usage(deep=True).sum() / (1024*1024) >= 100:
             filenum+=1
             write_chunk(df, bsky_username)
