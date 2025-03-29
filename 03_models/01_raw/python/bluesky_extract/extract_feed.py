@@ -189,9 +189,9 @@ def extract_feed() -> None:
         # accumulate data across the feeds of many users
         # stash_user_posts() will save CSV data should it hit the 100 mb threshold mid-ingestion for a single user
         if c == 1:
-            df = stash_user_posts(bsky_client=cli, bsky_did=followed_users[usr][0], bsky_username=usr)
+            df = stash_user_posts(schema_input=schema, bsky_client=cli, bsky_did=followed_users[usr][0], bsky_username=usr)
         else:
-            df_next = stash_user_posts(bsky_client=cli, bsky_did=followed_users[usr][0], bsky_username=usr)
+            df_next = stash_user_posts(schema_input=schema, bsky_client=cli, bsky_did=followed_users[usr][0], bsky_username=usr)
             df = pd.concat([df, df_next])
             # if the 100 MB threshold is hit between users, stash the data at this point
             df, _ = chunk_check(schema_input=schema, dataframe_input=df)
