@@ -10,8 +10,14 @@ import pytz
 import time
 from typing import Tuple
 
+# Azure connection config
+AZR_XCT_STR = os.getenv('AZR_XCT_STR')
+AZR_SRC_DIR = os.getenv('AZR_SRC_DIR')
+AZR_TGT_CTR = os.getenv('AZR_TGT_CTR')
+AZR_TGT_DIR = f"{os.getenv('AZR_TGT_DIR')}/"  # apparently a trailing slash is required? 
+
 # schema for all tabular data collected in this file
-schema = {'content_id':                               []
+SCHEMA = {'content_id':                               []
          ,'post_uri':                                 []
          ,'like_count':                               []
          ,'quote_count':                              []
@@ -212,7 +218,7 @@ def stash_user_posts(client_details: str, schema_input: dict, bsky_client:Client
                 here, between one page and the next for the same user, and not after one 
                 user finishes/before the next user is begun.
         '''
-        _, data = chunk_check(schema_input=schema, dict_input=data)
+        _, data = chunk_check(schema_input=SCHEMA, dict_input=data)
         if not resp.cursor:
             pages_remain = False
         csr = resp.cursor        # reset cursor when another page of posts is available
@@ -220,12 +226,9 @@ def stash_user_posts(client_details: str, schema_input: dict, bsky_client:Client
 
 # upload-csv-as-blob function
 def upload_file_to_azr(file_to_upload: str):
-    azr_xct_str = os.getenv('AZR_XCT_STR')
-    azr_container = os.getenv('AZR_TGT_CTR')
-    azr_dir = os.getenv('AZR_TGT_DIR')
-    blob_cli = BlobServiceClient.from_connection_string(azr_xct_str)
-    container_cli = blob_cli.get_container_client(azr_container)
-    blob_name = f"{azr_dir}/{os.path.basename(file_to_upload)}"
+    blob_cli = BlobServiceClient.from_connection_string(AZR_XCT_STR)
+    container_cli = blob_cli.get_container_client(AZR_TGT_CTR)
+    blob_name = f"{AZR_TGT_DIR}/{os.path.basename(file_to_upload)}"
     blob_cli = container_cli.get_blob_client(blob_name)
 
     # Upload the file (supports large files via chunking)
@@ -233,6 +236,22 @@ def upload_file_to_azr(file_to_upload: str):
         blob_cli.upload_blob(data, overwrite=True)
         print(f"Uploaded file: {blob_name}")
 
+def clear_local_dir():
+    blob_service_client = BlobServiceClient.from_connection_string(AZR_XCT_STR)
+    container_client = blob_service_client.get_container_client(AZR_TGT_CTR)
+
+    # collect all filenames in blob dir, then limit the list of files to those labeled with the most recent date
+    blob_list = container_client.list_blobs(name_starts_with=AZR_TGT_DIR)
+    azr_files = [blob.name.split('/')[-1] for blob in blob_list]
+    local_files = [file for file in os.listdir(AZR_SRC_DIR)]
+
+    for file in local_files:
+        if file in azr_files:
+            os.remove(f"{AZR_SRC_DIR}/{file}")
+        else:
+            print(f"File {file} detected locally but not detected in Azure Storage account!!\nYou may have some local data missing from the cloud. Consider reuploading.")
+    if len(os.listdir(AZR_SRC_DIR)) == 0:
+        os.rmdir(AZR_SRC_DIR)
 # Driver function
 def extract_feed() -> None:
     cli, session_usr = bluesky_login()
@@ -259,12 +278,12 @@ def extract_feed() -> None:
         # accumulate data across the feeds of many users
         # stash_user_posts() will save CSV data should it hit the 100 mb threshold mid-ingestion for a single user
         if c == 1:
-            df = stash_user_posts(cli_deets, schema_input=schema, bsky_client=cli, bsky_did=following_users[usr][0], bsky_username=usr)
+            df = stash_user_posts(cli_deets, schema_input=SCHEMA, bsky_client=cli, bsky_did=following_users[usr][0], bsky_username=usr)
         else:
-            df_next = stash_user_posts(cli_deets, schema_input=schema, bsky_client=cli, bsky_did=following_users[usr][0], bsky_username=usr)
+            df_next = stash_user_posts(cli_deets, schema_input=SCHEMA, bsky_client=cli, bsky_did=following_users[usr][0], bsky_username=usr)
             df = pd.concat([df, df_next])
             # if the 100 MB threshold is hit between users, stash the data at this point
-            df, _ = chunk_check(schema_input=schema, dataframe_input=df)
+            df, _ = chunk_check(schema_input=SCHEMA, dataframe_input=df)
     if len(df) > 0:
         # ensure any remaining data less than 100 MB is still written
         write_chunk(df)
