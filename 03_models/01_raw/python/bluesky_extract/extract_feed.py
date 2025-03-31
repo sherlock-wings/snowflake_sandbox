@@ -72,7 +72,7 @@ def write_chunk(df: pd.DataFrame, output_path: str=None) -> None:
     # ex) If 3 files are generated on New Years Day 2025, the names are ['posts_2025-01-01_1.csv', 'posts_2025-01-01_2.csv', 'posts_2025-01-01_3.csv']
     rn = datetime.now().strftime('%Y-%m-%d')
     last_file_num = -1
-    filename = f"{output_path}/{rn}_"
+    filename = f"{output_path}/posts_{rn}_"
 
     if os.path.exists(f"{output_path}/posts_{rn}_1.csv"):
         # get a list of ints where each item is the number just before the '.csv' part in the file name-- get CSV filenames only
@@ -98,11 +98,20 @@ def write_chunk(df: pd.DataFrame, output_path: str=None) -> None:
              )           
 # check if the current file is already "full" (larger than 100 MB, by default)
 # if it is, stash the current data object as CSV and reset a new empty one    
-def chunk_check(schema_input: dict, filesize_limit_mb: int = 200, dict_input: dict=None, dataframe_input: pd.DataFrame=pd.DataFrame(), callout_size: bool=False) -> Tuple[pd.DataFrame, dict]:
+def chunk_check(schema_input: dict, filesize_limit_mb: int = 300, dict_input: dict=None, dataframe_input: pd.DataFrame=pd.DataFrame(), callout_size: bool=False) -> Tuple[pd.DataFrame, dict]:
     if not dict_input and dataframe_input.empty:
         raise ValueError("chunk_check() requires either an argument for `dict_input` or for `dataframe_input`. Both cannot be ommitted.")
     elif dataframe_input.empty:
         dataframe_input = pd.DataFrame(dict_input)
+    '''
+    TODO-- Figure out why there isn't a one-to-one between MB measured via pd.DataFrame.memory_usage() and 
+           actual MB consumed when the CSV is written to disk.
+
+           Like if you try to cut it off at 100 MB the file that gets written is something like 45 - 65 MB.
+
+           So right now I'm just gonna crank this number up to 300 until I can figure out a better way 
+           to control this without guesstimating.
+    '''
     size = dataframe_input.memory_usage(deep=True).sum() / (1000000)
     if callout_size:
         print(f"Current calculated space of df is {size:,.2f} MB")
@@ -113,7 +122,7 @@ def chunk_check(schema_input: dict, filesize_limit_mb: int = 200, dict_input: di
     return dataframe_input, dict_input
     
 # write User Feed data as a series of one or more CSVs
-def stash_user_posts(client_details: str, schema_input: dict, bsky_client:Client, bsky_did:str, bsky_username:str) -> pd.DataFrame:
+def stash_user_posts(client_details: str, schema_input: dict, bsky_client:Client, bsky_did:str, bsky_username:str, max_retries: int = 5, wait_period_increment_seconds: int=300) -> pd.DataFrame:
     data         = {col: [] for col in schema_input} 
     csr          = None
     pages_remain = True
@@ -124,17 +133,24 @@ def stash_user_posts(client_details: str, schema_input: dict, bsky_client:Client
     while pages_remain:
         # Retrieve a paginated post-feed for a specific bluesky user
         page_num += 1  
-        
-        try:
-            resp = bsky_client.get_author_feed(actor=bsky_did, cursor=csr)
-        except NetworkError:
-            print(f"Call for page {page_num} of user @{bsky_username}'s post data was blocked by Rate-Limiting.")
-            print(f"Trying again in 300 seconds...")
-            time.sleep(300)
-            resp = bsky_client.get_author_feed(actor=bsky_did, cursor=csr)
+        retry_count = 0
+        wait_period_seconds = 0
+        # Calls made to BlueSky can get rate-limited
+        # Retry when calls get blocked some number of times before giving up, linearly-increasing wait-period between retries 
+        while retry_count <= max_retries:
+            try:
+                resp = bsky_client.get_author_feed(actor=bsky_did, cursor=csr)
+            except NetworkError:
+                retry_count += 1
+                if retry_count > max_retries:
+                    raise NetworkError(f"Call to atproto.Client.get_author_feed() still blocked after {max_retries} attempts. Aborting.")
+                wait_period_seconds += wait_period_increment_seconds
+                print(f"Call for page {page_num} of user @{bsky_username}'s post data was blocked by Rate-Limiting.")
+                print(f"Trying again in {wait_period_seconds} seconds (attempt {retry_count} of {max_retries})...")
+                time.sleep(wait_period_seconds)
 
         feed = resp.feed
-        print(f"Retrieving post data from page {page_num} for user @{bsky_username}.bsky.social...", end='\r')
+        print(f"Retrieving post data from page {page_num} for user @{bsky_username}...", end='\r')
         for item in feed:
             #
             # i drink your data! i DRINK IT UP ლಠ益ಠ)ლ
@@ -174,15 +190,27 @@ def stash_user_posts(client_details: str, schema_input: dict, bsky_client:Client
             # extract timestamp strings as actual timestamps, including timezone
             ts = timestamp_parser.parse(item.post.author.created_at)
             data['post_author_account_created_timestamp'].append(ts) 
+            
             # client details passed as input arg
             data['bluesky_client_account_did'].append(client_details.split('|')[0])
             data['bluesky_client_account_username'].append(client_details.split('|')[1])
             data['bluesky_client_account_displayname'].append(client_details.split('|')[2])
-            data['bluesky_client_account_created_timestamp'].append(client_details.split('|')[3])
             
+            # extract timestamp strings as actual timestamps, including timezone
+            ts = timestamp_parser.parse(client_details.split('|')[3])
+            data['bluesky_client_account_created_timestamp'].append(ts)
+
             ts = datetime.now(pytz.timezone('America/New_York')).astimezone(pytz.timezone('UTC'))
             data['record_captured_timestamp'].append(ts) 
+        '''
+        TODO -- Figure out why the below call never gets a "hit". It's like the only time
+                that this .py file will write a CSV to disk is between one user and the next.
 
+                This doesn't really make sense-- 99% of the time this program should be inside
+                the `while` loop in this method. So you would think that the CSV write happens
+                here, between one page and the next for the same user, and not after one 
+                user finishes/before the next user is begun.
+        '''
         _, data = chunk_check(schema_input=schema, dict_input=data)
         if not resp.cursor:
             pages_remain = False
@@ -235,7 +263,7 @@ def extract_feed() -> None:
             df_next = stash_user_posts(cli_deets, schema_input=schema, bsky_client=cli, bsky_did=following_users[usr][0], bsky_username=usr)
             df = pd.concat([df, df_next])
             # if the 100 MB threshold is hit between users, stash the data at this point
-            df, _ = chunk_check(schema_input=schema, dataframe_input=df, callout_size=True)
+            df, _ = chunk_check(schema_input=schema, dataframe_input=df)
     if len(df) > 0:
         # ensure any remaining data less than 100 MB is still written
         write_chunk(df)
