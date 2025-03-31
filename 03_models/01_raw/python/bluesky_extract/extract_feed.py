@@ -140,17 +140,18 @@ def stash_user_posts(client_details: str, schema_input: dict, bsky_client:Client
         while retry_count <= max_retries:
             try:
                 resp = bsky_client.get_author_feed(actor=bsky_did, cursor=csr)
+                break
             except NetworkError:
                 retry_count += 1
                 if retry_count > max_retries:
                     raise NetworkError(f"Call to atproto.Client.get_author_feed() still blocked after {max_retries} attempts. Aborting.")
                 wait_period_seconds += wait_period_increment_seconds
-                print(f"Call for page {page_num} of user @{bsky_username}'s post data was blocked by Rate-Limiting.")
-                print(f"Trying again in {wait_period_seconds} seconds (attempt {retry_count} of {max_retries})...")
+                print(f"Call for page {page_num:,} of user @{bsky_username}'s post data was blocked by Rate-Limiting.")
+                print(f"Trying again in {wait_period_seconds:,} seconds (attempt {retry_count} of {max_retries})...")
                 time.sleep(wait_period_seconds)
-
+        
         feed = resp.feed
-        print(f"Retrieving post data from page {page_num} for user @{bsky_username}...", end='\r')
+        print(f"Ingesting {page_num:,} pages of post-data from user @{bsky_username}...", end='\r')
         for item in feed:
             #
             # i drink your data! i DRINK IT UP ლಠ益ಠ)ლ
@@ -267,13 +268,13 @@ def extract_feed() -> None:
     if len(df) > 0:
         # ensure any remaining data less than 100 MB is still written
         write_chunk(df)
-    print(f"Feed Ingestion Complete! Uploading to Azure now...\n")
+    print(f"\nFeed Ingestion Complete! Uploading to Azure now...\n")
     source_dir = os.getenv('AZR_SRC_DIR')
     files = [file for file in os.listdir(source_dir) if file.endswith('.csv')]
     print(f"{len(files)} total CSV files detected.")
     
     for i in range(len(files)):
-        print(f"Uploading {files[i]}, {i+1} of {len(files)}")
+        print(f"\nUploading {files[i]}, {i+1} of {len(files)}")
         upload_file_to_azr(f"{source_dir}/{files[i]}")
     
     print(f"File upload complete!")
