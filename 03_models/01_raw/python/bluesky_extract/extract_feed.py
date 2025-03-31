@@ -11,23 +11,27 @@ import time
 from typing import Tuple
 
 # schema for all tabular data collected in this file
-schema = {'content_id':                       []
-         ,'post_uri':                         []
-         ,'like_count':                       []
-         ,'quote_count':                      []
-         ,'reply_count':                      []
-         ,'repost_count':                     []
-         ,'post_created_timestamp':           []
-         ,'text':                             []
-         ,'tags':                             []
-         ,'embedded_link_title':              []
-         ,'embedded_link_description':        []
-         ,'embedded_link_uri':                []
-         ,'author_did':                       []
-         ,'author_username':                  []
-         ,'author_displayname':               []
-         ,'author_account_created_timestamp': []
-         ,'record_captured_timestamp':        []
+schema = {'content_id':                               []
+         ,'post_uri':                                 []
+         ,'like_count':                               []
+         ,'quote_count':                              []
+         ,'reply_count':                              []
+         ,'repost_count':                             []
+         ,'post_created_timestamp':                   []
+         ,'text':                                     []
+         ,'tags':                                     []
+         ,'embedded_link_title':                      []
+         ,'embedded_link_description':                []
+         ,'embedded_link_uri':                        []
+         ,'post_author_did':                          []
+         ,'post_author_username':                     []
+         ,'post_author_displayname':                  []
+         ,'post_author_account_created_timestamp':    []
+         ,'bluesky_client_account_did':               []
+         ,'bluesky_client_account_username':          []
+         ,'bluesky_client_account_displayname':       []
+         ,'bluesky_client_account_created_timestamp': []
+         ,'record_captured_timestamp':                []
         }
 
 # Instantiate a BlueSky session
@@ -61,14 +65,16 @@ def get_following_users(bsky_client: Client, bsky_handle: str, follows_limit: in
 
 
 # write a chunk of post data to CSV
-def write_chunk(df: pd.DataFrame, output_path: str='03_models/01_raw/python/bluesky_extract') -> None:
+def write_chunk(df: pd.DataFrame, output_path: str=None) -> None:
+    if not output_path:
+        output_path = os.getenv('AZR_SRC_DIR')
     # filename format is posts_<extraction_date>_<file_ordinal>.csv, where <final ordinal> is an incremental int
     # ex) If 3 files are generated on New Years Day 2025, the names are ['posts_2025-01-01_1.csv', 'posts_2025-01-01_2.csv', 'posts_2025-01-01_3.csv']
     rn = datetime.now().strftime('%Y-%m-%d')
     last_file_num = -1
     filename = f"{output_path}/{rn}_"
 
-    if os.path.exists(f"{output_path}/{rn}_1.csv"):
+    if os.path.exists(f"{output_path}/posts_{rn}_1.csv"):
         # get a list of ints where each item is the number just before the '.csv' part in the file name-- get CSV filenames only
         files = [int(file.split('_')[-1].split('.')[0]) for file in os.listdir(output_path) if file.split('.')[-1] == 'csv']
         files.sort()
@@ -80,7 +86,7 @@ def write_chunk(df: pd.DataFrame, output_path: str='03_models/01_raw/python/blue
         filename += f"{last_file_num}.csv"
     else:
         filename += "1.csv"
-    print(f"Writing {filename}...")
+    print(f"\nWriting {filename}...")
     df.to_csv(filename,
               index=False,
               encoding='utf-8',
@@ -107,7 +113,7 @@ def chunk_check(schema_input: dict, filesize_limit_mb: int = 200, dict_input: di
     return dataframe_input, dict_input
     
 # write User Feed data as a series of one or more CSVs
-def stash_user_posts(schema_input: dict, bsky_client:Client, bsky_did:str, bsky_username:str) -> pd.DataFrame:
+def stash_user_posts(client_details: str, schema_input: dict, bsky_client:Client, bsky_did:str, bsky_username:str) -> pd.DataFrame:
     data         = {col: [] for col in schema_input} 
     csr          = None
     pages_remain = True
@@ -161,14 +167,19 @@ def stash_user_posts(schema_input: dict, bsky_client:Client, bsky_did:str, bsky_
             except AttributeError:
                 data['embedded_link_uri'].append('null')
 
-            data['author_did'].append(bsky_did)
-            data['author_username'].append(item.post.author.handle)
-            data['author_displayname'].append(item.post.author.display_name)
+            data['post_author_did'].append(bsky_did)
+            data['post_author_username'].append(item.post.author.handle)
+            data['post_author_displayname'].append(item.post.author.display_name)
 
             # extract timestamp strings as actual timestamps, including timezone
             ts = timestamp_parser.parse(item.post.author.created_at)
-            data['author_account_created_timestamp'].append(ts) 
-
+            data['post_author_account_created_timestamp'].append(ts) 
+            # client details passed as input arg
+            data['bluesky_client_account_did'].append(client_details.split('|')[0])
+            data['bluesky_client_account_username'].append(client_details.split('|')[1])
+            data['bluesky_client_account_displayname'].append(client_details.split('|')[2])
+            data['bluesky_client_account_created_timestamp'].append(client_details.split('|')[3])
+            
             ts = datetime.now(pytz.timezone('America/New_York')).astimezone(pytz.timezone('UTC'))
             data['record_captured_timestamp'].append(ts) 
 
@@ -196,6 +207,18 @@ def upload_file_to_azr(file_to_upload: str):
 # Driver function
 def extract_feed() -> None:
     cli, session_usr = bluesky_login()
+    
+    # to collect information from bluesky, you need a bluesky client. 
+    # to do that, you need to create a user (with a name, etc) to log into bluesky. the bluesky client session is then tied to this specific user
+    # for completeness, information on the specific user we are logging in as should also be collected
+    cli_did = get_did(cli, session_usr)
+    resp = cli.get_profile(actor=cli_did)
+    cli_username = session_usr
+    cli_displayname = resp.display_name
+    cli_account_created_at = resp.created_at
+
+    cli_deets = f"{cli_did}|{cli_username}|{cli_displayname}|{cli_account_created_at}"
+    
     following_users = {item.handle: [item.did, item.display_name] for item in get_following_users(cli, session_usr)}
     print(f"Detected {len(following_users):,} BlueSky Users being followed by user @{session_usr}")
     print(f"Parsing posts...")
@@ -207,9 +230,9 @@ def extract_feed() -> None:
         # accumulate data across the feeds of many users
         # stash_user_posts() will save CSV data should it hit the 100 mb threshold mid-ingestion for a single user
         if c == 1:
-            df = stash_user_posts(schema_input=schema, bsky_client=cli, bsky_did=following_users[usr][0], bsky_username=usr)
+            df = stash_user_posts(cli_deets, schema_input=schema, bsky_client=cli, bsky_did=following_users[usr][0], bsky_username=usr)
         else:
-            df_next = stash_user_posts(schema_input=schema, bsky_client=cli, bsky_did=following_users[usr][0], bsky_username=usr)
+            df_next = stash_user_posts(cli_deets, schema_input=schema, bsky_client=cli, bsky_did=following_users[usr][0], bsky_username=usr)
             df = pd.concat([df, df_next])
             # if the 100 MB threshold is hit between users, stash the data at this point
             df, _ = chunk_check(schema_input=schema, dataframe_input=df, callout_size=True)
