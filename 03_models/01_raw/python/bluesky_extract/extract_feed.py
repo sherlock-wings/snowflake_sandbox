@@ -44,23 +44,23 @@ def get_did(bsky_client: Client, bksy_handle: str) -> str:
     return bsky_client.com.atproto.identity.resolve_handle({'handle': bksy_handle}).did
 
 # get all followers for the user related to a given BlueSky session
-def get_followed_users(bsky_client: Client, bsky_handle: str, follows_limit: int = 100) -> list:
+def get_following_users(bsky_client: Client, bsky_handle: str, follows_limit: int = 100) -> list:
     bsky_did = get_did(bsky_client, bsky_handle)
     csr = None
     pages_remain = True
-    followed_users = []
+    following_users = []
     # like posts, followed users are paginated
     while pages_remain:
         resp = bsky_client.get_follows(actor=bsky_did, limit=follows_limit, cursor=csr)
-        followed_users += resp.follows
+        following_users += resp.follows
         if not resp.cursor:
             pages_remain = False
         csr = resp.cursor
-    return followed_users 
+    return following_users 
 
 
 # write a chunk of post data to CSV
-def write_chunk(df: pd.DataFrame, output_path: str='posts_output') -> None:
+def write_chunk(df: pd.DataFrame, output_path: str='03_models/01_raw/python/bluesky_extract') -> None:
     # filename format is posts_<extraction_date>_<file_ordinal>.csv, where <final ordinal> is an incremental int
     # ex) If 3 files are generated on New Years Day 2025, the names are ['posts_2025-01-01_1.csv', 'posts_2025-01-01_2.csv', 'posts_2025-01-01_3.csv']
     rn = datetime.now().strftime('%Y-%m-%d')
@@ -79,25 +79,26 @@ def write_chunk(df: pd.DataFrame, output_path: str='posts_output') -> None:
         filename += f"{last_file_num}.csv"
     else:
         filename += "1.csv"
-    df.to_csv(df.to_csv(filename,
-                        index=False,
-                        encoding='utf-8',
-                        quoting=csv.QUOTE_ALL, # Wrap all fields in quotes
-                        quotechar='"',         # Standard quote character
-                        escapechar='\\',       # Escape special chars
-                        doublequote=True,      # Handle existing quotes
-                        lineterminator='\n'    # Standard line terminator
-                       )
-              )           
+    print(f"Writing {filename}...")
+    df.to_csv(filename,
+              index=False,
+              encoding='utf-8',
+              quoting=csv.QUOTE_ALL, # Wrap all fields in quotes -- hopefully this handles weird chars like line separators or paragraph separators
+              quotechar='"',         
+              escapechar='\\',       
+              doublequote=True,      
+              lineterminator='\n'    
+             )           
 # check if the current file is already "full" (larger than 100 MB, by default)
 # if it is, stash the current data object as CSV and reset a new empty one    
-def chunk_check(schema_input: dict, filesize_limit_mb: int = 100, dict_input: dict=None, dataframe_input: pd.DataFrame=None) -> Tuple[pd.DataFrame, dict]:
-    if not dict_input and not dataframe_input:
-        raise ValueError("chunk_check() requires an argument for `dict_input` and/or for `dataframe_input`. Both cannot be ommitted.")
-    elif not dataframe_input:
+def chunk_check(schema_input: dict, filesize_limit_mb: int = 100, dict_input: dict=None, dataframe_input: pd.DataFrame=pd.DataFrame(), callout_size: bool=False) -> Tuple[pd.DataFrame, dict]:
+    if not dict_input and dataframe_input.empty:
+        raise ValueError("chunk_check() requires either an argument for `dict_input` or for `dataframe_input`. Both cannot be ommitted.")
+    elif dataframe_input.empty:
         dataframe_input = pd.DataFrame(dict_input)
     size = dataframe_input.memory_usage(deep=True).sum() / (1000000)
-    print(f"Current calculated space of df is {size:,.2f} MB")
+    if callout_size:
+        print(f"Current calculated space of df is {size:,.2f} MB")
     if size >= filesize_limit_mb:
         print("SIZE LIMIT TRIGGERED")
         write_chunk(dataframe_input)
@@ -175,39 +176,7 @@ def stash_user_posts(schema_input: dict, bsky_client:Client, bsky_did:str, bsky_
         csr = resp.cursor        # reset cursor when another page of posts is available
     return pd.DataFrame(data)
 
-# Driver function
-def extract_feed() -> None:
-    cli, session_usr = bluesky_login()
-    followed_users = {item.handle: [item.did, item.display_name] for item in get_followed_users(cli, session_usr)}
-    print(f"Detected {len(followed_users):,} BlueSky Users being followed by user @{session_usr}")
-    print(f"Parsing posts...")
-    df = None
-    c = 0
-    for usr in followed_users:
-        c += 1
-        print(f"\n\n{str(c).zfill(3)} of {str(len(followed_users)).zfill(3)} | Parsing posts from user @{usr}...")
-        # accumulate data across the feeds of many users
-        # stash_user_posts() will save CSV data should it hit the 100 mb threshold mid-ingestion for a single user
-        if c == 1:
-            df = stash_user_posts(schema_input=schema, bsky_client=cli, bsky_did=followed_users[usr][0], bsky_username=usr)
-        else:
-            df_next = stash_user_posts(schema_input=schema, bsky_client=cli, bsky_did=followed_users[usr][0], bsky_username=usr)
-            df = pd.concat([df, df_next])
-            # if the 100 MB threshold is hit between users, stash the data at this point
-            df, _ = chunk_check(schema_input=schema, dataframe_input=df)
-    if len(df) > 0:
-        # ensure any remaining data less than 100 MB is still written
-        write_chunk(df)
-    print(f"Feed Ingestion Complete! Uploading to Azure now...\n")
-    files = [file for file in os.listdir('posts_output') if file.endswith('.csv')]
-    print(f"{len(files)} total CSV files detected.")
-    
-    for i in range(len(files)):
-        print(f"Uploading {files[i]}, {i+1} of {len(files)}")
-        upload_file_to_azr(files[i])
-    
-    print(f"File upload complete!")
-
+# upload-csv-as-blob function
 def upload_file_to_azr(file_to_upload: str):
     azr_xct_str = os.getenv('AZR_XCT_STR')
     azr_container = 'sfsandbox'
@@ -221,6 +190,39 @@ def upload_file_to_azr(file_to_upload: str):
     with open(file_to_upload, "rb") as data:
         blob_cli.upload_blob(data, overwrite=True)
         print(f"Uploaded file: {blob_name}")
+
+# Driver function
+def extract_feed() -> None:
+    cli, session_usr = bluesky_login()
+    following_users = {item.handle: [item.did, item.display_name] for item in get_following_users(cli, session_usr)}
+    print(f"Detected {len(following_users):,} BlueSky Users being followed by user @{session_usr}")
+    print(f"Parsing posts...")
+    df = None
+    c = 0
+    for usr in following_users:
+        c += 1
+        print(f"\n\n{str(c).zfill(3)} of {str(len(following_users)).zfill(3)} | Parsing posts from user @{usr}...")
+        # accumulate data across the feeds of many users
+        # stash_user_posts() will save CSV data should it hit the 100 mb threshold mid-ingestion for a single user
+        if c == 1:
+            df = stash_user_posts(schema_input=schema, bsky_client=cli, bsky_did=following_users[usr][0], bsky_username=usr)
+        else:
+            df_next = stash_user_posts(schema_input=schema, bsky_client=cli, bsky_did=following_users[usr][0], bsky_username=usr)
+            df = pd.concat([df, df_next])
+            # if the 100 MB threshold is hit between users, stash the data at this point
+            df, _ = chunk_check(schema_input=schema, dataframe_input=df, callout_size=True)
+    if len(df) > 0:
+        # ensure any remaining data less than 100 MB is still written
+        write_chunk(df)
+    print(f"Feed Ingestion Complete! Uploading to Azure now...\n")
+    files = [file for file in os.listdir('posts_output') if file.endswith('.csv')]
+    print(f"{len(files)} total CSV files detected.")
+    
+    for i in range(len(files)):
+        print(f"Uploading {files[i]}, {i+1} of {len(files)}")
+        upload_file_to_azr(files[i])
+    
+    print(f"File upload complete!")
 
 if __name__ == "__main__":
     extract_feed()
