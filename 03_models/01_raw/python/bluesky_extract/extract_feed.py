@@ -12,9 +12,15 @@ from typing import Tuple
 
 # Azure connection config
 AZR_XCT_STR = os.getenv('AZR_XCT_STR')
-AZR_SRC_DIR = os.getenv('AZR_SRC_DIR')
+BLB_SVC_CLI = BlobServiceClient.from_connection_string(AZR_XCT_STR)
 AZR_TGT_CTR = os.getenv('AZR_TGT_CTR')
+AZR_CTR_CLI = BLB_SVC_CLI.get_container_client(AZR_TGT_CTR)
+AZR_SRC_DIR = os.getenv('AZR_SRC_DIR')
 AZR_TGT_DIR = f"{os.getenv('AZR_TGT_DIR')}/"  # apparently a trailing slash is required? 
+
+# BlueSky Client Account Config
+USR = os.getenv('BSY_USR').lower()
+KEY = os.getenv('BSY_KEY')
 
 # schema for all tabular data collected in this file
 SCHEMA = {'content_id':                               []
@@ -42,8 +48,6 @@ SCHEMA = {'content_id':                               []
 
 # Instantiate a BlueSky session
 def bluesky_login() -> Tuple[Client, str]:
-    USR = os.getenv('BSY_USR').lower()
-    KEY = os.getenv('BSY_KEY')
     bsky_client = Client()
     bsky_client.login(USR, KEY)
     return bsky_client, USR
@@ -73,7 +77,7 @@ def get_following_users(bsky_client: Client, bsky_handle: str, follows_limit: in
 # write a chunk of post data to CSV
 def write_chunk(df: pd.DataFrame, output_path: str=None) -> None:
     if not output_path:
-        output_path = os.getenv('AZR_SRC_DIR')
+        output_path = AZR_SRC_DIR
     # filename format is posts_<extraction_date>_<file_ordinal>.csv, where <final ordinal> is an incremental int
     # ex) If 3 files are generated on New Years Day 2025, the names are ['posts_2025-01-01_1.csv', 'posts_2025-01-01_2.csv', 'posts_2025-01-01_3.csv']
     rn = datetime.now().strftime('%Y-%m-%d')
@@ -226,14 +230,11 @@ def stash_user_posts(client_details: str, schema_input: dict, bsky_client:Client
 
 # upload-csv-as-blob function
 def upload_file_to_azr(file_to_upload: str):
-    blob_cli = BlobServiceClient.from_connection_string(AZR_XCT_STR)
-    container_cli = blob_cli.get_container_client(AZR_TGT_CTR)
     blob_name = f"{AZR_TGT_DIR}/{os.path.basename(file_to_upload)}"
-    blob_cli = container_cli.get_blob_client(blob_name)
-
+    
     # Upload the file (supports large files via chunking)
     with open(file_to_upload, "rb") as data:
-        blob_cli.upload_blob(data, overwrite=True)
+        BLB_SVC_CLI.upload_blob(data, overwrite=True)
         print(f"Uploaded file: {blob_name}")
 
 def clear_local_dir():
@@ -241,7 +242,7 @@ def clear_local_dir():
     container_client = blob_service_client.get_container_client(AZR_TGT_CTR)
 
     # collect all filenames in blob dir, then limit the list of files to those labeled with the most recent date
-    blob_list = container_client.list_blobs(name_starts_with=AZR_TGT_DIR)
+    blob_list = AZR_CTR_CLI.list_blobs(name_starts_with=AZR_TGT_DIR)
     azr_files = [blob.name.split('/')[-1] for blob in blob_list]
     local_files = [file for file in os.listdir(AZR_SRC_DIR)]
 
@@ -252,6 +253,7 @@ def clear_local_dir():
             print(f"File {file} detected locally but not detected in Azure Storage account!!\nYou may have some local data missing from the cloud. Consider reuploading.")
     if len(os.listdir(AZR_SRC_DIR)) == 0:
         os.rmdir(AZR_SRC_DIR)
+
 # Driver function
 def extract_feed() -> None:
     cli, session_usr = bluesky_login()
@@ -298,5 +300,6 @@ def extract_feed() -> None:
     
     print(f"File upload complete!")
 
+    clear_local_dir()
 if __name__ == "__main__":
     extract_feed()
