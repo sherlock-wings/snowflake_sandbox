@@ -91,7 +91,7 @@ def write_chunk(df: pd.DataFrame, output_path: str='03_models/01_raw/python/blue
              )           
 # check if the current file is already "full" (larger than 100 MB, by default)
 # if it is, stash the current data object as CSV and reset a new empty one    
-def chunk_check(schema_input: dict, filesize_limit_mb: int = 100, dict_input: dict=None, dataframe_input: pd.DataFrame=pd.DataFrame(), callout_size: bool=False) -> Tuple[pd.DataFrame, dict]:
+def chunk_check(schema_input: dict, filesize_limit_mb: int = 200, dict_input: dict=None, dataframe_input: pd.DataFrame=pd.DataFrame(), callout_size: bool=False) -> Tuple[pd.DataFrame, dict]:
     if not dict_input and dataframe_input.empty:
         raise ValueError("chunk_check() requires either an argument for `dict_input` or for `dataframe_input`. Both cannot be ommitted.")
     elif dataframe_input.empty:
