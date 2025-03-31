@@ -23,6 +23,7 @@ schema = {'content_id':                       []
          ,'embedded_link_title':              []
          ,'embedded_link_description':        []
          ,'embedded_link_uri':                []
+         ,'author_did':                       []
          ,'author_username':                  []
          ,'author_displayname':               []
          ,'author_account_created_timestamp': []
@@ -160,6 +161,7 @@ def stash_user_posts(schema_input: dict, bsky_client:Client, bsky_did:str, bsky_
             except AttributeError:
                 data['embedded_link_uri'].append('null')
 
+            data['author_did'].append(bsky_did)
             data['author_username'].append(item.post.author.handle)
             data['author_displayname'].append(item.post.author.display_name)
 
