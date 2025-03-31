@@ -179,8 +179,8 @@ def stash_user_posts(schema_input: dict, bsky_client:Client, bsky_did:str, bsky_
 # upload-csv-as-blob function
 def upload_file_to_azr(file_to_upload: str):
     azr_xct_str = os.getenv('AZR_XCT_STR')
-    azr_container = 'sfsandbox'
-    azr_dir = 'bluesky_posts'
+    azr_container = os.getenv('AZR_TGT_CTR')
+    azr_dir = os.getenv('AZR_TGT_DIR')
     blob_cli = BlobServiceClient.from_connection_string(azr_xct_str)
     container_cli = blob_cli.get_container_client(azr_container)
     blob_name = f"{azr_dir}/{os.path.basename(file_to_upload)}"
@@ -215,12 +215,13 @@ def extract_feed() -> None:
         # ensure any remaining data less than 100 MB is still written
         write_chunk(df)
     print(f"Feed Ingestion Complete! Uploading to Azure now...\n")
-    files = [file for file in os.listdir('posts_output') if file.endswith('.csv')]
+    source_dir = os.getenv('AZR_SRC_DIR')
+    files = [file for file in os.listdir(source_dir) if file.endswith('.csv')]
     print(f"{len(files)} total CSV files detected.")
     
     for i in range(len(files)):
         print(f"Uploading {files[i]}, {i+1} of {len(files)}")
-        upload_file_to_azr(files[i])
+        upload_file_to_azr(f"{source_dir}/{files[i]}")
     
     print(f"File upload complete!")
 
