@@ -212,6 +212,7 @@ def stash_user_posts(client_details: str
         # i drink your data! i DRINK IT UP ლಠ益ಠ)ლ
         # 
         for item in feed:
+            ts = item.post.record.created_at
             # WATERMARK STRATEGY-- don't ingest the same record more than once 
             watermark_ts = datetime(1900, 1, 1, 0, 0, 0, 0, pytz.utc) # default value
             try:
