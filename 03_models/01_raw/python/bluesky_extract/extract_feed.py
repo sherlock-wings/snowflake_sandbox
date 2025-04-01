@@ -4,6 +4,7 @@ from azure.storage.blob import BlobServiceClient
 import csv
 from datetime import datetime
 from dateutil import parser as timestamp_parser
+from io import StringIO
 import os
 import pandas as pd
 import pytz
@@ -45,6 +46,10 @@ SCHEMA = {'content_id':                               []
          ,'bluesky_client_account_created_timestamp': []
          ,'record_captured_timestamp':                []
         }
+
+# Control-table directory 
+# This table will be used for the "high-watermark" stratgegy for incremental ingestion 
+WTM_TBL_DIR = os.getenv('WTM_TBL_DIR')
 
 # Instantiate a BlueSky session
 def bluesky_login() -> Tuple[Client, str]:
@@ -132,15 +137,26 @@ def chunk_check(schema_input: dict, filesize_limit_mb: int = 300, dict_input: di
     return dataframe_input, dict_input
     
 # write User Feed data as a series of one or more CSVs
-def stash_user_posts(client_details: str, schema_input: dict, bsky_client:Client, bsky_did:str, bsky_username:str, max_retries: int = 5, wait_period_increment_seconds: int=300) -> pd.DataFrame:
+def stash_user_posts(client_details: str
+                    ,schema_input: dict
+                    ,bsky_client:Client
+                    ,bsky_did:str
+                    ,bsky_username:str
+                    ,wtm_tbl: pd.DataFrame
+                    ,max_retries: int = 5
+                    ,wait_period_increment_seconds: int=300) -> pd.DataFrame:
+    
     data         = {col: [] for col in schema_input} 
     csr          = None
     pages_remain = True
     page_num     = 0
-    df           = pd.DataFrame()
+    watermark_crossed = False
 
     # Iterate through every post in their account's post history
-    while pages_remain:
+    while pages_remain and not watermark_crossed:
+        if watermark_crossed:
+            break
+        
         # Retrieve a paginated post-feed for a specific bluesky user
         page_num += 1  
         retry_count = 0
@@ -159,24 +175,31 @@ def stash_user_posts(client_details: str, schema_input: dict, bsky_client:Client
                 print(f"Call for page {page_num:,} of user @{bsky_username}'s post data was blocked by Rate-Limiting.")
                 print(f"Trying again in {wait_period_seconds:,} seconds (attempt {retry_count} of {max_retries})...")
                 time.sleep(wait_period_seconds)
-        
         feed = resp.feed
         print(f"Ingesting {page_num:,} pages of post-data from user @{bsky_username}...", end='\r')
+        #
+        # i drink your data! i DRINK IT UP ლಠ益ಠ)ლ
+        # 
         for item in feed:
-            #
-            # i drink your data! i DRINK IT UP ლಠ益ಠ)ლ
-            # 
+            # WATERMARK STRATEGY-- don't ingest the same record more than once 
+            ts = timestamp_parser.parse(item.post.record.created_at)
+            watermark_ts = datetime(1900, 1, 1, 0, 0, 0)
+            if not wtm_tbl.empty:
+                # look up the timestamp in the watermark table for the user who authored the post
+                watermark_ts = timestamp_parser.parse(wtm_tbl['post_created_timestamp'][wtm_tbl['post_author_did'].index(bsky_did)])
+            if ts <= watermark_ts:
+                watermark_crossed = True
+                print(f"\nHit high watermark for user {client_details.split('|')[1]}\nEncountered post creation timestamp is {ts}, known latest timestamp for this user is {watermark_ts}")
+                print("Ingestion for this user will now stop.\n")
+                break
+            # if stash_user_posts() gets to this line, the given post has not been ingested before, so the program continues...
+            data['post_created_timestamp'].append(ts)   
             data['content_id'].append(item.post.cid)
             data['post_uri'].append(item.post.uri)
             data['like_count'].append(item.post.like_count)
             data['quote_count'].append(item.post.quote_count)
             data['reply_count'].append(item.post.reply_count)
             data['repost_count'].append(item.post.repost_count)
-
-            # extract timestamp strings as actual timestamps, including timezone
-            ts = timestamp_parser.parse(item.post.record.created_at)
-            data['post_created_timestamp'].append(ts)   
-
             data['text'].append(item.post.record.text)
             data['tags'].append(item.post.record.tags)
             
@@ -229,7 +252,7 @@ def stash_user_posts(client_details: str, schema_input: dict, bsky_client:Client
     return pd.DataFrame(data)
 
 # upload-csv-as-blob function
-def upload_file_to_azr(file_to_upload: str):
+def upload_file_to_azr(file_to_upload: str) -> None:
     blob_name = f"{AZR_TGT_DIR}/{os.path.basename(file_to_upload)}"
     
     # Upload the file (supports large files via chunking)
@@ -237,10 +260,7 @@ def upload_file_to_azr(file_to_upload: str):
         BLB_SVC_CLI.upload_blob(data, overwrite=True)
         print(f"Uploaded file: {blob_name}")
 
-def clear_local_dir():
-    blob_service_client = BlobServiceClient.from_connection_string(AZR_XCT_STR)
-    container_client = blob_service_client.get_container_client(AZR_TGT_CTR)
-
+def clear_local_dir() -> None:
     # collect all filenames in blob dir, then limit the list of files to those labeled with the most recent date
     blob_list = AZR_CTR_CLI.list_blobs(name_starts_with=AZR_TGT_DIR)
     azr_files = [blob.name.split('/')[-1] for blob in blob_list]
@@ -254,6 +274,31 @@ def clear_local_dir():
     if len(os.listdir(AZR_SRC_DIR)) == 0:
         os.rmdir(AZR_SRC_DIR)
 
+# generate a control table for the "High-Watermark" strategy
+# This is an incremental ingestion strategy-- it should ensure that the same record is never sent to the Azure Storage acct more than once
+def write_watermark_table() -> None: 
+    blob_list = AZR_CTR_CLI.list_blobs()
+    azr_files = [blob.name for blob in blob_list]
+    if len(azr_files) == 0:
+        print(f"\n\nWARNING! WARNING! WARNING!\n\nZero CSV files found in Azure Blob directory {AZR_TGT_DIR}, container {AZR_TGT_CTR}")
+        print("This means incremental ingestion will not be applied. If that is unexpected, then this run may be ingesting duplicate records.")
+        print("If you don't want that, cancel this ingestion now with CTRL+C!\n")
+
+    max_date = max([datetime.strptime(filename.split('/')[-1].split('_')[1], '%Y-%m-%d').date() for filename in azr_files])
+    file_datestring = datetime.strftime(max_date, '%Y-%m-%d')
+    azr_files = [file for file in azr_files if file_datestring in file]
+    azr_files
+    df = pd.DataFrame(SCHEMA)
+    for filename in azr_files:
+        blob_client = BLB_SVC_CLI.get_blob_client(container=AZR_TGT_CTR, blob=filename)
+        blob_data = blob_client.download_blob().readall()
+        df_next = pd.read_csv(StringIO(blob_data.decode('utf-8')))
+        df = pd.concat([df, df_next])
+
+    df = df.groupby('post_author_did')['post_created_timestamp'].max().reset_index()
+    df.to_csv(f"{WTM_TBL_DIR}/extract_feed_control_tbl.csv", index=False)
+    print(f"High-Watermark Control table written to {WTM_TBL_DIR}/extract_feed_control_tbl.csv\n")
+
 # Driver function
 def extract_feed() -> None:
     cli, session_usr = bluesky_login()
@@ -266,8 +311,16 @@ def extract_feed() -> None:
     cli_username = session_usr
     cli_displayname = resp.display_name
     cli_account_created_at = resp.created_at
-
     cli_deets = f"{cli_did}|{cli_username}|{cli_displayname}|{cli_account_created_at}"
+    
+    # before parsing begins, check if a control table (for incremental ingestion) is available locally
+    # if it isn't write this table locally
+    watermark_tbl = pd.DataFrame()
+    try:
+        watermark_tbl = pd.read_csv(f"{WTM_TBL_DIR}extract_feed_control_tbl.csv").to_dict(orient='list')
+    except FileNotFoundError:
+        print(f"No High-Watermark control table found. Attempting to create local file now...")
+        write_watermark_table()
     
     following_users = {item.handle: [item.did, item.display_name] for item in get_following_users(cli, session_usr)}
     print(f"Detected {len(following_users):,} BlueSky Users being followed by user @{session_usr}")
@@ -280,9 +333,9 @@ def extract_feed() -> None:
         # accumulate data across the feeds of many users
         # stash_user_posts() will save CSV data should it hit the 100 mb threshold mid-ingestion for a single user
         if c == 1:
-            df = stash_user_posts(cli_deets, schema_input=SCHEMA, bsky_client=cli, bsky_did=following_users[usr][0], bsky_username=usr)
+            df = stash_user_posts(cli_deets, schema_input=SCHEMA, bsky_client=cli, bsky_did=following_users[usr][0], bsky_username=usr, wtm_tbl=watermark_tbl)
         else:
-            df_next = stash_user_posts(cli_deets, schema_input=SCHEMA, bsky_client=cli, bsky_did=following_users[usr][0], bsky_username=usr)
+            df_next = stash_user_posts(cli_deets, schema_input=SCHEMA, bsky_client=cli, bsky_did=following_users[usr][0], bsky_username=usr, wtm_tbl=watermark_tbl)
             df = pd.concat([df, df_next])
             # if the 100 MB threshold is hit between users, stash the data at this point
             df, _ = chunk_check(schema_input=SCHEMA, dataframe_input=df)
@@ -290,16 +343,15 @@ def extract_feed() -> None:
         # ensure any remaining data less than 100 MB is still written
         write_chunk(df)
     print(f"\nFeed Ingestion Complete! Uploading to Azure now...\n")
+    
     source_dir = os.getenv('AZR_SRC_DIR')
     files = [file for file in os.listdir(source_dir) if file.endswith('.csv')]
     print(f"{len(files)} total CSV files detected.")
-    
     for i in range(len(files)):
         print(f"\nUploading {files[i]}, {i+1} of {len(files)}")
         upload_file_to_azr(f"{source_dir}/{files[i]}")
-    
     print(f"File upload complete!")
-
+    
     clear_local_dir()
 if __name__ == "__main__":
     extract_feed()
