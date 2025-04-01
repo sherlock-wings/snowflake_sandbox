@@ -288,9 +288,10 @@ def upload_file_to_azr(file_to_upload: str) -> None:
     if file_to_upload.split('/')[-1] in azr_files:
         print(f"\nFile {file_to_upload.split('/')[-1]} was found both in the Azure Storage Location and on the local machine.\nSkipping the upload for the local version of {file_to_upload.split('/')[-1]} to avoid overwriting existing cloud data.\n")
         return None
+    blob_cli = BLB_SVC_CLI.get_blob_client(container=AZR_TGT_CTR, blob=blob_name)
     # If no overwrite-danger is detected, upload the file (supports large files via chunking)
     with open(file_to_upload, "rb") as data:
-        BLB_SVC_CLI.upload_blob(data, overwrite=True)
+        blob_cli.upload_blob(data, overwrite=True)
         print(f"Uploaded file: {blob_name}")
 
 def clear_local_dir() -> None:
