@@ -16,11 +16,29 @@ def jitter(start_value: float, volatility: float = 0.01, direction: int = 0) -> 
         jitter += random.uniform(-volatility, volatility) * start_value
     return start_value + jitter
 
+# GENERATE TIME (COLUMN 2)
+TIME = pd.date_range(start = '2025-02-17 00:00:00.000000000'
+                    ,end   = '2025-02-23 23:59:59.999999999'
+                    ,freq  = '1s').values
 
-timestamps = pd.date_range(start = '2025-02-17 00:00:00.000000000'
-                          ,end   = '2025-02-23 23:59:59.999999999'
-                          ,freq = '1s').values
-timestamps = pd.Series([ts + np.timedelta64(round(jitter(500000000, 0.99999, 0)), 'ns') for ts in timestamps])
+TIME = pd.Series([ts + np.timedelta64(round(jitter(500000000, 0.99999, 0)), 'ns') for ts in TIME])
+
+# GENERATE DATE (COLUMN 1)
+DATE = pd.Series([dt.date() for dt in TIME])
+
+# GENERATE SYM (COLUMN 3)
+SYM = pd.Series("1YMH25", index=TIME.index)
+
+# GENERATE PIMCOINTERNALKEY (COLUMN 4)
+PIMCOINTERNALKEY = pd.Series("F:XCBT:XCBT:YM:M:20250301", index=TIME.index)
+
+# GENERATE PIMCOINTERNALKEY (COLUMN 5)
+MDSID = pd.Series("1YMH25|REFINITIV|null|LIVE", index=TIME.index)
+
+# GENERATE FEEDSEQNUM (COLUMN 6)
+start = 259237
+seconds_in_a_week = 604800
+FEEDSEQNUM = pd.Series(np.arange(start, start+seconds_in_a_week, 1))
 
 '''
 NOTES: Column Generation specs for PIMCO TICK_DATA_FULL Table:
