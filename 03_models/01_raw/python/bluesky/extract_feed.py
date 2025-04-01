@@ -372,5 +372,6 @@ def extract_feed() -> None:
     print(f"File upload complete!")
     
     clear_local_dir()
+    
 if __name__ == "__main__":
     extract_feed()
