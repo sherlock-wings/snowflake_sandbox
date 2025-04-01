@@ -317,7 +317,8 @@ def write_watermark_table() -> None:
         blob_client = BLB_SVC_CLI.get_blob_client(container=AZR_TGT_CTR, blob=azr_files[i])
         blob_data = blob_client.download_blob().readall()
         df_next = pd.read_csv(StringIO(blob_data.decode('utf-8')))
-        df = pd.concat([df, df_next])
+        if not df_next.empty:
+            df = pd.concat([df, df_next])
         print(f"{i+1} of {len(azr_files)} max-date files downloaded from Azure")
 
 
@@ -361,7 +362,8 @@ def extract_feed() -> None:
             df = stash_user_posts(cli_deets, schema_input=SCHEMA, bsky_client=cli, bsky_did=following_users[usr][0], bsky_username=usr, wtm_tbl=watermark_tbl)
         else:
             df_next = stash_user_posts(cli_deets, schema_input=SCHEMA, bsky_client=cli, bsky_did=following_users[usr][0], bsky_username=usr, wtm_tbl=watermark_tbl)
-            df = pd.concat([df, df_next])
+            if not df_next.empty:
+                df = pd.concat([df, df_next])
             # if the 100 MB threshold is hit between users, stash the data at this point
             df, _ = chunk_check(schema_input=SCHEMA, dataframe_input=df)
     if len(df) > 0:
