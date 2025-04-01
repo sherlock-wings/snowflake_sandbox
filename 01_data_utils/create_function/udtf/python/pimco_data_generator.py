@@ -40,6 +40,12 @@ start = 259237
 seconds_in_a_week = 604800
 FEEDSEQNUM = pd.Series(np.arange(start, start+seconds_in_a_week, 1))
 
+# GENERATE FEEDAPP (COLUMN 7)
+FEEDAPP = pd.Series("RefinitivFuturesGw3_CLOUD_PROD_PROD-SECRETS_K8S_K8S-PROD", index=TIME.index)
+
+# GENERATE VENDORUPDATETIME (COLUMN 8) 
+VENDORUPDATETIME = pd.Series([ts + np.timedelta64(5, 'hour') for ts in TIME])
+
 '''
 NOTES: Column Generation specs for PIMCO TICK_DATA_FULL Table:
 3,330 rows per hour
