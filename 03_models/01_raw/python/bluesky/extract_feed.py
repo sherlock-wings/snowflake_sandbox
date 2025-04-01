@@ -310,15 +310,18 @@ def write_watermark_table() -> None:
     max_date = max([datetime.strptime(filename.split('/')[-1].split('_')[1], '%Y-%m-%d').date() for filename in azr_files])
     file_datestring = datetime.strftime(max_date, '%Y-%m-%d')
     azr_files = [file for file in azr_files if file_datestring in file]
-    azr_files
+    print(f"{len(azr_files):,} files matching max date {max_date} detected in Azure Cloud Storage.\nDownloading files to generate watermark table...")
     df = pd.DataFrame(SCHEMA)
-    for filename in azr_files:
-        blob_client = BLB_SVC_CLI.get_blob_client(container=AZR_TGT_CTR, blob=filename)
+    for i in range(len(azr_files)):
+        blob_client = BLB_SVC_CLI.get_blob_client(container=AZR_TGT_CTR, blob=azr_files[i])
         blob_data = blob_client.download_blob().readall()
         df_next = pd.read_csv(StringIO(blob_data.decode('utf-8')))
         df = pd.concat([df, df_next])
+        print(f"{i+1} of {len(azr_files)} max-date files downloaded from Azure")
+
 
     df = df.groupby('post_author_did')['post_created_timestamp'].max().reset_index()
+    print("Writing control table...")
     df.to_csv(f"{WTM_TBL_DIR}/extract_feed_control_tbl.csv", index=False)
     print(f"High-Watermark Control table written to {WTM_TBL_DIR}/extract_feed_control_tbl.csv\n")
 
@@ -338,7 +341,7 @@ def extract_feed() -> None:
     
     # before parsing begins, write a control table locally
     # this should prevent records already saved in Azure from being ingested again
-    print(f"New BlueSky feed-extract session opened at {datetime.now(pytz.timezone("America/New_York"))}")
+    print(f"New BlueSky feed-extract session opened at {datetime.now(pytz.timezone("America/New_York")).strftime('%Y-%m-%d %H:%M:%S %Z')}")
     print(f"Logging in as BlueSky User {USR}... \nLET'S GET THIS DATA! ( ͡⌐■ ͜ʖ ͡-■)\n\n")
     write_watermark_table()
     watermark_tbl = pd.read_csv(f"{WTM_TBL_DIR}/extract_feed_control_tbl.csv").to_dict(orient='list')
