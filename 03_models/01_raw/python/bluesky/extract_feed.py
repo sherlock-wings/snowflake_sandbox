@@ -210,7 +210,8 @@ def stash_user_posts(client_details: str
 
             if ts <= watermark_ts:
                 watermark_crossed = True
-                print(f"\n\nHit high watermark for user {client_details.split('|')[1]}\nEncountered post creation timestamp is {ts}, latest known timestamp for this user is {watermark_ts}")
+                print(f"\n\nHit high watermark for user {client_details.split('|')[1]}")
+                print(f"Encountered post creation timestamp is {datetime.strftime(ts, '%Y-%m-%d %H:%M:%S.%f %z')}, latest known timestamp for this user is {datetime.strftime(watermark_ts, '%Y-%m-%d %H:%M:%S.%f %z')}")
                 print("Ingestion for this user will now stop.\n")
                 break
             # if stash_user_posts() gets to this line, the given post has not been ingested before, so the program continues...
@@ -310,7 +311,7 @@ def write_watermark_table() -> None:
     max_date = max([datetime.strptime(filename.split('/')[-1].split('_')[1], '%Y-%m-%d').date() for filename in azr_files])
     file_datestring = datetime.strftime(max_date, '%Y-%m-%d')
     azr_files = [file for file in azr_files if file_datestring in file]
-    print(f"{len(azr_files):,} files matching max date {max_date} detected in Azure Cloud Storage.\nDownloading files to generate watermark table...")
+    print(f"{len(azr_files):,} files with max date {max_date} detected in Azure Cloud Storage.\nDownloading files to generate watermark table...")
     df = pd.DataFrame(SCHEMA)
     for i in range(len(azr_files)):
         blob_client = BLB_SVC_CLI.get_blob_client(container=AZR_TGT_CTR, blob=azr_files[i])
