@@ -89,28 +89,33 @@ def write_chunk(df: pd.DataFrame, output_path: str=None) -> None:
     filename = f"{output_path}/posts_{rn}_"
     last_file_num = local_last_file_num = cloud_last_file_num = -1
     
-    # generating the incremental int correctly means checking, both in the cloud and locally, for any CSVs which already exist and whose name includes the current date 
+    # generating the incremental int correctly means checking, both in the cloud and locally, for any CSVs which already exist whose name includes the current date 
     # check Azure Cloud Storage location first to determine the name for the next generated CSV
     azr_files = [blob.name for blob in AZR_CTR_CLI.list_blobs()]
     if len(azr_files) > 0:
         cloud_file_numbers = [int(file.split('_')[-1].split('.')[0]) for file in azr_files if file.split('.')[-1] == 'csv' and rn in file]
         cloud_file_numbers.sort()
         cloud_last_file_num = cloud_file_numbers[-1]+1
+    else:
+        cloud_last_file_num = 0
         
-    # defer to the cloud-- only base the next file name on local files if no cloud files for this day are found
-    if os.path.exists(f"{output_path}/posts_{rn}_1.csv") and cloud_file_numbers == -1:
+    if os.path.exists(f"{output_path}/posts_{rn}_1.csv"):
         # get a list of ints where each item is the number just before the '.csv' part in the file name-- get CSV filenames only
         local_file_numbers = [int(file.split('_')[-1].split('.')[0]) for file in os.listdir(output_path) if file.split('.')[-1] == 'csv']
         local_file_numbers.sort()
         try:
             local_last_file_num = local_file_numbers[-1]+1
         except IndexError:
-            pass 
-
-    if cloud_last_file_num > 0:
-        last_file_num = cloud_last_file_num
-    elif local_last_file_num > 0:
-        last_file_num = local_last_file_num
+            pass
+    else:
+        local_last_file_num = 0
+    
+    if local_last_file_num > cloud_last_file_num:
+        last_file_num = local_last_file_num 
+    elif cloud_last_file_num > local_last_file_num:
+        last_file_num = cloud_last_file_num 
+    else:
+        last_file_num = 1
 
     if not os.path.exists(output_path): 
         os.makedirs(output_path)
