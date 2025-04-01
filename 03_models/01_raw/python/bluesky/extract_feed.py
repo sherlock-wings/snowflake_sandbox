@@ -95,7 +95,10 @@ def write_chunk(df: pd.DataFrame, output_path: str=None) -> None:
     if len(azr_files) > 0:
         cloud_file_numbers = [int(file.split('_')[-1].split('.')[0]) for file in azr_files if file.split('.')[-1] == 'csv' and rn in file]
         cloud_file_numbers.sort()
-        cloud_last_file_num = cloud_file_numbers[-1]+1
+        try:
+            cloud_last_file_num = cloud_file_numbers[-1]+1
+        except IndexError:
+            cloud_last_file_num = 0    
     else:
         cloud_last_file_num = 0
         
@@ -106,7 +109,7 @@ def write_chunk(df: pd.DataFrame, output_path: str=None) -> None:
         try:
             local_last_file_num = local_file_numbers[-1]+1
         except IndexError:
-            pass
+            local_last_file_num = 0
     else:
         local_last_file_num = 0
     
