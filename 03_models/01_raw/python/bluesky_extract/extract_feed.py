@@ -86,15 +86,33 @@ def write_chunk(df: pd.DataFrame, output_path: str=None) -> None:
     # filename format is posts_<extraction_date>_<file_ordinal>.csv, where <final ordinal> is an incremental int
     # ex) If 3 files are generated on New Years Day 2025, the names are ['posts_2025-01-01_1.csv', 'posts_2025-01-01_2.csv', 'posts_2025-01-01_3.csv']
     rn = datetime.now().strftime('%Y-%m-%d')
-    last_file_num = -1
     filename = f"{output_path}/posts_{rn}_"
-
-    if os.path.exists(f"{output_path}/posts_{rn}_1.csv"):
+    last_file_num, local_last_file_num, cloud_last_file_num = -1
+    
+    # generating the incremental int correctly means checking, both in the cloud and locally, for any CSVs which already exist and whose name includes the current date 
+    # check Azure Cloud Storage location first to determine the name for the next generated CSV
+    azr_files = [blob.name for blob in AZR_CTR_CLI.list_blobs()]
+    if len(azr_files) > 0:
+        cloud_file_numbers = [int(file.split('_')[-1].split('.')[0]) for file in azr_files if file.split('.')[-1] == 'csv' and rn in file]
+        cloud_file_numbers.sort()
+        cloud_last_file_num = local_file_numbers[-1]+1
+        
+    # defer to the cloud-- only base the next file name on local files if no cloud files for this day are found
+    if os.path.exists(f"{output_path}/posts_{rn}_1.csv") and cloud_file_numbers == -1:
         # get a list of ints where each item is the number just before the '.csv' part in the file name-- get CSV filenames only
-        files = [int(file.split('_')[-1].split('.')[0]) for file in os.listdir(output_path) if file.split('.')[-1] == 'csv']
-        files.sort()
-        last_file_num = files[-1]+1 #increment by one
-    elif not os.path.exists(output_path): 
+        local_file_numbers = [int(file.split('_')[-1].split('.')[0]) for file in os.listdir(output_path) if file.split('.')[-1] == 'csv']
+        local_file_numbers.sort()
+        try:
+            local_last_file_num = local_file_numbers[-1]+1
+        except IndexError:
+            pass 
+
+    if cloud_last_file_num > 0:
+        last_file_num = cloud_last_file_num
+    elif local_last_file_num > 0:
+        last_file_num = local_last_file_num
+
+    if not os.path.exists(output_path): 
         os.makedirs(output_path)
 
     if last_file_num > 0:
@@ -253,17 +271,20 @@ def stash_user_posts(client_details: str
 
 # upload-csv-as-blob function
 def upload_file_to_azr(file_to_upload: str) -> None:
+    # block potential cloud overwrites
+    azr_files = [blob.name.split('/')[-1] for blob in AZR_CTR_CLI.list_blobs()]
     blob_name = f"{AZR_TGT_DIR}/{os.path.basename(file_to_upload)}"
-    
-    # Upload the file (supports large files via chunking)
+    if file_to_upload.split('/')[-1] in azr_files:
+        print(f"\nFile {file_to_upload.split('/')[-1]} was found both in the Azure Storage Location and on the local machine.\nSkipping the upload for the local version of {file_to_upload.split('/')[-1]} to avoid overwriting existing cloud data.\n")
+        return None
+    # If no overwrite-danger is detected, upload the file (supports large files via chunking)
     with open(file_to_upload, "rb") as data:
         BLB_SVC_CLI.upload_blob(data, overwrite=True)
         print(f"Uploaded file: {blob_name}")
 
 def clear_local_dir() -> None:
     # collect all filenames in blob dir, then limit the list of files to those labeled with the most recent date
-    blob_list = AZR_CTR_CLI.list_blobs(name_starts_with=AZR_TGT_DIR)
-    azr_files = [blob.name.split('/')[-1] for blob in blob_list]
+    azr_files = [blob.name.split('/')[-1] for blob in AZR_CTR_CLI.list_blobs]
     local_files = [file for file in os.listdir(AZR_SRC_DIR)]
 
     for file in local_files:
@@ -277,8 +298,7 @@ def clear_local_dir() -> None:
 # generate a control table for the "High-Watermark" strategy
 # This is an incremental ingestion strategy-- it should ensure that the same record is never sent to the Azure Storage acct more than once
 def write_watermark_table() -> None: 
-    blob_list = AZR_CTR_CLI.list_blobs()
-    azr_files = [blob.name for blob in blob_list]
+    azr_files = [blob.name for blob in AZR_CTR_CLI.list_blobs()]
     if len(azr_files) == 0:
         print(f"\n\nWARNING! WARNING! WARNING!\n\nZero CSV files found in Azure Blob directory {AZR_TGT_DIR}, container {AZR_TGT_CTR}")
         print("This means incremental ingestion will not be applied. If that is unexpected, then this run may be ingesting duplicate records.")
@@ -344,12 +364,11 @@ def extract_feed() -> None:
         write_chunk(df)
     print(f"\nFeed Ingestion Complete! Uploading to Azure now...\n")
     
-    source_dir = os.getenv('AZR_SRC_DIR')
-    files = [file for file in os.listdir(source_dir) if file.endswith('.csv')]
+    files = [file for file in os.listdir(AZR_SRC_DIR) if file.endswith('.csv')]
     print(f"{len(files)} total CSV files detected.")
     for i in range(len(files)):
         print(f"\nUploading {files[i]}, {i+1} of {len(files)}")
-        upload_file_to_azr(f"{source_dir}/{files[i]}")
+        upload_file_to_azr(f"{AZR_SRC_DIR}/{files[i]}")
     print(f"File upload complete!")
     
     clear_local_dir()
