@@ -1,1 +1,4 @@
-NUKE.sql
+nuke_everything.sql
+*csv
+scratch*
+*pyc
