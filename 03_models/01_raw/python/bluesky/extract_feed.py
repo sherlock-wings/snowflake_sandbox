@@ -372,8 +372,8 @@ def extract_feed() -> None:
             df_next = stash_user_posts(cli_deets, schema_input=SCHEMA, bsky_client=cli, bsky_did=following_users[usr][0], bsky_username=usr, wtm_tbl=watermark_tbl)
             if not df_next.empty:
                 df = pd.concat([df, df_next])
-            # if the 100 MB threshold is hit between users, stash the data at this point
-            df, _ = chunk_check(schema_input=SCHEMA, dataframe_input=df)
+                # if the 100 MB threshold is hit between users, stash the data at this point
+                df, _ = chunk_check(schema_input=SCHEMA, dataframe_input=df)
     if len(df) > 0:
         # ensure any remaining data less than 100 MB is still written
         write_chunk(df)
