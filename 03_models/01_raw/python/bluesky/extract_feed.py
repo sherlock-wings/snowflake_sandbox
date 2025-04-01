@@ -207,9 +207,10 @@ def stash_user_posts(client_details: str
                 watermark_ts = timestamp_parser.parse(wtm_tbl['post_created_timestamp'][wtm_tbl['post_author_did'].index(bsky_did)])
             except IndexError:
                 pass # watermark keeps default value if a later watermark for that user is not found
+
             if ts <= watermark_ts:
                 watermark_crossed = True
-                print(f"\nHit high watermark for user {client_details.split('|')[1]}\nEncountered post creation timestamp is {ts}, known latest timestamp for this user is {watermark_ts}")
+                print(f"\n\nHit high watermark for user {client_details.split('|')[1]}\nEncountered post creation timestamp is {ts}, latest known timestamp for this user is {watermark_ts}")
                 print("Ingestion for this user will now stop.\n")
                 break
             # if stash_user_posts() gets to this line, the given post has not been ingested before, so the program continues...
@@ -335,15 +336,12 @@ def extract_feed() -> None:
     cli_account_created_at = resp.created_at
     cli_deets = f"{cli_did}|{cli_username}|{cli_displayname}|{cli_account_created_at}"
     
-    # before parsing begins, check if a control table (for incremental ingestion) is available locally
-    # if it isn't write this table locally
-    watermark_tbl = {}
-    try:
-        watermark_tbl = pd.read_csv(f"{WTM_TBL_DIR}extract_feed_control_tbl.csv").to_dict(orient='list')
-    except FileNotFoundError:
-        print(f"No High-Watermark control table found. Attempting to create local file now...")
-        write_watermark_table()
-        watermark_tbl = pd.read_csv(f"{WTM_TBL_DIR}extract_feed_control_tbl.csv").to_dict(orient='list')
+    # before parsing begins, write a control table locally
+    # this should prevent records already saved in Azure from being ingested again
+    print(f"New BlueSky feed-extract session opened at {datetime.now(pytz.timezone("America/New_York"))}")
+    print(f"Logging in as BlueSky User {USR}... \nLET'S GET THIS DATA! ( ͡⌐■ ͜ʖ ͡-■)\n\n")
+    write_watermark_table()
+    watermark_tbl = pd.read_csv(f"{WTM_TBL_DIR}/extract_feed_control_tbl.csv").to_dict(orient='list')
     
     following_users = {item.handle: [item.did, item.display_name] for item in get_following_users(cli, session_usr)}
     print(f"Detected {len(following_users):,} BlueSky Users being followed by user @{session_usr}")
