@@ -87,7 +87,7 @@ def write_chunk(df: pd.DataFrame, output_path: str=None) -> None:
     # ex) If 3 files are generated on New Years Day 2025, the names are ['posts_2025-01-01_1.csv', 'posts_2025-01-01_2.csv', 'posts_2025-01-01_3.csv']
     rn = datetime.now().strftime('%Y-%m-%d')
     filename = f"{output_path}/posts_{rn}_"
-    last_file_num, local_last_file_num, cloud_last_file_num = -1
+    last_file_num = local_last_file_num = cloud_last_file_num = -1
     
     # generating the incremental int correctly means checking, both in the cloud and locally, for any CSVs which already exist and whose name includes the current date 
     # check Azure Cloud Storage location first to determine the name for the next generated CSV
