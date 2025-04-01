@@ -284,7 +284,7 @@ def stash_user_posts(client_details: str
 def upload_file_to_azr(file_to_upload: str) -> None:
     # block potential cloud overwrites
     azr_files = [blob.name.split('/')[-1] for blob in AZR_CTR_CLI.list_blobs()]
-    blob_name = f"{AZR_TGT_DIR}/{os.path.basename(file_to_upload)}"
+    blob_name = f"{AZR_TGT_DIR.rstrip('/')}/{os.path.basename(file_to_upload)}"
     if file_to_upload.split('/')[-1] in azr_files:
         print(f"\nFile {file_to_upload.split('/')[-1]} was found both in the Azure Storage Location and on the local machine.\nSkipping the upload for the local version of {file_to_upload.split('/')[-1]} to avoid overwriting existing cloud data.\n")
         return None
