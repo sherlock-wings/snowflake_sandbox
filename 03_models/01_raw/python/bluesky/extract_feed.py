@@ -201,14 +201,18 @@ def stash_user_posts(client_details: str
                 print(f"Call for page {page_num:,} of user @{bsky_username}'s post data was blocked by Rate-Limiting.")
                 print(f"Trying again in {wait_period_seconds:,} seconds (attempt {retry_count} of {max_retries})...")
                 time.sleep(wait_period_seconds)
+        # reverse-chron sort feed. This helps optimize our watermark logic
         feed = resp.feed
+        for item in feed: 
+            item.post.record.created_at = timestamp_parser.parse(item.post.record.created_at)
+        feed.sort(key=lambda item: item.post.record.created_at, reverse=True)
+        
         print(f"Ingesting {page_num:,} pages of post-data from user @{bsky_username}...", end='\r')
         #
         # i drink your data! i DRINK IT UP ლಠ益ಠ)ლ
         # 
         for item in feed:
             # WATERMARK STRATEGY-- don't ingest the same record more than once 
-            ts = timestamp_parser.parse(item.post.record.created_at)
             watermark_ts = datetime(1900, 1, 1, 0, 0, 0, 0, pytz.utc) # default value
             try:
                 # look up the timestamp in the watermark table for the user who authored the post
@@ -250,20 +254,14 @@ def stash_user_posts(client_details: str
             data['post_author_did'].append(bsky_did)
             data['post_author_username'].append(item.post.author.handle)
             data['post_author_displayname'].append(item.post.author.display_name)
-
-            # extract timestamp strings as actual timestamps, including timezone
-            ts = timestamp_parser.parse(item.post.author.created_at)
-            data['post_author_account_created_timestamp'].append(ts) 
+            data['post_author_account_created_timestamp'].append(item.post.author.created_at) 
             
             # client details passed as input arg
             data['bluesky_client_account_did'].append(client_details.split('|')[0])
             data['bluesky_client_account_username'].append(client_details.split('|')[1])
             data['bluesky_client_account_displayname'].append(client_details.split('|')[2])
             
-            # extract timestamp strings as actual timestamps, including timezone
-            ts = timestamp_parser.parse(client_details.split('|')[3])
-            data['bluesky_client_account_created_timestamp'].append(ts)
-
+            data['bluesky_client_account_created_timestamp'].append(client_details.split('|')[3])
             ts = datetime.now(pytz.timezone('America/New_York')).astimezone(pytz.timezone('UTC'))
             data['record_captured_timestamp'].append(ts) 
         '''
