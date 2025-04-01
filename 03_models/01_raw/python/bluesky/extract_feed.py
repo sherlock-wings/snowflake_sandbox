@@ -95,7 +95,7 @@ def write_chunk(df: pd.DataFrame, output_path: str=None) -> None:
     if len(azr_files) > 0:
         cloud_file_numbers = [int(file.split('_')[-1].split('.')[0]) for file in azr_files if file.split('.')[-1] == 'csv' and rn in file]
         cloud_file_numbers.sort()
-        cloud_last_file_num = cloud_last_file_num[-1]+1
+        cloud_last_file_num = cloud_file_numbers[-1]+1
         
     # defer to the cloud-- only base the next file name on local files if no cloud files for this day are found
     if os.path.exists(f"{output_path}/posts_{rn}_1.csv") and cloud_file_numbers == -1:
