@@ -160,7 +160,7 @@ def stash_user_posts(client_details: str
                     ,bsky_client:Client
                     ,bsky_did:str
                     ,bsky_username:str
-                    ,wtm_tbl: pd.DataFrame
+                    ,wtm_tbl: dict
                     ,max_retries: int = 5
                     ,wait_period_increment_seconds: int=300) -> pd.DataFrame:
     
@@ -201,10 +201,12 @@ def stash_user_posts(client_details: str
         for item in feed:
             # WATERMARK STRATEGY-- don't ingest the same record more than once 
             ts = timestamp_parser.parse(item.post.record.created_at)
-            watermark_ts = datetime(1900, 1, 1, 0, 0, 0)
-            if not wtm_tbl.empty:
+            watermark_ts = datetime(1900, 1, 1, 0, 0, 0, 0, pytz.utc) # default value
+            try:
                 # look up the timestamp in the watermark table for the user who authored the post
                 watermark_ts = timestamp_parser.parse(wtm_tbl['post_created_timestamp'][wtm_tbl['post_author_did'].index(bsky_did)])
+            except IndexError:
+                pass # watermark keeps default value if a later watermark for that user is not found
             if ts <= watermark_ts:
                 watermark_crossed = True
                 print(f"\nHit high watermark for user {client_details.split('|')[1]}\nEncountered post creation timestamp is {ts}, known latest timestamp for this user is {watermark_ts}")
@@ -335,12 +337,13 @@ def extract_feed() -> None:
     
     # before parsing begins, check if a control table (for incremental ingestion) is available locally
     # if it isn't write this table locally
-    watermark_tbl = pd.DataFrame()
+    watermark_tbl = {}
     try:
         watermark_tbl = pd.read_csv(f"{WTM_TBL_DIR}extract_feed_control_tbl.csv").to_dict(orient='list')
     except FileNotFoundError:
         print(f"No High-Watermark control table found. Attempting to create local file now...")
         write_watermark_table()
+        watermark_tbl = pd.read_csv(f"{WTM_TBL_DIR}extract_feed_control_tbl.csv").to_dict(orient='list')
     
     following_users = {item.handle: [item.did, item.display_name] for item in get_following_users(cli, session_usr)}
     print(f"Detected {len(following_users):,} BlueSky Users being followed by user @{session_usr}")
