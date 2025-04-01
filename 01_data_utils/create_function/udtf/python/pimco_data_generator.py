@@ -1,5 +1,21 @@
 import numpy as np
 import pandas as pd
+import random
+
+# "jitter" some value up, down, or bidirectionally about a start value
+# will be used for many random value generations
+def jitter(start_value: float, volatility: float = 0.01, direction: int = 0) -> float:
+    if direction not in [-1, 0, 1]:
+        raise ValueError("Input argument for `direction` should be -1 (negative jitter), 1 (positive jitter), or 0 (bidirectional jitter).")
+    jitter = 0
+    if direction == -1:
+        jitter += random.uniform(-volatility, 0) * start_value
+    elif direction == 1:
+        jitter += random.uniform(0, volatility) * start_value
+    else:
+        jitter += random.uniform(-volatility, volatility) * start_value
+    return start_value + jitter
+
 
 timestamps = pd.date_range(start = '2025-02-17 00:00:00.000000000'
                           ,end   = '2025-02-23 23:59:59.999999999'
