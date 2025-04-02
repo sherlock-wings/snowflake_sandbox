@@ -177,6 +177,19 @@ MARKETVWAP = jitter_series(pd.Series([0] * (len(TIME)-1)), direction=1, relative
 MARKETVWAP = pd.concat([pd.Series(LOW.values[0]), MARKETVWAP], ignore_index=True).cumsum().rename('MARKETVWAP')
 all_cols.append(MARKETVWAP)
 
+# BLOCKTRD (COLUMN 22)
+BLOCKTRD = GMTOFFSET.copy().rename('BLOCKTRD')
+all_cols.append(BLOCKTRD)
+
+# BLOCKTRD (COLUMN 23)
+TICKDIR = GMTOFFSET.copy().rename('TICKDIR')
+all_cols.append(TICKDIR)
+
+# BLOCKTRD (COLUMN 24)
+TURNOVER = GMTOFFSET.copy().rename('TURNOVER')
+all_cols.append(TURNOVER)
+
+
 # FINAL DATAFRAME
 df = pd.concat(all_cols, 
                #columns=TABLE_COLUMN_SET, 
@@ -207,11 +220,11 @@ SEQNUM = (from time) YYYYMMDDHHMMSS(9) || FEEDSEQNUM
 PRICE = CASE WHEN TYPE = 'TRADE' THEN -- Bidirectional 5% jitter about 44675.0000 -- ELSE NULL
 VOLUME = CASE WHEN TYPE = 'TRADE' THEN -- random int b/n 1 and 80 -- ELSE NULL
 ACCVOLUME = Cumulative Sum of VOLUME
-
 MARKETVWAP = Start at 2 below first value for LOW and increase by fractional dollars cumulatively
 OPEN = Bidirectional 5% jitter about PRICE
 HIGH = Positive 5% jitter about OPEN
 LOW = Negative 5% jitter about OPEN
+
 BLOCKTRD = 100% NULL
 TICKDIR = 100% NULL
 TURNOVER = 100% NULL
