@@ -264,6 +264,14 @@ all_cols.append(MKTSTIND)
 IRGCOND = GMTOFFSET.copy().rename('IRGCOND')
 all_cols.append(IRGCOND)
 
+
+# LSTSALCOND (COLUMN 40)
+
+# Generate random mask for 8% True values
+mask = np.random.random(size=len(TIME)) < 0.08
+LSTSALCOND = pd.Series(np.where(mask, 2, np.nan)).astype('Int64').rename('LSTSALCOND')
+all_cols.append(LSTSALCOND)
+
 # FINAL DATAFRAME
 df = pd.concat(all_cols, 
                #columns=TABLE_COLUMN_SET, 
