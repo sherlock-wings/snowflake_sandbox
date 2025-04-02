@@ -65,8 +65,12 @@ TYPE = ['TRADE' if item == 1 else 'QUOTE' if item == 2 else None for item in TYP
 GMTOFFSET = FEEDSEQNUM.copy()
 GMTOFFSET[:] = None
 
+# GENERATE EXCHTIME (COLUMN 13)
+EXCHTIME = VENDORUPDATETIME
 
-
+# GENERATE SEQNUM (COLUMN 14)
+SEQNUM = np.arange(1, total_rows, 1)
+SEQNUM = pd.Series([str(ts).replace('-', '').replace(':', '').replace(' ', '').replace('.', '')+str(item) for ts, item in zip(TIME, SEQNUM)])
 '''
 NOTES: Column Generation specs for PIMCO TICK_DATA_FULL Table:
 3,330 rows per hour
@@ -86,8 +90,8 @@ MDSRECEIVETIME = fractional seconds (random) after VENDORUPDATETIME
 MDSPUBLISHTIME = fractional seconds (random) after MDSRECEIVETIME
 TYPE = Can be approximated as 10% 'TRADE', 90% 'QUOTE'
 GMTOFFSET = 100% NULL
-
 EXCHTIME = Same as VENDORUPDATETIME
+
 SEQNUM = (from time) YYYYMMDDHHMMSS(9) || FEEDSEQNUM
 PRICE = CASE WHEN TYPE = 'TRADE' THEN -- Bidirectional 5% jitter about 44675.0000 -- ELSE NULL
 VOLUME = CASE WHEN TYPE = 'TRADE' THEN -- random int b/n 1 and 80 -- ELSE NULL
