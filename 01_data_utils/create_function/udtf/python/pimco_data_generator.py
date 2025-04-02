@@ -159,13 +159,18 @@ all_cols.append(VOLUME)
 ACCVOLUME = VOLUME.fillna(0).cumsum().rename('ACCVOLUME')
 all_cols.append(ACCVOLUME)
 
-
 # OPEN (COLUMN 19)
 OPEN = jitter_series(PRICE.groupby(TIME.dt.date).first(), volatility=0.001)
 OPEN = pd.DataFrame(TIME.dt.date).merge(OPEN, how='left', left_on='TIME', right_on='TIME').PRICE.rename('OPEN')
 all_cols.append(OPEN)
+
 # HIGH (COLUMN 20)
+HIGH = jitter_series(OPEN, direction=1, volatility=0.001).rename('HIGH')
+all_cols.append(HIGH)
+
 # LOW (COLUMN 21)
+LOW = jitter_series(OPEN, direction=-1, volatility=0.001).rename('LOW')
+all_cols.append(LOW)
 
 # MARKETVWAP (COLUMN 18)
 
