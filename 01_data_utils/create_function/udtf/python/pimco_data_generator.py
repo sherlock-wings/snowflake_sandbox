@@ -272,6 +272,19 @@ mask = np.random.random(size=len(TIME)) < 0.08
 LSTSALCOND = pd.Series(np.where(mask, 2, np.nan)).astype('Int64').rename('LSTSALCOND')
 all_cols.append(LSTSALCOND)
 
+
+# CRSSALCOND (COLUMN 41)
+CRSSALCOND = GMTOFFSET.copy().rename('CRSSALCOND')
+all_cols.append(CRSSALCOND)
+
+# TRTRDFLAG (COLUMN 42)
+TRTRDFLAG = GMTOFFSET.copy().rename('TRTRDFLAG')
+all_cols.append(TRTRDFLAG)
+
+# ELIGBLTRD (COLUMN 43)
+ELIGBLTRD = GMTOFFSET.copy().rename('ELIGBLTRD')
+all_cols.append(ELIGBLTRD)
+
 # FINAL DATAFRAME
 df = pd.concat(all_cols, 
                #columns=TABLE_COLUMN_SET, 
@@ -335,12 +348,12 @@ ASKTONE= 100% NULL
 BIDTONE= 100% NULL
 TRADETONE= 100% NULL
 MKTSTIND = CASE WHEN PRICE IS NULL THEN 'BBO' END
-
 IRGCOND = 100% NULL
 LSTSALCOND= 
     numberList = [-1, 0, 1]
     print(random.choices(numberList, weights=(1, 99, 99), k=1))
     Increment off of VOLUME
+
 CRSSALCOND = 100% NULL
 TRTRDFLAG = 100% NULL
 ELIGBLTRD = 100% NULL
