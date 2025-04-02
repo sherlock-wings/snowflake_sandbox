@@ -189,6 +189,17 @@ all_cols.append(TICKDIR)
 TURNOVER = GMTOFFSET.copy().rename('TURNOVER')
 all_cols.append(TURNOVER)
 
+# BIDPRICE
+first_price = PRICE[PRICE.notna()].iloc[0] # get the numeric value of the first-occurring not-null price
+
+BIDPRICE = PRICE.copy()
+# on a copy of the original PRICE series, first fill forward. Then, for all initial nulls, replace swith first-occurring not-null price
+BIDPRICE = PRICE.ffill().fillna(first_price)
+
+numberList = [-2, -1, 0, 1]
+increments = pd.Series(random.choices(numberList, weights=(60, 120, 180, 6), k=len(BIDPRICE)))
+BIDPRICE = (BIDPRICE + increments).rename('BIDPRICE')
+all_cols.append(TURNOVER)
 
 # FINAL DATAFRAME
 df = pd.concat(all_cols, 
@@ -224,10 +235,10 @@ MARKETVWAP = Start at 2 below first value for LOW and increase by fractional dol
 OPEN = Bidirectional 5% jitter about PRICE
 HIGH = Positive 5% jitter about OPEN
 LOW = Negative 5% jitter about OPEN
-
 BLOCKTRD = 100% NULL
 TICKDIR = 100% NULL
 TURNOVER = 100% NULL
+
 BIDPRICE:
     numberList = [-2, -1, 0, 1]
     print(random.choices(numberList, weights=(60, 120, 180, 6), k=1))
