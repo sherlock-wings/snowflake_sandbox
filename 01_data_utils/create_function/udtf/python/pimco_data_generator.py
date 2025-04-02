@@ -1,10 +1,6 @@
-from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
 import random
-
-import numpy as np
-from datetime import datetime, timedelta
 
 # create a series of numbers that "walk" mostly up or down, starting from a given value
 def random_walk(start_value: int | float, n_values: int, step_size: int | float, prob_up: float):
