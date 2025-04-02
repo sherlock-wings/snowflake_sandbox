@@ -1,32 +1,30 @@
+from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
 import random
 
-def jitter_series(
-    start_value: float,
-    size: int,
-    volatility: float = 0.01,
-    direction: int = 0,
-    random_seed: int | None = None,
-) -> np.ndarray:
-    """
-    Generate a NumPy array of jittered values efficiently.
-    
-    Args:
-        start_value: Base value to jitter around.
-        size: Number of values to generate.
-        volatility: Relative jitter magnitude (e.g., 0.01 = ±1%).
-        direction: -1 (down only), 0 (bidirectional), 1 (up only).
-        random_seed: Optional seed for reproducibility.
-    
-    Returns:
-        np.ndarray: Array of jittered values.
-    """
+import numpy as np
+from datetime import datetime, timedelta
+
+def jitter_series(input_series: pd.Series
+                 ,direction: int = 0
+                 ,seed: int | None = None
+                 ,size: int | None = None 
+                 ,volatility: float = 0.01
+                 ,relative: bool = True
+                 ,discrete: bool = False) -> pd.Series:
     if direction not in [-1, 0, 1]:
         raise ValueError("`direction` must be -1, 0, or 1.")
-    
-    rng = np.random.default_rng(random_seed)
-    
+    # size default value
+    if not size:
+        size = len(input_series)
+
+    is_datetime = False
+    if type(input_series.values[0]) == np.datetime64:
+        is_datetime = True
+
+    rng = np.random.default_rng(seed)
+
     if direction == -1:
         jitters = rng.uniform(-volatility, 0, size)
     elif direction == 1:
@@ -34,7 +32,24 @@ def jitter_series(
     else:  # direction == 0
         jitters = rng.uniform(-volatility, volatility, size)
     
-    return start_value * (1 + jitters)
+    # allow user to increment by a discrete (integer) or continuous (float) quantity 
+    if discrete:
+        jitters = jitters.round().astype('int64')
+
+    # cast datetimes to numeric type if needed
+    if is_datetime:
+        input_series = input_series.astype('int64')
+
+    # allow user to increment by flat addition or by relative percent
+    if not relative:
+        input_series = input_series + jitters
+    else:
+        input_series = input_series * (1 + jitters)
+    
+    if is_datetime:
+        return input_series.astype('datetime64[ns]')
+    else:
+        return input_series
 
 # GENERATE TIME (COLUMN 2)
 TIME = pd.Series(pd.date_range(start = '2025-02-17 00:00:00.000000000'
@@ -43,8 +58,7 @@ TIME = pd.Series(pd.date_range(start = '2025-02-17 00:00:00.000000000'
                               ).values
                 )
 
-TIME = pd.Series([ts + np.timedelta64(round(jitter(250000000, 0.99999, 0)), 'ns') for ts in TIME])
-total_rows = len(TIME)
+
 
 # GENERATE DATE (COLUMN 1)
 DATE = pd.Series([dt.date() for dt in TIME])
