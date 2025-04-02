@@ -17,11 +17,14 @@ def jitter(start_value: float, volatility: float = 0.01, direction: int = 0) -> 
     return start_value + jitter
 
 # GENERATE TIME (COLUMN 2)
-TIME = pd.date_range(start = '2025-02-17 00:00:00.000000000'
-                    ,end   = '2025-02-23 23:59:59.999999999'
-                    ,freq  = '1s').values
+TIME = pd.Series(pd.date_range(start = '2025-02-17 00:00:00.000000000'
+                              ,end   = '2025-02-23 23:59:59.999999999'
+                              ,freq  = '0.5s'
+                              ).values
+                )
+total_rows = len(TIME)
 
-TIME = pd.Series([ts + np.timedelta64(round(jitter(500000000, 0.99999, 0)), 'ns') for ts in TIME])
+TIME = pd.Series([ts + np.timedelta64(round(jitter(250000000, 0.99999, 0)), 'ns') for ts in TIME])
 
 # GENERATE DATE (COLUMN 1)
 DATE = pd.Series([dt.date() for dt in TIME])
@@ -37,14 +40,26 @@ MDSID = pd.Series("1YMH25|REFINITIV|null|LIVE", index=TIME.index)
 
 # GENERATE FEEDSEQNUM (COLUMN 6)
 start = 259237
-seconds_in_a_week = 604800
-FEEDSEQNUM = pd.Series(np.arange(start, start+seconds_in_a_week, 1))
+FEEDSEQNUM = pd.Series(np.arange(start, start+total_rows, 1))
 
 # GENERATE FEEDAPP (COLUMN 7)
 FEEDAPP = pd.Series("RefinitivFuturesGw3_CLOUD_PROD_PROD-SECRETS_K8S_K8S-PROD", index=TIME.index)
 
 # GENERATE VENDORUPDATETIME (COLUMN 8) 
-VENDORUPDATETIME = pd.Series([ts + np.timedelta64(5, 'hour') for ts in TIME])
+VENDORUPDATETIME = pd.Series([ts + np.timedelta64(5, 'h') for ts in TIME])
+
+# GENERATE MDSRECEIVETIME (COLUMN 9)
+
+MDSRECEIVETIME = pd.Series([ts + np.timedelta64(round(jitter(500000000, 0.99999, 0)), 'ns') for ts in VENDORUPDATETIME])
+
+# GENERATE MDSPUBLISHTIME (COLUMN 10)
+
+MDSPUBLISHTIME = pd.Series([ts + np.timedelta64(round(jitter(500000000, 0.99999, 0)), 'ns') for ts in MDSRECEIVETIME])
+
+# GENERATE TYPE (COLUMN 11)
+choice_ls = [1,2]
+TYPE = random.choices(choice_ls, weights=(1, 9), k=total_rows)
+TYPE = ['TRADE' if item == 1 else 'QUOTE' if item == 2 else None for item in TYPE]
 
 '''
 NOTES: Column Generation specs for PIMCO TICK_DATA_FULL Table:
@@ -64,6 +79,7 @@ VENDORUPDATETIME = 5 hours after TIME
 MDSRECEIVETIME = fractional seconds (random) after VENDORUPDATETIME
 MDSPUBLISHTIME = fractional seconds (random) after MDSRECEIVETIME
 TYPE = Can be approximated as 10% 'TRADE', 90% 'QUOTE'
+
 GMTOFFSET = 100% NULL
 EXCHTIME = Same as VENDORUPDATETIME
 SEQNUM = (from time) YYYYMMDDHHMMSS(9) || FEEDSEQNUM
@@ -78,7 +94,7 @@ BLOCKTRD = 100% NULL
 TICKDIR = 100% NULL
 TURNOVER = 100% NULL
 BIDPRICE:
-    numberList = [-2, -1 0, 1]
+    numberList = [-2, -1, 0, 1]
     print(random.choices(numberList, weights=(60, 120, 180, 6), k=1))
     Increment off of last not-null price
 BIDSIZE:
