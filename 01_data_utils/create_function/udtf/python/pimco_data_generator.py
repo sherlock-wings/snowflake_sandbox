@@ -260,6 +260,10 @@ non_trades = TYPE != 'TRADE'
 MKTSTIND[non_trades] = 'BBO'
 all_cols.append(MKTSTIND)
 
+# IRGCOND (COLUMN 39)
+IRGCOND = GMTOFFSET.copy().rename('IRGCOND')
+all_cols.append(IRGCOND)
+
 # FINAL DATAFRAME
 df = pd.concat(all_cols, 
                #columns=TABLE_COLUMN_SET, 
@@ -322,8 +326,8 @@ BIDTIC= 100% NULL
 ASKTONE= 100% NULL
 BIDTONE= 100% NULL
 TRADETONE= 100% NULL
-
 MKTSTIND = CASE WHEN PRICE IS NULL THEN 'BBO' END
+
 IRGCOND = 100% NULL
 LSTSALCOND= 
     numberList = [-1, 0, 1]
