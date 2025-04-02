@@ -129,9 +129,15 @@ SEQNUM = TIME.dt.strftime('%Y%m%d%H%M%S%f') + SEQNUM.astype(str)
 price_start = 44650.56000
 trade_series = (TYPE == 'TRADE')
 total_trades = trade_series.sum()
+
 pricewalk = random_walk(start_value=price_start, n_values=total_trades, step_size=0.002, prob_up=0.75)
 PRICE = pd.Series(np.nan, index=TIME.index)
 PRICE[trade_series] = pricewalk.values
+
+# GENERATE VOLUME (COLUMN 16)
+vols = pd.Series(np.random.randint(1, 80, total_trades))
+VOLUME = pd.Series(np.nan, index=TIME.index)
+VOLUME[trade_series] = vols.values
 
 '''
 NOTES: Column Generation specs for PIMCO TICK_DATA_FULL Table:
@@ -154,8 +160,8 @@ TYPE = Can be approximated as 10% 'TRADE', 90% 'QUOTE'
 GMTOFFSET = 100% NULL
 EXCHTIME = Same as VENDORUPDATETIME
 SEQNUM = (from time) YYYYMMDDHHMMSS(9) || FEEDSEQNUM
-
 PRICE = CASE WHEN TYPE = 'TRADE' THEN -- Bidirectional 5% jitter about 44675.0000 -- ELSE NULL
+
 VOLUME = CASE WHEN TYPE = 'TRADE' THEN -- random int b/n 1 and 80 -- ELSE NULL
 ACCVOLUME = Cumulative Sum of VOLUME
 MARKETVWAP = Start at 2 below first value for LOW and increase by fractional dollars cumulatively
