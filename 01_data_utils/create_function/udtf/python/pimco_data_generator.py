@@ -145,6 +145,7 @@ PRICE = pd.Series(np.nan, index=TIME.index).rename('PRICE')
 PRICE[trade_series] = pricewalk.values
 all_cols.append(PRICE)
 
+
 # GENERATE VOLUME (COLUMN 16)
 vols = pd.Series(np.random.randint(1, 5, total_trades))
 VOLUME = pd.Series(np.nan, index=TIME.index)
@@ -189,23 +190,40 @@ all_cols.append(TICKDIR)
 TURNOVER = GMTOFFSET.copy().rename('TURNOVER')
 all_cols.append(TURNOVER)
 
-# BIDPRICE
+# BIDPRICE (COLUMN 25)
 first_price = PRICE[PRICE.notna()].iloc[0] # get the numeric value of the first-occurring not-null price
-
 BIDPRICE = PRICE.copy()
 # on a copy of the original PRICE series, first fill forward. Then, for all initial nulls, replace swith first-occurring not-null price
 BIDPRICE = PRICE.ffill().fillna(first_price)
-
 numberList = [-2, -1, 0, 1]
 increments = pd.Series(random.choices(numberList, weights=(60, 120, 180, 6), k=len(BIDPRICE)))
 BIDPRICE = (BIDPRICE + increments).rename('BIDPRICE')
-all_cols.append(TURNOVER)
+all_cols.append(BIDPRICE)
+
+# BIDSIZE (COLUMN 26)
+BIDSIZE = pd.Series(np.random.randint(1, 7, len(TIME))).rename('BIDSIZE')
+all_cols.append(BIDSIZE)
+
+# ASKPRICE (COLUMN 27)
+first_price = PRICE[PRICE.notna()].iloc[0] # get the numeric value of the first-occurring not-null price
+ASKPRICE = PRICE.copy()
+# on a copy of the original PRICE series, first fill forward. Then, for all initial nulls, replace swith first-occurring not-null price
+ASKPRICE = PRICE.ffill().fillna(first_price)
+numberList = [0, 1, 2]
+increments = pd.Series(random.choices(numberList, weights=(9,6,3), k=len(ASKPRICE)))
+ASKPRICE = (ASKPRICE + increments).rename('ASKPRICE')
+all_cols.append(ASKPRICE)
+
+# ASKSIZE (COLUMN 28)
+ASKSIZE = pd.Series(np.random.randint(1, 7, len(TIME))).rename('ASKSIZE')
+all_cols.append(ASKSIZE)
 
 # FINAL DATAFRAME
 df = pd.concat(all_cols, 
                #columns=TABLE_COLUMN_SET, 
                axis=1)
 df
+
 
 '''
 NOTES: Column Generation specs for PIMCO TICK_DATA_FULL Table:
