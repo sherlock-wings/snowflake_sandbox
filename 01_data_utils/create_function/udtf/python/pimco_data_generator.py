@@ -218,12 +218,6 @@ all_cols.append(ASKPRICE)
 ASKSIZE = pd.Series(np.random.randint(1, 7, len(TIME))).rename('ASKSIZE')
 all_cols.append(ASKSIZE)
 
-# FINAL DATAFRAME
-df = pd.concat(all_cols, 
-               #columns=TABLE_COLUMN_SET, 
-               axis=1)
-df
-
 # BUYERID (COLUMN 29)
 BUYERID = GMTOFFSET.copy().rename('BUYERID')
 all_cols.append(BUYERID)
@@ -259,6 +253,18 @@ all_cols.append(BIDTONE)
 # TRADETONE (COLUMN 37)
 TRADETONE = GMTOFFSET.copy().rename('TRADETONE')
 all_cols.append(TRADETONE)
+
+# MKTSTIND (COLUMN 38)
+MKTSTIND = pd.Series(np.nan, index=TIME.index).astype(str).rename('MKTSTIND')
+non_trades = TYPE != 'TRADE'
+MKTSTIND[non_trades] = 'BBO'
+all_cols.append(MKTSTIND)
+
+# FINAL DATAFRAME
+df = pd.concat(all_cols, 
+               #columns=TABLE_COLUMN_SET, 
+               axis=1)
+df
 
 '''
 NOTES: Column Generation specs for PIMCO TICK_DATA_FULL Table:
@@ -307,7 +313,6 @@ BIDPRICE:
     Increment off of last not-null price
 ASKSIZE:
     Random int between 1 and 6
-
 BUYERID= 100% NULL
 NOBUYERS= 100% NULL
 SELLERID= 100% NULL
@@ -317,6 +322,7 @@ BIDTIC= 100% NULL
 ASKTONE= 100% NULL
 BIDTONE= 100% NULL
 TRADETONE= 100% NULL
+
 MKTSTIND = CASE WHEN PRICE IS NULL THEN 'BBO' END
 IRGCOND = 100% NULL
 LSTSALCOND= 
