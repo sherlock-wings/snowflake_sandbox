@@ -38,7 +38,6 @@ def jitter_series(input_series: pd.Series
     if type(input_series.values[0]) == np.datetime64:
         is_datetime = True
 
-
     rng = np.random.default_rng(seed)
     if direction == -1:
         jitters = rng.uniform(-volatility, 0, size)
@@ -78,48 +77,61 @@ total_rows = len(TIME)
 
 # GENERATE DATE (COLUMN 1)
 DATE = TIME.dt.date
+all_cols = [DATE, TIME]
 
 # GENERATE SYM (COLUMN 3)
 SYM = pd.Series("1YMH25", index=TIME.index)
+all_cols.append(SYM)
 
 # GENERATE PIMCOINTERNALKEY (COLUMN 4)
 PIMCOINTERNALKEY = pd.Series("F:XCBT:XCBT:YM:M:20250301", index=TIME.index)
+all_cols.append(PIMCOINTERNALKEY)
 
 # GENERATE PIMCOINTERNALKEY (COLUMN 5)
 MDSID = pd.Series("1YMH25|REFINITIV|null|LIVE", index=TIME.index)
+all_cols.append(MDSID)
 
 # GENERATE FEEDSEQNUM (COLUMN 6)
 start = 259237
 FEEDSEQNUM = pd.Series(np.arange(start, start+total_rows, 1))
+all_cols.append(FEEDSEQNUM)
 
 # GENERATE FEEDAPP (COLUMN 7)
 FEEDAPP = pd.Series("RefinitivFuturesGw3_CLOUD_PROD_PROD-SECRETS_K8S_K8S-PROD", index=TIME.index)
+all_cols.append(FEEDAPP)
 
 # GENERATE VENDORUPDATETIME (COLUMN 8) 
 deltas = pd.Series(pd.to_timedelta(5, unit='h'), index=TIME.index)
 VENDORUPDATETIME = TIME + deltas
+all_cols.append(VENDORUPDATETIME)
 
 # GENERATE MDSRECEIVETIME (COLUMN 9)
 MDSRECEIVETIME = jitter_series(VENDORUPDATETIME, volatility=1e9, direction=1, relative=False)
+all_cols.append(MDSRECEIVETIME)
 
 # GENERATE MDSPUBLISHTIME (COLUMN 10)
 MDSPUBLISHTIME = jitter_series(MDSRECEIVETIME, volatility=1e9, direction=1, relative=False)
+all_cols.append(MDSPUBLISHTIME)
 
 # GENERATE TYPE (COLUMN 11)
 choice_ls = [1,2]
 TYPE = pd.Series(random.choices(choice_ls, weights=(1, 9), k=total_rows))
 TYPE = pd.Series(np.where(TYPE == 1, 'TRADE', 'QUOTE'))
+all_cols.append(TYPE)
 
 # GENERATE GMTOFFSET (COLUMN 12)
 GMTOFFSET = FEEDSEQNUM.copy()
 GMTOFFSET[:] = None
+all_cols.append(GMTOFFSET)
 
 # GENERATE EXCHTIME (COLUMN 13)
 EXCHTIME = VENDORUPDATETIME
+all_cols.append(EXCHTIME)
 
 # GENERATE SEQNUM (COLUMN 14)
 SEQNUM = np.arange(1, total_rows+1, 1)
 SEQNUM = TIME.dt.strftime('%Y%m%d%H%M%S%f') + SEQNUM.astype(str)
+all_cols.append(SEQNUM)
 
 # GENERATE PRICE (COLUMN 15)
 price_start = 44650.56000
@@ -129,14 +141,22 @@ total_trades = trade_series.sum()
 pricewalk = random_walk(start_value=price_start, n_values=total_trades, step_size=0.002, prob_up=0.75)
 PRICE = pd.Series(np.nan, index=TIME.index)
 PRICE[trade_series] = pricewalk.values
+all_cols.append(PRICE)
 
 # GENERATE VOLUME (COLUMN 16)
 vols = pd.Series(np.random.randint(1, 80, total_trades))
 VOLUME = pd.Series(np.nan, index=TIME.index)
 VOLUME[trade_series] = vols.values
 VOLUME = VOLUME.astype('Int64')
+all_cols.append(VOLUME)
 
 # GENERATE ACCVOLUME (COLUMN 17)
+# filldown to kill nulls (where addition is not supported), 
+# then convert each value from the initial one to the cumulative one,
+# then drop all resulting values for all indices except those where VOLUME is not null
+ACCVOLUME = VOLUME.ffill().cumsum().where(VOLUME.notna())
+all_cols.append(ACCVOLUME)
+
 '''
 NOTES: Column Generation specs for PIMCO TICK_DATA_FULL Table:
 3,330 rows per hour
@@ -160,8 +180,8 @@ EXCHTIME = Same as VENDORUPDATETIME
 SEQNUM = (from time) YYYYMMDDHHMMSS(9) || FEEDSEQNUM
 PRICE = CASE WHEN TYPE = 'TRADE' THEN -- Bidirectional 5% jitter about 44675.0000 -- ELSE NULL
 VOLUME = CASE WHEN TYPE = 'TRADE' THEN -- random int b/n 1 and 80 -- ELSE NULL
-
 ACCVOLUME = Cumulative Sum of VOLUME
+
 MARKETVWAP = Start at 2 below first value for LOW and increase by fractional dollars cumulatively
 OPEN = Bidirectional 5% jitter about PRICE
 HIGH = Positive 5% jitter about OPEN
