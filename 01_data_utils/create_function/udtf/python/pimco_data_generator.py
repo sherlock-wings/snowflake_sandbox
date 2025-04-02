@@ -2,19 +2,39 @@ import numpy as np
 import pandas as pd
 import random
 
-# "jitter" some value up, down, or bidirectionally about a start value
-# will be used for many random value generations
-def jitter(start_value: float, volatility: float = 0.01, direction: int = 0) -> float:
+def jitter_series(
+    start_value: float,
+    size: int,
+    volatility: float = 0.01,
+    direction: int = 0,
+    random_seed: int | None = None,
+) -> np.ndarray:
+    """
+    Generate a NumPy array of jittered values efficiently.
+    
+    Args:
+        start_value: Base value to jitter around.
+        size: Number of values to generate.
+        volatility: Relative jitter magnitude (e.g., 0.01 = ±1%).
+        direction: -1 (down only), 0 (bidirectional), 1 (up only).
+        random_seed: Optional seed for reproducibility.
+    
+    Returns:
+        np.ndarray: Array of jittered values.
+    """
     if direction not in [-1, 0, 1]:
-        raise ValueError("Input argument for `direction` should be -1 (negative jitter), 1 (positive jitter), or 0 (bidirectional jitter).")
-    jitter = 0
+        raise ValueError("`direction` must be -1, 0, or 1.")
+    
+    rng = np.random.default_rng(random_seed)
+    
     if direction == -1:
-        jitter += random.uniform(-volatility, 0) * start_value
+        jitters = rng.uniform(-volatility, 0, size)
     elif direction == 1:
-        jitter += random.uniform(0, volatility) * start_value
-    else:
-        jitter += random.uniform(-volatility, volatility) * start_value
-    return start_value + jitter
+        jitters = rng.uniform(0, volatility, size)
+    else:  # direction == 0
+        jitters = rng.uniform(-volatility, volatility, size)
+    
+    return start_value * (1 + jitters)
 
 # GENERATE TIME (COLUMN 2)
 TIME = pd.Series(pd.date_range(start = '2025-02-17 00:00:00.000000000'
@@ -22,9 +42,9 @@ TIME = pd.Series(pd.date_range(start = '2025-02-17 00:00:00.000000000'
                               ,freq  = '0.5s'
                               ).values
                 )
-total_rows = len(TIME)
 
 TIME = pd.Series([ts + np.timedelta64(round(jitter(250000000, 0.99999, 0)), 'ns') for ts in TIME])
+total_rows = len(TIME)
 
 # GENERATE DATE (COLUMN 1)
 DATE = pd.Series([dt.date() for dt in TIME])
@@ -71,6 +91,10 @@ EXCHTIME = VENDORUPDATETIME
 # GENERATE SEQNUM (COLUMN 14)
 SEQNUM = np.arange(1, total_rows, 1)
 SEQNUM = pd.Series([str(ts).replace('-', '').replace(':', '').replace(' ', '').replace('.', '')+str(item) for ts, item in zip(TIME, SEQNUM)])
+
+# GENERATE PRICE (COLUMN 15)
+price_nucleus = 44675.0000
+
 '''
 NOTES: Column Generation specs for PIMCO TICK_DATA_FULL Table:
 3,330 rows per hour
