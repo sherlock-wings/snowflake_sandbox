@@ -65,13 +65,19 @@ def jitter_series(input_series: pd.Series
     else:
         return input_series
 
-def generate_synthetic_pimco_tick_data(start_datetime: str, end_datetime: str, row_interval: str = '0.5s') -> pd.DataFrame:
+def generate_synthetic_pimco_tick_data(start_datetime: str = '2025-02-17 00:00:00.000000000'
+                                      ,end_datetime: str = '2025-02-23 23:59:59.999999999'
+                                      ,row_interval: str = '0.5s'
+                                      ,mode: str = 'return') -> pd.DataFrame:
+    if mode not in ['return', 'write']:
+        raise ValueError('`mode` argument must be "return" if you want it to return the data as a Pandas DataFrame, or "write" if you want it to write the data to CSV')
+    
     TABLE_COLUMN_SET = ['DATE', 'TIME', 'SYM', 'PIMCOINTERNALKEY', 'MDSID', 'FEEDSEQNUM', 'FEEDAPP', 'VENDORUPDATETIME', 'MDSRECEIVETIME', 'MDSPUBLISHTIME', 'TYPE', 'GMTOFFSET', 'EXCHTIME', 'SEQNUM', 'PRICE', 'VOLUME', 'ACCVOLUME', 'MARKETVWAP', 'OPEN', 'HIGH', 'LOW', 'BLOCKTRD', 'TICKDIR', 'TURNOVER', 'BIDPRICE', 'BIDSIZE', 'ASKPRICE', 'ASKSIZE', 'BUYERID', 'NOBUYERS', 'SELLERID', 'NOSELLERS', 'MIDPRICE', 'BIDTIC', 'ASKTONE', 'BIDTONE', 'TRADETONE', 'MKTSTIND', 'IRGCOND', 'LSTSALCOND', 'CRSSALCOND', 'TRTRDFLAG', 'ELIGBLTRD', 'PRCQLCD', 'LOWTP1', 'HIGHTP1', 'ACTTP1', 'ACTFLAG1', 'OFFBKTYPE', 'GV3TEXT', 'GV4TEXT', 'ALIAS', 'MFDTRANTP', 'MMTCLASS', 'SPRDCDN', 'STRGYCDN', 'OFFBKCDN', 'PRCQL2']
 
     # GENERATE TIME (COLUMN 2)
     TIME = pd.Series(pd.date_range(start = start_datetime # test argument: '2025-02-17 00:00:00.000000000'
-                                  ,end   = end_datetime # test argument: '2025-02-23 23:59:59.999999999'
-                                  ,freq  = row_interval # test argument: '0.5s'
+                                  ,end   = end_datetime   # test argument: '2025-02-23 23:59:59.999999999'
+                                  ,freq  = row_interval   # test argument: '0.5s'
                                   ).values
                     ).rename('TIME')
     # "jitter" time by a random amount of fractional sections between 0.0 and 0.5s (nanosecond precision)
@@ -353,8 +359,13 @@ def generate_synthetic_pimco_tick_data(start_datetime: str, end_datetime: str, r
     df = pd.concat(all_cols, 
                 #columns=TABLE_COLUMN_SET, 
                 axis=1)
-    return df[TABLE_COLUMN_SET]
+    if mode == 'return':
+        return df[TABLE_COLUMN_SET]
+    elif mode == 'write':
+        df.to_csv(index=False)
 
+if __name__ == "__main__":
+    extract_feed()
 '''
 NOTES: Column Generation specs for PIMCO TICK_DATA_FULL Table:
 3,330 rows per hour
