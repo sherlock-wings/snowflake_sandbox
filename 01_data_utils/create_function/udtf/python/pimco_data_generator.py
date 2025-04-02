@@ -224,6 +224,41 @@ df = pd.concat(all_cols,
                axis=1)
 df
 
+# BUYERID (COLUMN 29)
+BUYERID = GMTOFFSET.copy().rename('BUYERID')
+all_cols.append(BUYERID)
+
+# NOBUYERS (COLUMN 30)
+NOBUYERS = GMTOFFSET.copy().rename('NOBUYERS')
+all_cols.append(NOBUYERS)
+
+# SELLERID (COLUMN 31)
+SELLERID = GMTOFFSET.copy().rename('SELLERID')
+all_cols.append(SELLERID)
+
+# NOSELLERS (COLUMN 32)
+NOSELLERS = GMTOFFSET.copy().rename('NOSELLERS')
+all_cols.append(NOSELLERS)
+
+# MIDPRICE (COLUMN 33)
+MIDPRICE = GMTOFFSET.copy().rename('MIDPRICE')
+all_cols.append(MIDPRICE)
+
+# BIDTIC (COLUMN 34)
+BIDTIC = GMTOFFSET.copy().rename('BIDTIC')
+all_cols.append(BIDTIC)
+
+# ASKTONE (COLUMN 35)
+ASKTONE = GMTOFFSET.copy().rename('ASKTONE')
+all_cols.append(ASKTONE)
+
+# BIDTONE (COLUMN 36)
+BIDTONE = GMTOFFSET.copy().rename('BIDTONE')
+all_cols.append(BIDTONE)
+
+# TRADETONE (COLUMN 37)
+TRADETONE = GMTOFFSET.copy().rename('TRADETONE')
+all_cols.append(TRADETONE)
 
 '''
 NOTES: Column Generation specs for PIMCO TICK_DATA_FULL Table:
@@ -256,7 +291,6 @@ LOW = Negative 5% jitter about OPEN
 BLOCKTRD = 100% NULL
 TICKDIR = 100% NULL
 TURNOVER = 100% NULL
-
 BIDPRICE:
     numberList = [-2, -1, 0, 1]
     print(random.choices(numberList, weights=(60, 120, 180, 6), k=1))
@@ -273,6 +307,7 @@ BIDPRICE:
     Increment off of last not-null price
 ASKSIZE:
     Random int between 1 and 6
+
 BUYERID= 100% NULL
 NOBUYERS= 100% NULL
 SELLERID= 100% NULL
