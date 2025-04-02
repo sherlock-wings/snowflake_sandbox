@@ -6,16 +6,35 @@ import random
 import numpy as np
 from datetime import datetime, timedelta
 
+# create a series of numbers that "walk" mostly up or down, starting from a given value
+def random_walk(start_value: int | float, n_values: int, step_size: int | float, prob_up: float):
+    if prob_up < 0 or prob_up > 1:
+        raise ValueError("`prob_up` must be a float between 0 and 1")
+    
+    # Generate a series of "steps", which can be up or down
+    choices = np.random.choice([1, -1], size=n_values-1, p=[prob_up, 1-prob_up])
+
+    # convert a series of steps into a series of running sums 
+    # (each element equals the last element plus the value of the current "step")
+    steps = np.cumsum(choices) * step_size
+
+    # implement the start_value as an offset added to each element of `steps`
+    # also, add the initial start value as an element at the beginning to complete the series
+    values = np.concatenate([[start_value], start_value + steps])
+    return pd.Series(values, dtype=float)
+
 def jitter_series(input_series: pd.Series
-                 ,direction: int = 0
-                 ,seed: int | None = None
+                 ,direction: int | list = None
+                 ,seed: int | None = None # for reproducible copies of "jittered" series
                  ,size: int | None = None 
                  ,volatility: float = 0.01
                  ,relative: bool = True
                  ,discrete: bool = False) -> pd.Series:
+    # validate direction as an int
     if direction not in [-1, 0, 1]:
-        raise ValueError("`direction` must be -1, 0, or 1.")
-    # size default value
+        raise ValueError("`direction` must be a whole number between -1 and 1, or a list of exactly two floats that sum to 1.0")
+   
+   # size default value
     if not size:
         size = len(input_series)
 
@@ -23,8 +42,8 @@ def jitter_series(input_series: pd.Series
     if type(input_series.values[0]) == np.datetime64:
         is_datetime = True
 
-    rng = np.random.default_rng(seed)
 
+    rng = np.random.default_rng(seed)
     if direction == -1:
         jitters = rng.uniform(-volatility, 0, size)
     elif direction == 1:
@@ -57,11 +76,12 @@ TIME = pd.Series(pd.date_range(start = '2025-02-17 00:00:00.000000000'
                               ,freq  = '0.5s'
                               ).values
                 )
-
-
+# "jitter" time by a random amount of fractional sections between 0.0 and 0.5s (nanosecond precision)
+TIME = jitter_series(TIME, volatility=1e8, relative=False)
+total_rows = len(TIME)
 
 # GENERATE DATE (COLUMN 1)
-DATE = pd.Series([dt.date() for dt in TIME])
+DATE = TIME.dt.date
 
 # GENERATE SYM (COLUMN 3)
 SYM = pd.Series("1YMH25", index=TIME.index)
@@ -80,20 +100,19 @@ FEEDSEQNUM = pd.Series(np.arange(start, start+total_rows, 1))
 FEEDAPP = pd.Series("RefinitivFuturesGw3_CLOUD_PROD_PROD-SECRETS_K8S_K8S-PROD", index=TIME.index)
 
 # GENERATE VENDORUPDATETIME (COLUMN 8) 
-VENDORUPDATETIME = pd.Series([ts + np.timedelta64(5, 'h') for ts in TIME])
+deltas = pd.Series(pd.to_timedelta(5, unit='h'), index=TIME.index)
+VENDORUPDATETIME = TIME + deltas
 
 # GENERATE MDSRECEIVETIME (COLUMN 9)
-
-MDSRECEIVETIME = pd.Series([ts + np.timedelta64(round(jitter(500000000, 0.99999, 0)), 'ns') for ts in VENDORUPDATETIME])
+MDSRECEIVETIME = jitter_series(VENDORUPDATETIME, volatility=1e9, direction=1, relative=False)
 
 # GENERATE MDSPUBLISHTIME (COLUMN 10)
-
-MDSPUBLISHTIME = pd.Series([ts + np.timedelta64(round(jitter(500000000, 0.99999, 0)), 'ns') for ts in MDSRECEIVETIME])
+MDSPUBLISHTIME = jitter_series(MDSRECEIVETIME, volatility=1e9, direction=1, relative=False)
 
 # GENERATE TYPE (COLUMN 11)
 choice_ls = [1,2]
-TYPE = random.choices(choice_ls, weights=(1, 9), k=total_rows)
-TYPE = ['TRADE' if item == 1 else 'QUOTE' if item == 2 else None for item in TYPE]
+TYPE = pd.Series(random.choices(choice_ls, weights=(1, 9), k=total_rows))
+TYPE = pd.Series(np.where(TYPE == 1, 'TRADE', 'QUOTE'))
 
 # GENERATE GMTOFFSET (COLUMN 12)
 GMTOFFSET = FEEDSEQNUM.copy()
@@ -103,11 +122,16 @@ GMTOFFSET[:] = None
 EXCHTIME = VENDORUPDATETIME
 
 # GENERATE SEQNUM (COLUMN 14)
-SEQNUM = np.arange(1, total_rows, 1)
-SEQNUM = pd.Series([str(ts).replace('-', '').replace(':', '').replace(' ', '').replace('.', '')+str(item) for ts, item in zip(TIME, SEQNUM)])
+SEQNUM = np.arange(1, total_rows+1, 1)
+SEQNUM = TIME.dt.strftime('%Y%m%d%H%M%S%f') + SEQNUM.astype(str)
 
 # GENERATE PRICE (COLUMN 15)
-price_nucleus = 44675.0000
+price_start = 44650.56000
+trade_series = (TYPE == 'TRADE')
+total_trades = trade_series.sum()
+pricewalk = random_walk(start_value=price_start, n_values=total_trades, step_size=0.002, prob_up=0.75)
+PRICE = pd.Series(np.nan, index=TIME.index)
+PRICE[trade_series] = pricewalk.values
 
 '''
 NOTES: Column Generation specs for PIMCO TICK_DATA_FULL Table:
@@ -129,8 +153,8 @@ MDSPUBLISHTIME = fractional seconds (random) after MDSRECEIVETIME
 TYPE = Can be approximated as 10% 'TRADE', 90% 'QUOTE'
 GMTOFFSET = 100% NULL
 EXCHTIME = Same as VENDORUPDATETIME
-
 SEQNUM = (from time) YYYYMMDDHHMMSS(9) || FEEDSEQNUM
+
 PRICE = CASE WHEN TYPE = 'TRADE' THEN -- Bidirectional 5% jitter about 44675.0000 -- ELSE NULL
 VOLUME = CASE WHEN TYPE = 'TRADE' THEN -- random int b/n 1 and 80 -- ELSE NULL
 ACCVOLUME = Cumulative Sum of VOLUME
