@@ -24,7 +24,7 @@ def random_walk(start_value: int | float, n_values: int, step_size: int | float,
     return pd.Series(values, dtype=float)
 
 def jitter_series(input_series: pd.Series
-                 ,direction: int | list = None
+                 ,direction: int = 0
                  ,seed: int | None = None # for reproducible copies of "jittered" series
                  ,size: int | None = None 
                  ,volatility: float = 0.01
@@ -138,7 +138,9 @@ PRICE[trade_series] = pricewalk.values
 vols = pd.Series(np.random.randint(1, 80, total_trades))
 VOLUME = pd.Series(np.nan, index=TIME.index)
 VOLUME[trade_series] = vols.values
+VOLUME = VOLUME.astype('Int64')
 
+# GENERATE ACCVOLUME (COLUMN 17)
 '''
 NOTES: Column Generation specs for PIMCO TICK_DATA_FULL Table:
 3,330 rows per hour
@@ -161,8 +163,8 @@ GMTOFFSET = 100% NULL
 EXCHTIME = Same as VENDORUPDATETIME
 SEQNUM = (from time) YYYYMMDDHHMMSS(9) || FEEDSEQNUM
 PRICE = CASE WHEN TYPE = 'TRADE' THEN -- Bidirectional 5% jitter about 44675.0000 -- ELSE NULL
-
 VOLUME = CASE WHEN TYPE = 'TRADE' THEN -- random int b/n 1 and 80 -- ELSE NULL
+
 ACCVOLUME = Cumulative Sum of VOLUME
 MARKETVWAP = Start at 2 below first value for LOW and increase by fractional dollars cumulatively
 OPEN = Bidirectional 5% jitter about PRICE
