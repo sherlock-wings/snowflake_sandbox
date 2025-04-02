@@ -173,11 +173,15 @@ LOW = jitter_series(OPEN, direction=-1, volatility=0.001).rename('LOW')
 all_cols.append(LOW)
 
 # MARKETVWAP (COLUMN 18)
+MARKETVWAP = jitter_series(pd.Series([0] * (len(TIME)-1)), direction=1, relative=False, volatility=0.01)
+MARKETVWAP = pd.concat([pd.Series(LOW.values[0]), MARKETVWAP], ignore_index=True).cumsum().rename('MARKETVWAP')
+all_cols.append(MARKETVWAP)
 
 # FINAL DATAFRAME
-all_cols.append(ACCVOLUME)
-df = pd.concat(all_cols, columns=TABLE_COLUMN_SET, axis=1)
-
+df = pd.concat(all_cols, 
+               #columns=TABLE_COLUMN_SET, 
+               axis=1)
+df
 
 '''
 NOTES: Column Generation specs for PIMCO TICK_DATA_FULL Table:
