@@ -1,3 +1,4 @@
+import dask.dataframe as dd
 import numpy as np
 import pandas as pd
 import random
@@ -67,11 +68,7 @@ def jitter_series(input_series: pd.Series
 
 def generate_synthetic_pimco_tick_data(start_datetime: str = '2025-02-17 00:00:00.000000000'
                                       ,end_datetime: str = '2025-02-23 23:59:59.999999999'
-                                      ,row_interval: str = '0.5s'
-                                      ,mode: str = 'return') -> pd.DataFrame:
-    if mode not in ['return', 'write']:
-        raise ValueError('`mode` argument must be "return" if you want it to return the data as a Pandas DataFrame, or "write" if you want it to write the data to CSV')
-    
+                                      ,row_interval: str = '0.5s') -> pd.DataFrame:
     TABLE_COLUMN_SET = ['DATE', 'TIME', 'SYM', 'PIMCOINTERNALKEY', 'MDSID', 'FEEDSEQNUM', 'FEEDAPP', 'VENDORUPDATETIME', 'MDSRECEIVETIME', 'MDSPUBLISHTIME', 'TYPE', 'GMTOFFSET', 'EXCHTIME', 'SEQNUM', 'PRICE', 'VOLUME', 'ACCVOLUME', 'MARKETVWAP', 'OPEN', 'HIGH', 'LOW', 'BLOCKTRD', 'TICKDIR', 'TURNOVER', 'BIDPRICE', 'BIDSIZE', 'ASKPRICE', 'ASKSIZE', 'BUYERID', 'NOBUYERS', 'SELLERID', 'NOSELLERS', 'MIDPRICE', 'BIDTIC', 'ASKTONE', 'BIDTONE', 'TRADETONE', 'MKTSTIND', 'IRGCOND', 'LSTSALCOND', 'CRSSALCOND', 'TRTRDFLAG', 'ELIGBLTRD', 'PRCQLCD', 'LOWTP1', 'HIGHTP1', 'ACTTP1', 'ACTFLAG1', 'OFFBKTYPE', 'GV3TEXT', 'GV4TEXT', 'ALIAS', 'MFDTRANTP', 'MMTCLASS', 'SPRDCDN', 'STRGYCDN', 'OFFBKCDN', 'PRCQL2']
 
     # GENERATE TIME (COLUMN 2)
@@ -359,13 +356,10 @@ def generate_synthetic_pimco_tick_data(start_datetime: str = '2025-02-17 00:00:0
     df = pd.concat(all_cols, 
                 #columns=TABLE_COLUMN_SET, 
                 axis=1)
-    if mode == 'return':
-        return df[TABLE_COLUMN_SET]
-    elif mode == 'write':
-        df.to_csv(index=False)
+    return df[TABLE_COLUMN_SET]
 
 if __name__ == "__main__":
-    generate_synthetic_pimco_tick_data(mode="write")
+    generate_synthetic_pimco_tick_data()
 '''
 NOTES: Column Generation specs for PIMCO TICK_DATA_FULL Table:
 3,330 rows per hour
