@@ -365,7 +365,7 @@ def generate_synthetic_pimco_tick_data(start_datetime: str = '2025-02-17 00:00:0
         df.to_csv(index=False)
 
 if __name__ == "__main__":
-    extract_feed()
+    generate_synthetic_pimco_tick_data(mode="write")
 '''
 NOTES: Column Generation specs for PIMCO TICK_DATA_FULL Table:
 3,330 rows per hour
