@@ -265,6 +265,7 @@ def stash_user_posts(client_details: str
             data['bluesky_client_account_created_timestamp'].append(client_details.split('|')[3])
             ts = datetime.now(pytz.timezone('America/New_York')).astimezone(pytz.timezone('UTC'))
             data['record_captured_timestamp'].append(ts) 
+        
         '''
         TODO -- Figure out why the below call never gets a "hit". It's like the only time
                 that this .py file will write a CSV to disk is between one user and the next.
@@ -274,6 +275,8 @@ def stash_user_posts(client_details: str
                 here, between one page and the next for the same user, and not after one 
                 user finishes/before the next user is begun.
         '''
+        if watermark_crossed:
+            break
         _, data = chunk_check(schema_input=SCHEMA, dict_input=data)
         if not resp.cursor:
             pages_remain = False
