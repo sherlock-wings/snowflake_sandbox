@@ -3,7 +3,7 @@ use database pcallahan_sandbox;
 create schema if not exists raw;
 use schema raw;
 
-create table if not exists arbyswaifu_feed (
+create table if not exists thehippus_feed (
  content_id varchar
 ,post_uri varchar
 ,like_count varchar
@@ -27,8 +27,8 @@ create table if not exists arbyswaifu_feed (
 ,record_captured_timestamp varchar
 );
 
-create or replace stage stg_arbyswaifu_feed
+create or replace stage stg_thehippus_feed
   URL = 'azure://pfcstack1.blob.core.windows.net/sfsandbox/bluesky_posts/'
     CREDENTIALS = (  AZURE_SAS_TOKEN = '***' );
 
-list @stg_arbyswaifu_feed;
+list @stg_thehippus_feed;

@@ -3,8 +3,8 @@ use database pcallahan_sandbox;
 create schema if not exists raw;
 use schema raw;
 
-COPY INTO arbyswaifu_feed
-FROM @stg_arbyswaifu_feed
+COPY INTO thehippus_feed
+FROM @stg_thehippus_feed
 FILE_FORMAT = (TYPE = CSV 
                PARSE_HEADER = TRUE
                FIELD_OPTIONALLY_ENCLOSED_BY = '"'
