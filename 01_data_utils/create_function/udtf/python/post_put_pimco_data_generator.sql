@@ -26,7 +26,7 @@ FROM @pimco_synthetic_data
 FILE_FORMAT = (TYPE = CSV, PARSE_HEADER = TRUE)
 MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE;
 
-create or replace table tick_data_synthetic
+create or replace table tick_data_synthetic_sm
 (
     DATE DATE,
     TIME TIMESTAMP_NTZ,
@@ -89,7 +89,7 @@ create or replace table tick_data_synthetic
 
 );
 
-insert into tick_data_synthetic
+insert into tick_data_synthetic_sm
 select 
     to_date(DATE) as date,
     to_timestamp_ntz(replace(TIME, 'D', ' ')) as time,
@@ -152,4 +152,4 @@ select
 FROM STG_TICK_DATA_SYNTHETIC;
 
 
-SELECT TOP 10 * FROM TICK_DATA_SYNTHETIC;
+SELECT TOP 10 * FROM tick_data_synthetic_sm;

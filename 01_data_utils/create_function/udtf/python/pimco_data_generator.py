@@ -1,7 +1,58 @@
 import dask.dataframe as dd
 import numpy as np
+import os
 import pandas as pd
 import random
+from snowflake import connector as snowflake_connector
+
+def put_files_in_sf(output_dir: str = 'output'
+                   ,role_name: str = 'DATA_ENGINEER'
+                   ,db_name: str = 'PIMCO_POC_DB'
+                   ,schema_name: str = 'PIMCO_POC_BRONZE'
+                   ,stg_name: str = 'PIMCO_SYNTHETIC_DATA') -> None:
+    # Establish connection
+    conn = snowflake_connector.connect(
+        authenticator = 'externalbrowser',
+        user          = os.getenv('HKSF_username'),
+        account       = os.getenv('HKSF_accountname'),
+        warehouse     = os.getenv('HKSF_warehousename'),
+        database      = os.getenv('HKSF_dbname'),
+        schema        = os.getenv('HKSF_schemaname')
+    )
+    
+    cur = conn.cursor()
+    cur.execute(f"USE ROLE {role_name};")    
+    cur.execute(f"USE SCHEMA {db_name}.{schema_name};")
+    cur.execute(f'put file://{output_dir}/ptd*.csv @{stg_name} parallel = 8 auto_compress = true overwrite = true')
+    
+    print(f"All .csv files in {output_dir} have been uploaded to snowflake stage {db_name}.{schema_name}.{stg_name}.")
+    print(f"Files were uploaded to target snowflake account '{os.getenv('HKSF_accountname')}' via user {os.getenv('HKSF_username')} and role {os.getenv('HKSF_rolename')}.")
+    cur.close()
+    conn.close()
+
+def delete_local_files(directory: str = 'output', file_extenstion: str = '.csv'):
+    """Delete all .csv files in the specified directory"""
+    if not os.path.isdir(directory):
+        print(f"Error: {directory} is not a valid directory")
+        return
+    
+    deleted_count = 0
+    error_count = 0
+    
+    for filename in os.listdir(directory):
+        if filename.lower().endswith(file_extenstion):
+            file_path = os.path.join(directory, filename)
+            try:
+                if os.path.isfile(file_path):  # Make sure it's a file, not a directory
+                    os.remove(file_path)
+                    deleted_count += 1
+                    print(f"Deleted: {file_path}")
+            except Exception as e:
+                error_count += 1
+                print(f"Error deleting {file_path}: {str(e)}")
+    
+    print(f"\nSummary: Deleted {deleted_count} CSV files with {error_count} errors")
+
 
 # create a series of numbers that "walk" mostly up or down, starting from a given value
 def random_walk(start_value: int | float, n_values: int, step_size: int | float, prob_up: float):
@@ -66,9 +117,11 @@ def jitter_series(input_series: pd.Series
     else:
         return input_series
 
-def generate_synthetic_pimco_tick_data(start_datetime: str = '2025-02-17 00:00:00.000000000'
-                                      ,end_datetime: str = '2025-02-23 23:59:59.999999999'
-                                      ,row_interval: str = '0.5s') -> pd.DataFrame:
+def generate_rows_with_symbol(input_symbol: str = '1YMH25'
+                             ,start_datetime: str = '2025-02-17 00:00:00.000000000'
+                             ,end_datetime: str = '2025-02-23 23:59:59.999999999'
+                             ,row_interval: str = '0.5s'
+                             ,output_dir: str = 'output') -> pd.DataFrame:
     TABLE_COLUMN_SET = ['DATE', 'TIME', 'SYM', 'PIMCOINTERNALKEY', 'MDSID', 'FEEDSEQNUM', 'FEEDAPP', 'VENDORUPDATETIME', 'MDSRECEIVETIME', 'MDSPUBLISHTIME', 'TYPE', 'GMTOFFSET', 'EXCHTIME', 'SEQNUM', 'PRICE', 'VOLUME', 'ACCVOLUME', 'MARKETVWAP', 'OPEN', 'HIGH', 'LOW', 'BLOCKTRD', 'TICKDIR', 'TURNOVER', 'BIDPRICE', 'BIDSIZE', 'ASKPRICE', 'ASKSIZE', 'BUYERID', 'NOBUYERS', 'SELLERID', 'NOSELLERS', 'MIDPRICE', 'BIDTIC', 'ASKTONE', 'BIDTONE', 'TRADETONE', 'MKTSTIND', 'IRGCOND', 'LSTSALCOND', 'CRSSALCOND', 'TRTRDFLAG', 'ELIGBLTRD', 'PRCQLCD', 'LOWTP1', 'HIGHTP1', 'ACTTP1', 'ACTFLAG1', 'OFFBKTYPE', 'GV3TEXT', 'GV4TEXT', 'ALIAS', 'MFDTRANTP', 'MMTCLASS', 'SPRDCDN', 'STRGYCDN', 'OFFBKCDN', 'PRCQL2']
 
     # GENERATE TIME (COLUMN 2)
@@ -94,7 +147,7 @@ def generate_synthetic_pimco_tick_data(start_datetime: str = '2025-02-17 00:00:0
     all_cols.append(PIMCOINTERNALKEY)
 
     # GENERATE PIMCOINTERNALKEY (COLUMN 5)
-    MDSID = pd.Series("1YMH25|REFINITIV|null|LIVE", index=TIME.index).rename('MDSID')
+    MDSID = pd.Series(f"{input_symbol}|REFINITIV|null|LIVE", index=TIME.index).rename('MDSID')
     all_cols.append(MDSID)
 
     # GENERATE FEEDSEQNUM (COLUMN 6)
@@ -356,7 +409,20 @@ def generate_synthetic_pimco_tick_data(start_datetime: str = '2025-02-17 00:00:0
     df = pd.concat(all_cols, 
                 #columns=TABLE_COLUMN_SET, 
                 axis=1)
-    return df[TABLE_COLUMN_SET]
+    df = dd.from_pandas(df, npartitions = 10)
+    df.to_csv(f'{output_dir}/ptd_{input_symbol}_*.csv', index=False)
+
+def generate_synthetic_pimco_tick_data(symbol_input_ls: str
+                                      ,start_datetime: str
+                                      ,end_datetime: str
+                                      ,row_interval: str
+                                      ,output_dir: str = 'output') -> None:
+    symbol_input_ls = pd.read_csv('distinct_symbols.txt', header=None, names=['SYM']).SYM.values
+
+    for sym in symbol_input_ls:
+        generate_rows_with_symbol(sym, start_datetime, end_datetime, row_interval, output_dir)
+        put_files_in_sf()
+        delete_local_files()
 
 if __name__ == "__main__":
     generate_synthetic_pimco_tick_data()
