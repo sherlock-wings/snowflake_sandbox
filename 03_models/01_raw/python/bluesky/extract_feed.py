@@ -35,17 +35,6 @@ AZR_TGT_DIR = f"{os.getenv('AZR_TGT_DIR')}/"  # apparently a trailing slash is r
 USR = os.getenv('BSY_USR').lower()
 KEY = os.getenv('BSY_KEY')
 
-# Use connection string locally, Managed Identity in Azure
-if "AzureWebJobsStorage" in os.environ:
-    credential = DefaultAzureCredential()
-    storage_url = f"https://<storage-account>.blob.core.windows.net"
-else:
-    connection_string = "DefaultEndpointsProtocol=https;AccountName=<storage-account>;AccountKey=<access-key>;EndpointSuffix=core.windows.net"
-    container_client = ContainerClient.from_connection_string(
-        connection_string,
-        container_name="your-container"
-    )
-
 # Azure connection config
 AZR_XCT_STR = os.getenv('AZR_XCT_STR')
 BLB_SVC_CLI = BlobServiceClient.from_connection_string(AZR_XCT_STR)
