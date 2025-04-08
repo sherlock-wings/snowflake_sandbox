@@ -1,0 +1,34 @@
+Python script: /home/admin/work/personal/snowflake_sandbox/03_models/01_raw/python/bluesky/extract_feed.py
+Log file: /home/admin/work/personal/snowflake_sandbox/03_models/01_raw/python/bluesky/extract_logs//extract_feed_2025-04-08_03-35-37.log
+New BlueSky feed-extract session opened at 2025-04-08 03:35:41 EDT
+Logging in as BlueSky User thehippus.bsky.social... 
+LET'S GET THIS DATA! ( ͡⌐■ ͜ʖ ͡-■)
+
+
+Traceback (most recent call last):
+  File "/home/admin/work/personal/snowflake_sandbox/03_models/01_raw/python/bluesky/extract_feed.py", line 395, in <module>
+    extract_feed()
+  File "/home/admin/work/personal/snowflake_sandbox/03_models/01_raw/python/bluesky/extract_feed.py", line 359, in extract_feed
+    write_watermark_table()
+  File "/home/admin/work/personal/snowflake_sandbox/03_models/01_raw/python/bluesky/extract_feed.py", line 316, in write_watermark_table
+    azr_files = [blob.name for blob in AZR_CTR_CLI.list_blobs()]
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/admin/miniconda3/lib/python3.12/site-packages/azure/core/paging.py", line 123, in __next__
+    return next(self._page_iterator)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/admin/miniconda3/lib/python3.12/site-packages/azure/core/paging.py", line 75, in __next__
+    self._response = self._get_next(self.continuation_token)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/admin/miniconda3/lib/python3.12/site-packages/azure/storage/blob/_list_blobs_helper.py", line 96, in _get_next_cb
+    process_storage_error(error)
+  File "/home/admin/miniconda3/lib/python3.12/site-packages/azure/storage/blob/_shared/response_handlers.py", line 186, in process_storage_error
+    exec("raise error from None")   # pylint: disable=exec-used # nosec
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 1, in <module>
+azure.core.exceptions.HttpResponseError: This request is not authorized to perform this operation.
+RequestId:eeacf8fb-601e-002f-1d58-a8a762000000
+Time:2025-04-08T07:35:41.1011595Z
+ErrorCode:AuthorizationFailure
+Content: <?xml version="1.0" encoding="utf-8"?><Error><Code>AuthorizationFailure</Code><Message>This request is not authorized to perform this operation.
+RequestId:eeacf8fb-601e-002f-1d58-a8a762000000
+Time:2025-04-08T07:35:41.1011595Z</Message></Error>

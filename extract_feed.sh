@@ -1,8 +1,8 @@
 #!/bin/bash
 
 PYTHON_SCRIPT="$PROJECT_DIR/03_models/01_raw/python/bluesky/extract_feed.py"
-LOG_DIR="$PROJECT_DIR/03_models/01_raw/python/bluesky/extract_logs/"                  # Update to your desired log directory
-TIMESTAMP=$(date +'%Y-%m-%d_%H-%M-%S')   # Format: YYYY-MM-DD_HH-MM-SS
+LOG_DIR="$PROJECT_DIR/03_models/01_raw/python/bluesky/extract_logs/"                  
+TIMESTAMP=$(date +'%Y-%m-%d_%H-%M-%S')   
 LOG_FILE="${LOG_DIR}/extract_feed_${TIMESTAMP}.log" 
 
 # Create log directory if it doesn't exist
