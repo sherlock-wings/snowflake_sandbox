@@ -152,6 +152,9 @@ def write_chunk(df: pd.DataFrame, output_path: str=None) -> None:
     else:
         filename += "1.csv"
     print(f"\nWriting {filename}...")
+    df['azure_containter_name'] = AZR_TGT_CTR
+    df['azure_blobpath'] = AZR_SRC_DIR
+    df['azure_blobname'] = filename
     df.to_csv(filename,
               index=False,
               encoding='utf-8',
@@ -192,7 +195,7 @@ def stash_user_posts(client_details: str
                     ,bsky_client:Client
                     ,bsky_did:str
                     ,bsky_username:str
-                    ,wtm_tbl: dict
+                    ,wtm_tbl: dict | None = None
                     ,max_retries: int = 5
                     ,wait_period_increment_seconds: int=300) -> pd.DataFrame:
     
@@ -201,12 +204,11 @@ def stash_user_posts(client_details: str
     pages_remain = True
     page_num     = 0
     watermark_crossed = False
+    default_timezone = pytz.timezone('UTC')
+    known_content_ids = set() # idk why but the same user will have the same posts repeated many times-- block em with a set
 
     # Iterate through every post in their account's post history
     while pages_remain and not watermark_crossed:
-        if watermark_crossed:
-            break
-        
         # Retrieve a paginated post-feed for a specific bluesky user
         page_num += 1  
         retry_count = 0
@@ -228,67 +230,73 @@ def stash_user_posts(client_details: str
         # reverse-chron sort feed. This helps optimize our watermark logic
         feed = resp.feed
         for item in feed: 
-            item.post.record.created_at = timestamp_parser.parse(item.post.record.created_at)
+            ts = timestamp_parser.parse(item.post.record.created_at)
+            if not ts.tzinfo:
+                ts = default_timezone.localize(ts)
+            item.post.record.created_at = ts
+
         feed.sort(key=lambda item: item.post.record.created_at, reverse=True)
-        
         print(f"Ingesting {page_num:,} pages of post-data from user @{bsky_username}...", end='\r')
         #
         # i drink your data! i DRINK IT UP ლಠ益ಠ)ლ
         # 
         for item in feed:
-            ts = item.post.record.created_at
-            # WATERMARK STRATEGY-- don't ingest the same record more than once 
-            watermark_ts = datetime(1900, 1, 1, 0, 0, 0, 0, pytz.utc) # default value
-            try:
-                # look up the timestamp in the watermark table for the user who authored the post
-                watermark_ts = timestamp_parser.parse(wtm_tbl['post_created_timestamp'][wtm_tbl['post_author_did'].index(bsky_did)])
-            except ValueError:
-                pass # watermark keeps default value if a later watermark for that user is not found
+            if wtm_tbl:
+                # WATERMARK STRATEGY-- don't ingest the same record more than once 
+                watermark_ts = datetime(1900, 1, 1, 0, 0, 0, 0, pytz.utc) # default value
+                try:
+                    # look up the timestamp in the watermark table for the user who authored the post
+                    watermark_ts = timestamp_parser.parse(wtm_tbl['post_created_timestamp'][wtm_tbl['post_author_did'].index(bsky_did)])
+                except ValueError:
+                    pass # watermark keeps default value if a later watermark for that user is not found
 
-            if ts <= watermark_ts:
-                watermark_crossed = True
-                print(f"\n\nHit high watermark for user {client_details.split('|')[1]}")
-                print(f"Encountered post creation timestamp is {datetime.strftime(ts, '%Y-%m-%d %H:%M:%S.%f %z')}, latest known timestamp for this user is {datetime.strftime(watermark_ts, '%Y-%m-%d %H:%M:%S.%f %z')}")
-                print("Ingestion for this user will now stop.\n")
-                break
-            # if stash_user_posts() gets to this line, the given post has not been ingested before, so the program continues...
-            data['post_created_timestamp'].append(ts)   
-            data['content_id'].append(item.post.cid)
-            data['post_uri'].append(item.post.uri)
-            data['like_count'].append(item.post.like_count)
-            data['quote_count'].append(item.post.quote_count)
-            data['reply_count'].append(item.post.reply_count)
-            data['repost_count'].append(item.post.repost_count)
-            data['text'].append(item.post.record.text)
-            data['tags'].append(item.post.record.tags)
-            
-            # post may or may not have external links
-            try:
-                data['embedded_link_title'].append(item.post.record.embed.external.title)
-            except AttributeError:
-                data['embedded_link_title'].append('null')
-            try:
-                data['embedded_link_description'].append(item.post.record.embed.external.description)
-            except AttributeError:
-                data['embedded_link_description'].append('null')
-            try:
-                data['embedded_link_uri'].append(item.post.record.embed.external.uri)
-            except AttributeError:
-                data['embedded_link_uri'].append('null')
+                if ts <= watermark_ts:
+                    watermark_crossed = True
+                    print(f"\n\nHit high watermark for user {client_details.split('|')[1]}")
+                    print(f"Encountered post creation timestamp is {datetime.strftime(ts, '%Y-%m-%d %H:%M:%S.%f %z')}, latest known timestamp for this user is {datetime.strftime(watermark_ts, '%Y-%m-%d %H:%M:%S.%f %z')}")
+                    print("Ingestion for this user will now stop.\n")
+                    break
+            # idk why but the same user will have the same posts repeated many times-- block em with a set
+            if item.post.cid not in known_content_ids:
+            # if stash_user_posts() gets to this line, the given post has not been ingested before, so the program continues...        
+                known_content_ids.add(item.post.cid)
+                data['content_id'].append(item.post.cid)
+                data['post_created_timestamp'].append(ts)
+                data['post_uri'].append(item.post.uri)
+                data['like_count'].append(item.post.like_count)
+                data['quote_count'].append(item.post.quote_count)
+                data['reply_count'].append(item.post.reply_count)
+                data['repost_count'].append(item.post.repost_count)
+                data['text'].append(item.post.record.text)
+                data['tags'].append(item.post.record.tags)
+                
+                # post may or may not have external links
+                try:
+                    data['embedded_link_title'].append(item.post.record.embed.external.title)
+                except AttributeError:
+                    data['embedded_link_title'].append('null')
+                try:
+                    data['embedded_link_description'].append(item.post.record.embed.external.description)
+                except AttributeError:
+                    data['embedded_link_description'].append('null')
+                try:
+                    data['embedded_link_uri'].append(item.post.record.embed.external.uri)
+                except AttributeError:
+                    data['embedded_link_uri'].append('null')
 
-            data['post_author_did'].append(bsky_did)
-            data['post_author_username'].append(item.post.author.handle)
-            data['post_author_displayname'].append(item.post.author.display_name)
-            data['post_author_account_created_timestamp'].append(item.post.author.created_at) 
-            
-            # client details passed as input arg
-            data['bluesky_client_account_did'].append(client_details.split('|')[0])
-            data['bluesky_client_account_username'].append(client_details.split('|')[1])
-            data['bluesky_client_account_displayname'].append(client_details.split('|')[2])
-            
-            data['bluesky_client_account_created_timestamp'].append(client_details.split('|')[3])
-            ts = datetime.now(pytz.timezone('America/New_York')).astimezone(pytz.timezone('UTC'))
-            data['record_captured_timestamp'].append(ts) 
+                data['post_author_did'].append(bsky_did)
+                data['post_author_username'].append(item.post.author.handle)
+                data['post_author_displayname'].append(item.post.author.display_name)
+                data['post_author_account_created_timestamp'].append(item.post.author.created_at) 
+                
+                # client details passed as input arg
+                data['bluesky_client_account_did'].append(client_details.split('|')[0])
+                data['bluesky_client_account_username'].append(client_details.split('|')[1])
+                data['bluesky_client_account_displayname'].append(client_details.split('|')[2])
+                
+                data['bluesky_client_account_created_timestamp'].append(client_details.split('|')[3])
+                ts = datetime.now(pytz.timezone('America/New_York')).astimezone(pytz.timezone('UTC'))
+                data['record_captured_timestamp'].append(ts) 
         
         '''
         TODO -- Figure out why the below call never gets a "hit". It's like the only time
@@ -336,13 +344,14 @@ def clear_local_dir() -> None:
 
 # generate a control table for the "High-Watermark" strategy
 # This is an incremental ingestion strategy-- it should ensure that the same record is never sent to the Azure Storage acct more than once
-def write_watermark_table() -> None: 
+def write_watermark_table() -> bool: 
     azr_files = [blob.name for blob in AZR_CTR_CLI.list_blobs()]
     if len(azr_files) == 0:
         print(f"\n\nWARNING! WARNING! WARNING!\n\nZero CSV files found in Azure Blob directory {AZR_TGT_DIR}, container {AZR_TGT_CTR}")
         print("This means incremental ingestion will not be applied. If that is unexpected, then this run may be ingesting duplicate records.")
         print("If you don't want that, cancel this ingestion now with CTRL+C!\n")
-
+        return False # Indicate watermark-write failure to function caller
+    
     max_date = max([datetime.strptime(filename.split('/')[-1].split('_')[1], '%Y-%m-%d').date() for filename in azr_files])
     file_datestring = datetime.strftime(max_date, '%Y-%m-%d')
     azr_files = [file for file in azr_files if file_datestring in file]
@@ -361,6 +370,7 @@ def write_watermark_table() -> None:
     print("Writing control table...")
     df.to_csv(f"{WTM_TBL_DIR}/extract_feed_control_tbl.csv", index=False)
     print(f"High-Watermark Control table written to {WTM_TBL_DIR}/extract_feed_control_tbl.csv\n")
+    return True # Indicate watermark-write success to function caller
 
 # Driver function
 def extract_feed() -> None:
@@ -380,8 +390,11 @@ def extract_feed() -> None:
     # this should prevent records already saved in Azure from being ingested again
     print(f"New BlueSky feed-extract session opened at {datetime.now(pytz.timezone("America/New_York")).strftime('%Y-%m-%d %H:%M:%S %Z')}")
     print(f"Logging in as BlueSky User {USR}... \nLET'S GET THIS DATA! ( ͡⌐■ ͜ʖ ͡-■)\n\n")
-    write_watermark_table()
-    watermark_tbl = pd.read_csv(f"{WTM_TBL_DIR}/extract_feed_control_tbl.csv").to_dict(orient='list')
+    watermark_tbl_written = write_watermark_table()
+    if watermark_tbl_written:
+        watermark_tbl = pd.read_csv(f"{WTM_TBL_DIR}/extract_feed_control_tbl.csv").to_dict(orient='list')
+    else:
+        watermark_tbl = None
     
     following_users = {item.handle: [item.did, item.display_name] for item in get_following_users(cli, session_usr)}
     print(f"Detected {len(following_users):,} BlueSky Users being followed by user @{session_usr}")
