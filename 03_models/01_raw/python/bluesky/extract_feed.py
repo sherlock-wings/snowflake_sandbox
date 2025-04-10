@@ -152,7 +152,7 @@ def write_chunk(df: pd.DataFrame, output_path: str=None) -> None:
     else:
         filename += "1.csv"
     print(f"\nWriting {filename}...")
-    df['azure_containter_name'] = AZR_TGT_CTR
+    df['azure_container_name'] = AZR_TGT_CTR
     df['azure_blobpath'] = AZR_SRC_DIR
     df['azure_blobname'] = filename
     df.to_csv(filename,
