@@ -1,7 +1,7 @@
 #!/bin/bash
+PYTHON_SCRIPT="$L_XTR_DIR/extract_feed.py"
 
-PYTHON_SCRIPT=$L_XTR_DIR
-LOG_DIR="$PYTHON_SCRIPT/extract_logs/"                  
+LOG_DIR="$L_XTR_DIR/extract_logs/"                  
 TIMESTAMP=$(date +'%Y-%m-%d_%H-%M-%S')   
 LOG_FILE="${LOG_DIR}/extract_feed_${TIMESTAMP}.log" 
 
@@ -34,3 +34,6 @@ else
     echo "Python script failed to execute"
     exit 1
 fi
+
+# /home/admin/work/personal/snowflake_sandbox/03_models/01_raw/python/bluesky/local_extract/extract_feed.py
+# /home/admin/work/personal/snowflake_sandbox/03_models/01_raw/python/bluesky/local_extract
