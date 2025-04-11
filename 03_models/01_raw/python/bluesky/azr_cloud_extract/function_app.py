@@ -14,17 +14,6 @@ import pytz
 import time
 from typing import Tuple
 
-# Use connection string locally, Managed Identity in Azure
-if "AzureWebJobsStorage" in os.environ:
-    credential = DefaultAzureCredential()
-    storage_url = f"https://{os.getenv("AZR_STR_ACT")}.blob.core.windows.net"
-else:
-    connection_string = os.getenv("AZR_XCT_STR")
-    container_client = ContainerClient.from_connection_string(
-        connection_string,
-        container_name=os.getenv("AZR_TGT_CTR")
-    )
-
 # Azure connection config
 AZR_XCT_STR = os.getenv('AZR_XCT_STR')
 BLB_SVC_CLI = BlobServiceClient.from_connection_string(AZR_XCT_STR)
@@ -75,7 +64,7 @@ SCHEMA = {'content_id':                               []
 
 # Control-table directory 
 # This table will be used for the "high-watermark" stratgegy for incremental ingestion 
-L_WTM_TBL_DIR = os.getenv('L_WTM_TBL_DIR')
+L_XTR_DIR = os.getenv('L_XTR_DIR')
 
 # Instantiate a BlueSky session
 def bluesky_login() -> Tuple[Client, str]:
@@ -370,10 +359,11 @@ def write_watermark_table() -> bool:
 
     df = df.groupby('post_author_did')['post_created_timestamp'].max().reset_index()
     print("Writing control table...")
-    df.to_csv(f"{L_WTM_TBL_DIR}/extract_feed_control_tbl.csv", index=False)
-    print(f"High-Watermark Control table written to {L_WTM_TBL_DIR}/extract_feed_control_tbl.csv\n")
+    df.to_csv(f"{L_XTR_DIR}/extract_feed_control_tbl.csv", index=False)
+    print(f"High-Watermark Control table written to {L_XTR_DIR}/extract_feed_control_tbl.csv\n")
     return True # Indicate watermark-write success to function caller
 
+# Driver function
 app = func.FunctionApp()
 
 @app.timer_trigger(schedule="0 0 9 */2 * *", arg_name="myTimer", run_on_startup=False,
@@ -396,7 +386,7 @@ def extract_feed(myTimer: func.TimerRequest) -> None:
     print(f"Logging in as BlueSky User {USR}... \nLET'S GET THIS DATA! ( ͡⌐■ ͜ʖ ͡-■)\n\n")
     watermark_tbl_written = write_watermark_table()
     if watermark_tbl_written:
-        watermark_tbl = pd.read_csv(f"{L_WTM_TBL_DIR}/extract_feed_control_tbl.csv").to_dict(orient='list')
+        watermark_tbl = pd.read_csv(f"{L_XTR_DIR}/extract_feed_control_tbl.csv").to_dict(orient='list')
     else:
         watermark_tbl = None
     
@@ -436,6 +426,3 @@ def extract_feed(myTimer: func.TimerRequest) -> None:
         logging.info('The timer is past due!')
 
     logging.info('Python timer trigger function executed.')
-
-# curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.gpg
-# sudo mv microsoft.gpg /etc/apt/trusted.gpg.d/microsoft.gpg
