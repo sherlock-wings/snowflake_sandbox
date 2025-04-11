@@ -153,8 +153,8 @@ def write_chunk(df: pd.DataFrame, output_path: str=None) -> None:
         filename += "1.csv"
     print(f"\nWriting {filename}...")
     df['azure_container_name'] = AZR_TGT_CTR
-    df['azure_blobpath'] = AZR_SRC_DIR
-    df['azure_blobname'] = filename
+    df['azure_blobpath'] = AZR_TGT_DIR
+    df['azure_blobname'] = filename.split('/')[-1]
     df.to_csv(filename,
               index=False,
               encoding='utf-8',
@@ -250,11 +250,10 @@ def stash_user_posts(client_details: str
                 except ValueError:
                     pass # watermark keeps default value if a later watermark for that user is not found
 
-                if ts <= watermark_ts:
+                if item.post.record.created_at <= watermark_ts:
                     watermark_crossed = True
-                    print(f"\n\nHit high watermark for user {client_details.split('|')[1]}")
-                    print(f"Encountered post creation timestamp is {datetime.strftime(ts, '%Y-%m-%d %H:%M:%S.%f %z')}, latest known timestamp for this user is {datetime.strftime(watermark_ts, '%Y-%m-%d %H:%M:%S.%f %z')}")
-                    print("Ingestion for this user will now stop.\n")
+                    print(f"\n\nHit high watermark for user {bsky_username}")
+                    print(f"Encountered post creation timestamp is {datetime.strftime(item.post.record.created_at, '%Y-%m-%d %H:%M:%S.%f %z')}, latest known timestamp for this user is {datetime.strftime(watermark_ts, '%Y-%m-%d %H:%M:%S.%f %z')}")
                     break
             # idk why but the same user will have the same posts repeated many times-- block em with a set
             if item.post.cid not in known_content_ids:
@@ -308,6 +307,7 @@ def stash_user_posts(client_details: str
                 user finishes/before the next user is begun.
         '''
         if watermark_crossed:
+            print("Ingestion for this user will now stop.\n")
             break
         _, data = chunk_check(schema_input=SCHEMA, dict_input=data)
         if not resp.cursor:
