@@ -329,7 +329,7 @@ def upload_file_to_azr(file_to_upload: str) -> None:
         blob_cli.upload_blob(data, overwrite=True)
         print(f"Uploaded file: {blob_name}")
  
-def clear_local_dir():
+def clear_local_dir() -> None:
     # collect all filenames in blob dir, then limit the list of files to those labeled with the most recent date
     azr_files = [blob.name.split('/')[-1] for blob in AZR_CTR_CLI.list_blobs()]
     local_files = [file for file in os.listdir(AZR_SRC_DIR)]
