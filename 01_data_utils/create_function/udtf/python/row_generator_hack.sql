@@ -65,18 +65,40 @@ CREATE OR REPLACE TABLE tick_data_synthetic
 INSERT INTO tick_data_synthetic
 SELECT
     current_date() AS DATE,
-    current_timestamp() AS TIME,
+    -- times as varchar with format <datestring>D<timestring>
+    split_part(to_char(current_timestamp()), ' ', 1) || 'D' || 
+    split_part(to_char(current_timestamp()), ' ', 2) AS TIME,
+    
     substr(md5(random()), 1, 4) AS SYM,
     substr(md5(random()), 1, 10) AS PIMCOINTERNALKEY,
     substr(md5(random()), 1, 10) AS MDSID,
     floor(random() * 10000)::integer AS FEEDSEQNUM,
     substr(md5(random()), 1, 6) AS FEEDAPP,
-    dateadd(second, UNIFORM(0, 1000, RANDOM()), to_timestamp('2020-01-01 00:00:00')) AS VENDORUPDATETIME,
-    dateadd(second, UNIFORM(0, 1000, RANDOM()), to_timestamp('2020-01-01 00:00:00')) AS MDSRECEIVETIME,
-    dateadd(second, UNIFORM(0, 1000, RANDOM()), to_timestamp('2020-01-01 00:00:00')) AS MDSPUBLISHTIME,
+    -- times as varchar with format <datestring>D<timestring>
+    split_part(to_char(dateadd(second, UNIFORM(0, 1000, RANDOM()), to_timestamp('2020-01-01 00:00:00')),
+               ' ', 1)) || 'D' ||
+    split_part(dateadd(second, UNIFORM(0, 1000, RANDOM()), to_timestamp('2020-01-01 00:00:00')),
+               ' ', 2)
+    AS VENDORUPDATETIME,
+    -- times as varchar with format <datestring>D<timestring>
+    split_part(to_char(dateadd(second, UNIFORM(0, 1000, RANDOM()), to_timestamp('2020-01-01 00:00:00')),
+               ' ', 1)) || 'D' ||
+    split_part(dateadd(second, UNIFORM(0, 1000, RANDOM()), to_timestamp('2020-01-01 00:00:00')),
+               ' ', 2)
+    AS MDSRECEIVETIME,
+    -- times as varchar with format <datestring>D<timestring>
+    split_part(to_char(dateadd(second, UNIFORM(0, 1000, RANDOM()), to_timestamp('2020-01-01 00:00:00')),
+               ' ', 1)) || 'D' ||
+    split_part(dateadd(second, UNIFORM(0, 1000, RANDOM()), to_timestamp('2020-01-01 00:00:00')),
+               ' ', 2)
+    AS MDSPUBLISHTIME,
+    
     'TICK' AS TYPE,
     (floor(random() * 200) - 100)::float AS GMTOFFSET,
-    current_timestamp() AS EXCHTIME,
+    -- times as varchar with format <datestring>D<timestring>
+    split_part(to_char(current_timestamp()), ' ', 1) || 'D' || 
+    split_part(to_char(current_timestamp()), ' ', 2) AS EXCHTIME,
+    
     substr(md5(random()), 1, 10) AS SEQNUM,
     random() * 100 AS PRICE,
     floor(random() * 10000)::integer AS VOLUME,
