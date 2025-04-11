@@ -15,23 +15,17 @@ import time
 from typing import Tuple
 
 # Azure connection config
+
+# instantiate blob Service Client (dependency of container client)
+AZR_DFT_CRD = DefaultAzureCredential()
 AZR_XCT_STR = os.getenv('AZR_XCT_STR')
-BLB_SVC_CLI = BlobServiceClient.from_connection_string(AZR_XCT_STR)
+AZR_ACT_URL = f"https://{os.getenv('AZR_STR_ACT')}.blob.core.windows.net"
+BLB_SVC_CLI = BlobServiceClient(AZR_ACT_URL, AZR_DFT_CRD)
+
+# instantiate container client (needed for reads/writes of blob data to/from bluesky_posts azr directory)
 AZR_TGT_CTR = os.getenv('AZR_TGT_CTR')
 AZR_CTR_CLI = BLB_SVC_CLI.get_container_client(AZR_TGT_CTR)
-L_AZR_SRC_DIR = os.getenv('L_AZR_SRC_DIR')
-AZR_TGT_DIR = f"{os.getenv('AZR_TGT_DIR')}/"  # apparently a trailing slash is required? 
-
-# BlueSky Client Account Config
-USR = os.getenv('BSY_USR').lower()
-KEY = os.getenv('BSY_KEY')
-
-# Azure connection config
-AZR_XCT_STR = os.getenv('AZR_XCT_STR')
-BLB_SVC_CLI = BlobServiceClient.from_connection_string(AZR_XCT_STR)
-AZR_TGT_CTR = os.getenv('AZR_TGT_CTR')
-AZR_CTR_CLI = BLB_SVC_CLI.get_container_client(AZR_TGT_CTR)
-L_AZR_SRC_DIR = os.getenv('L_AZR_SRC_DIR')
+C_AZR_SRC_DIR = os.getenv('C_AZR_SRC_DIR')
 AZR_TGT_DIR = f"{os.getenv('AZR_TGT_DIR')}/"  # apparently a trailing slash is required? 
 
 # BlueSky Client Account Config
@@ -97,7 +91,7 @@ def get_following_users(bsky_client: Client, bsky_handle: str, follows_limit: in
 # write a chunk of post data to CSV
 def write_chunk(df: pd.DataFrame, output_path: str=None) -> None:
     if not output_path:
-        output_path = L_AZR_SRC_DIR
+        output_path = C_AZR_SRC_DIR
     # filename format is posts_<extraction_date>_<file_ordinal>.csv, where <final ordinal> is an incremental int
     # ex) If 3 files are generated on New Years Day 2025, the names are ['posts_2025-01-01_1.csv', 'posts_2025-01-01_2.csv', 'posts_2025-01-01_3.csv']
     rn = datetime.now().strftime('%Y-%m-%d')
@@ -323,15 +317,15 @@ def upload_file_to_azr(file_to_upload: str) -> None:
 def clear_local_dir() -> None:
     # collect all filenames in blob dir, then limit the list of files to those labeled with the most recent date
     azr_files = [blob.name.split('/')[-1] for blob in AZR_CTR_CLI.list_blobs()]
-    local_files = [file for file in os.listdir(L_AZR_SRC_DIR)]
+    local_files = [file for file in os.listdir(C_AZR_SRC_DIR)]
 
     for file in local_files:
         if file in azr_files:
-            os.remove(f"{L_AZR_SRC_DIR}/{file}")
+            os.remove(f"{C_AZR_SRC_DIR}/{file}")
         else:
             print(f"File {file} detected locally but not detected in Azure Storage account!!\nYou may have some local data missing from the cloud. Consider reuploading.")
-    if len(os.listdir(L_AZR_SRC_DIR)) == 0:
-        os.rmdir(L_AZR_SRC_DIR)
+    if len(os.listdir(C_AZR_SRC_DIR)) == 0:
+        os.rmdir(C_AZR_SRC_DIR)
 
 # generate a control table for the "High-Watermark" strategy
 # This is an incremental ingestion strategy-- it should ensure that the same record is never sent to the Azure Storage acct more than once
@@ -413,11 +407,11 @@ def extract_feed(myTimer: func.TimerRequest) -> None:
         write_chunk(df)
     print(f"\nFeed Ingestion Complete! Uploading to Azure now...\n")
     
-    files = [file for file in os.listdir(L_AZR_SRC_DIR) if file.endswith('.csv')]
+    files = [file for file in os.listdir(C_AZR_SRC_DIR) if file.endswith('.csv')]
     print(f"{len(files)} total CSV files detected.")
     for i in range(len(files)):
         print(f"\nUploading {files[i]}, {i+1} of {len(files)}")
-        upload_file_to_azr(f"{L_AZR_SRC_DIR}/{files[i]}")
+        upload_file_to_azr(f"{C_AZR_SRC_DIR}/{files[i]}")
     print(f"File upload complete!")
     
     clear_local_dir()
