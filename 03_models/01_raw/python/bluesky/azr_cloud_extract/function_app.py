@@ -18,7 +18,6 @@ from typing import Tuple
 
 # instantiate blob Service Client (dependency of container client)
 AZR_DFT_CRD = DefaultAzureCredential()
-AZR_XCT_STR = os.getenv('AZR_XCT_STR')
 AZR_ACT_URL = f"https://{os.getenv('AZR_STR_ACT')}.blob.core.windows.net"
 BLB_SVC_CLI = BlobServiceClient(AZR_ACT_URL, AZR_DFT_CRD)
 
