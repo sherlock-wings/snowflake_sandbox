@@ -12,17 +12,6 @@ import pytz
 import time
 from typing import Tuple
 
-# Use connection string locally, Managed Identity in Azure
-if "AzureWebJobsStorage" in os.environ:
-    credential = DefaultAzureCredential()
-    storage_url = f"https://{os.getenv("AZR_STR_ACT")}.blob.core.windows.net"
-else:
-    connection_string = os.getenv("AZR_XCT_STR")
-    container_client = ContainerClient.from_connection_string(
-        connection_string,
-        container_name=os.getenv("AZR_TGT_CTR")
-    )
-
 # Azure connection config
 AZR_XCT_STR = os.getenv('AZR_XCT_STR')
 BLB_SVC_CLI = BlobServiceClient.from_connection_string(AZR_XCT_STR)
