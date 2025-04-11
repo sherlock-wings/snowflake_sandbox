@@ -1,0 +1,9 @@
+{
+    "azureFunctions.deploySubpath": "03_models/01_raw/python/bluesky/azr_cloud_extract",
+    "azureFunctions.scmDoBuildDuringDeployment": true,
+    "azureFunctions.pythonVenv": ".venv",
+    "azureFunctions.projectLanguage": "Python",
+    "azureFunctions.projectRuntime": "~4",
+    "azureFunctions.projectLanguageModel": 2,
+    "azureFunctions.projectSubpath": "03_models/01_raw/python/bluesky/azr_cloud_extract"
+}

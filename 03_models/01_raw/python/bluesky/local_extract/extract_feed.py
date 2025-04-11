@@ -73,7 +73,7 @@ SCHEMA = {'content_id':                               []
 
 # Control-table directory 
 # This table will be used for the "high-watermark" stratgegy for incremental ingestion 
-L_WTM_TBL_DIR = os.getenv('L_WTM_TBL_DIR')
+L_XTR_DIR = os.getenv('L_XTR_DIR')
 
 # Instantiate a BlueSky session
 def bluesky_login() -> Tuple[Client, str]:
@@ -368,8 +368,8 @@ def write_watermark_table() -> bool:
 
     df = df.groupby('post_author_did')['post_created_timestamp'].max().reset_index()
     print("Writing control table...")
-    df.to_csv(f"{L_WTM_TBL_DIR}/extract_feed_control_tbl.csv", index=False)
-    print(f"High-Watermark Control table written to {L_WTM_TBL_DIR}/extract_feed_control_tbl.csv\n")
+    df.to_csv(f"{L_XTR_DIR}/extract_feed_control_tbl.csv", index=False)
+    print(f"High-Watermark Control table written to {L_XTR_DIR}/extract_feed_control_tbl.csv\n")
     return True # Indicate watermark-write success to function caller
 
 # Driver function
@@ -391,7 +391,7 @@ def extract_feed() -> None:
     print(f"Logging in as BlueSky User {USR}... \nLET'S GET THIS DATA! ( ͡⌐■ ͜ʖ ͡-■)\n\n")
     watermark_tbl_written = write_watermark_table()
     if watermark_tbl_written:
-        watermark_tbl = pd.read_csv(f"{L_WTM_TBL_DIR}/extract_feed_control_tbl.csv").to_dict(orient='list')
+        watermark_tbl = pd.read_csv(f"{L_XTR_DIR}/extract_feed_control_tbl.csv").to_dict(orient='list')
     else:
         watermark_tbl = None
     
