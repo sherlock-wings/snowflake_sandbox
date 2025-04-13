@@ -104,7 +104,7 @@ cross join dateseries b
 
 ,to_str as (
 select 
-     to_date(DATE)                                                                                         as date
+     to_char(DATE)                                                                                         as date
     ,split_part(to_char(time), ' ', 1)             || 'D' || split_part(to_char(time), ' ', 2)             as time
     ,split_part(to_char(vendorupdatetime), ' ', 1) || 'D' || split_part(to_char(vendorupdatetime), ' ', 2) as vendorupdatetime
     ,split_part(to_char(mdsreceivetime), ' ', 1)   || 'D' || split_part(to_char(mdsreceivetime), ' ', 2)   as mdsreceivetime
