@@ -6,7 +6,7 @@ from azure.storage.blob import BlobServiceClient, ContainerClient
 import csv
 from datetime import datetime
 from dateutil import parser as timestamp_parser
-from io import StringIO
+from io import StringIO, BytesIO
 import logging
 import os
 import pandas as pd
@@ -106,7 +106,7 @@ def write_chunk(df: pd.DataFrame, output_path: str=None) -> None:
     # ex) If 3 files are generated on New Years Day 2025, the names are ['posts_2025-01-01_1.csv', 'posts_2025-01-01_2.csv', 'posts_2025-01-01_3.csv']
     rn = datetime.now().strftime('%Y-%m-%d')
     filename = f"{output_path}/posts_{rn}_"
-    last_file_num = local_last_file_num = cloud_last_file_num = -1
+    last_file_num = -1
     
     # generating the incremental int correctly means checking, both in the cloud and locally, for any CSVs which already exist whose name includes the current date 
     # check Azure Cloud Storage location first to determine the name for the next generated CSV
@@ -115,50 +115,32 @@ def write_chunk(df: pd.DataFrame, output_path: str=None) -> None:
         cloud_file_numbers = [int(file.split('_')[-1].split('.')[0]) for file in azr_files if file.split('.')[-1] == 'csv' and rn in file]
         cloud_file_numbers.sort()
         try:
-            cloud_last_file_num = cloud_file_numbers[-1]+1
+            last_file_num = cloud_file_numbers[-1]+1
         except IndexError:
-            cloud_last_file_num = 0    
+            last_file_num = 0    
     else:
-        cloud_last_file_num = 0
-        
-    if os.path.exists(f"{output_path}/posts_{rn}_1.csv"):
-        # get a list of ints where each item is the number just before the '.csv' part in the file name-- get CSV filenames only
-        local_file_numbers = [int(file.split('_')[-1].split('.')[0]) for file in os.listdir(output_path) if file.split('.')[-1] == 'csv']
-        local_file_numbers.sort()
-        try:
-            local_last_file_num = local_file_numbers[-1]+1
-        except IndexError:
-            local_last_file_num = 0
-    else:
-        local_last_file_num = 0
+        last_file_num = 0
     
-    if local_last_file_num > cloud_last_file_num:
-        last_file_num = local_last_file_num 
-    elif cloud_last_file_num > local_last_file_num:
-        last_file_num = cloud_last_file_num 
-    else:
-        last_file_num = 1
-
-    if not os.path.exists(output_path): 
-        os.makedirs(output_path)
-
     if last_file_num > 0:
         filename += f"{last_file_num}.csv"
     else:
         filename += "1.csv"
-    print(f"\nWriting {filename}...")
     df['azure_container_name'] = AZR_TGT_CTR
     df['azure_blobpath'] = AZR_TGT_DIR
+    print(f"\nWriting {filename}...")
     df['azure_blobname'] = filename.split('/')[-1]
-    df.to_csv(filename,
-              index=False,
-              encoding='utf-8',
-              quoting=csv.QUOTE_ALL, # Wrap all fields in quotes -- hopefully this handles weird chars like line separators or paragraph separators
-              quotechar='"',         
-              escapechar='\\',       
-              doublequote=True,      
-              lineterminator='\n'    
-             )           
+
+    csv_buffer = df.to_csv(filename,
+                           index=False,
+                           encoding='utf-8',
+                           quoting=csv.QUOTE_ALL, # Wrap all fields in quotes -- hopefully this handles weird chars like line separators or paragraph separators
+                           quotechar='"',         
+                           escapechar='\\',       
+                           doublequote=True,      
+                           lineterminator='\n'    
+                          )
+    upload_file_to_azr(csv_buffer, filename) 
+             
 # check if the current file is already "full" (larger than 100 MB, by default)
 # if it is, stash the current data object as CSV and reset a new empty one    
 def chunk_check(schema_input: dict, filesize_limit_mb: int = 300, dict_input: dict=None, dataframe_input: pd.DataFrame=pd.DataFrame(), callout_size: bool=False) -> Tuple[pd.DataFrame, dict]:
@@ -311,31 +293,41 @@ def stash_user_posts(client_details: str
     return pd.DataFrame(data)
 
 # upload-csv-as-blob function
-def upload_file_to_azr(file_to_upload: str) -> None:
-    # block potential cloud overwrites
-    azr_files = [blob.name.split('/')[-1] for blob in AZR_CTR_CLI.list_blobs()]
-    blob_name = f"{AZR_TGT_DIR.rstrip('/')}/{os.path.basename(file_to_upload)}"
-    if file_to_upload.split('/')[-1] in azr_files:
-        print(f"\nFile {file_to_upload.split('/')[-1]} was found both in the Azure Storage Location and on the local machine.\nSkipping the upload for the local version of {file_to_upload.split('/')[-1]} to avoid overwriting existing cloud data.\n")
+def upload_file_to_azr(file_to_upload: str, blob_name) -> None:
+    
+    # block potential cloud overwrites (check if a blob with a similar name exists)
+    azr_files = [blob.name.split('/')[-1] for blob in AZR_CTR_CLI.list_blobs(name_starts_with=AZR_TGT_DIR.rstrip('/') + "/")]
+    blob_name = f"{AZR_TGT_DIR.rstrip('/')}/{blob_name}"
+    if blob_name.split('/')[-1] in azr_files:
+        print(f"\nA blob with the name {blob_name.split('/')[-1]} already exists in the Azure Storage Location.\nSkipping the upload to avoid overwriting existing cloud data.\n")
         return None
-    blob_cli = BLB_SVC_CLI.get_blob_client(container=AZR_TGT_CTR, blob=blob_name)
-    # If no overwrite-danger is detected, upload the file (supports large files via chunking)
-    with open(file_to_upload, "rb") as data:
-        blob_cli.upload_blob(data, overwrite=True)
-        print(f"Uploaded file: {blob_name}")
- 
-def clear_local_dir() -> None:
-    # collect all filenames in blob dir, then limit the list of files to those labeled with the most recent date
-    azr_files = [blob.name.split('/')[-1] for blob in AZR_CTR_CLI.list_blobs()]
-    local_files = [file for file in os.listdir(C_AZR_SRC_DIR)]
 
-    for file in local_files:
-        if file in azr_files:
-            os.remove(f"{C_AZR_SRC_DIR}/{file}")
-        else:
-            print(f"File {file} detected locally but not detected in Azure Storage account!!\nYou may have some local data missing from the cloud. Consider reuploading.")
-    if len(os.listdir(C_AZR_SRC_DIR)) == 0:
-        os.rmdir(C_AZR_SRC_DIR)
+    blob_cli = BLB_SVC_CLI.get_blob_client(container=AZR_TGT_CTR, blob=blob_name)
+
+    try:
+        # Create a BytesIO object from the string buffer
+        buffer_bytes = BytesIO(file_to_upload.encode('utf-8'))
+
+        # Upload the buffer to the blob
+        blob_cli.upload_blob(buffer_bytes, overwrite=True)
+        print(f"Uploaded buffer as blob: {blob_name}")
+
+    except Exception as e:
+        print(f"An error occurred during buffer upload: {e}")
+
+# # THIS FUNCTION IS ONLY NEEDED IF YOU'RE RUNNING THE EXTRACTION ENTIRELY OUTSIDE OF AZURE
+# def clear_local_dir() -> None:
+#     # collect all filenames in blob dir, then limit the list of files to those labeled with the most recent date
+#     azr_files = [blob.name.split('/')[-1] for blob in AZR_CTR_CLI.list_blobs()]
+#     local_files = [file for file in os.listdir(C_AZR_SRC_DIR)]
+
+#     for file in local_files:
+#         if file in azr_files:
+#             os.remove(f"{C_AZR_SRC_DIR}/{file}")
+#         else:
+#             print(f"File {file} detected locally but not detected in Azure Storage account!!\nYou may have some local data missing from the cloud. Consider reuploading.")
+#     if len(os.listdir(C_AZR_SRC_DIR)) == 0:
+#         os.rmdir(C_AZR_SRC_DIR)
 
 # generate a control table for the "High-Watermark" strategy
 # This is an incremental ingestion strategy-- it should ensure that the same record is never sent to the Azure Storage acct more than once
@@ -360,13 +352,8 @@ def write_watermark_table() -> bool:
             df = pd.concat([df, df_next])
         print(f"{i+1} of {len(azr_files)} max-date files downloaded from Azure")
 
-
-    df = df.groupby('post_author_did')['post_created_timestamp'].max().reset_index()
-    print("Writing control table...")
-    df.to_csv(f"{L_XTR_DIR}/extract_feed_control_tbl.csv", index=False)
-    print(f"High-Watermark Control table written to {L_XTR_DIR}/extract_feed_control_tbl.csv\n")
-    return True # Indicate watermark-write success to function caller
-
+    return df.groupby('post_author_did')['post_created_timestamp'].max().reset_index()
+    
 # Driver function
 app = func.FunctionApp()
 
@@ -388,11 +375,7 @@ def extract_feed(myTimer: func.TimerRequest) -> None:
     # before parsing begins, write a control table locally
     # this should prevent records already saved in Azure from being ingested again
     print(f"Logging in as BlueSky User {USR}... \nLET'S GET THIS DATA! ( ͡⌐■ ͜ʖ ͡-■)\n\n")
-    watermark_tbl_written = write_watermark_table()
-    if watermark_tbl_written:
-        watermark_tbl = pd.read_csv(f"{L_XTR_DIR}/extract_feed_control_tbl.csv").to_dict(orient='list')
-    else:
-        watermark_tbl = None
+    watermark_tbl = write_watermark_table()
     
     following_users = {item.handle: [item.did, item.display_name] for item in get_following_users(cli, session_usr)}
     print(f"Detected {len(following_users):,} BlueSky Users being followed by user @{session_usr}")
@@ -424,8 +407,7 @@ def extract_feed(myTimer: func.TimerRequest) -> None:
         upload_file_to_azr(f"{C_AZR_SRC_DIR}/{files[i]}")
     print(f"File upload complete!")
     
-    clear_local_dir()
-
+    
     if myTimer.past_due:
         logging.info('The timer is past due!')
 
