@@ -140,3 +140,4 @@ nuke_everything.sql
 scratch*
 *pyc
 *log
+azr_function_app_bskyxfeed* # bc i don't want to run workflows on this version of my git repo
