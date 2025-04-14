@@ -14,6 +14,7 @@ import pytz
 import time
 from typing import Tuple
 
+# TEST
 ###
 ### AZURE CONFIG
 ###
