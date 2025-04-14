@@ -14,7 +14,9 @@ import pytz
 import time
 from typing import Tuple
 
-# Azure connection config
+###
+### AZURE CONFIG
+###
 
 # instantiate blob Service Client (dependency of container client)
 AZR_DFT_CRD = DefaultAzureCredential()
@@ -27,11 +29,19 @@ AZR_CTR_CLI = BLB_SVC_CLI.get_container_client(AZR_TGT_CTR)
 C_AZR_SRC_DIR = os.getenv('C_AZR_SRC_DIR')
 AZR_TGT_DIR = f"{os.getenv('AZR_TGT_DIR')}/"  # apparently a trailing slash is required? 
 
-# BlueSky Client Account Config
+
+###
+### BLUESKY CLIENT CONFIG
+###
+
 USR = os.getenv('BSY_USR').lower()
 KEY = os.getenv('BSY_KEY')
 
-# schema for all tabular data collected in this file
+###
+### OTHER IMPORTANT LOCAL VARS
+###
+
+# defines the columnset for all data collected from bluesky posts
 SCHEMA = {'content_id':                               []
          ,'post_uri':                                 []
          ,'like_count':                               []
