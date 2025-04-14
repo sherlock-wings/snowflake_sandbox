@@ -2,7 +2,6 @@ atproto
 azure.functions 
 azure.identity 
 azure.storage.blob 
-csv
 datetime 
 dateutil  
 io 
