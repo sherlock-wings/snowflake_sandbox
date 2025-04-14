@@ -2,8 +2,7 @@ atproto
 azure.functions 
 azure.identity 
 azure.storage.blob 
-datetime 
-dateutil  
+datetime  
 io 
 logging
 os
