@@ -113,7 +113,7 @@ select
     ,* exclude(date, time, vendorupdatetime, mdsreceivetime, mdspublishtime, exchtime)
 from xjoin a
 )
-
+-- test
 select DATE
       ,TIME
       ,SYM
