@@ -133,3 +133,10 @@ __blobstorage__
 __queuestorage__
 __azurite_db*__.json
 .python_packages
+
+# Project-specific filepaths
+nuke_everything.sql
+*csv
+scratch*
+*pyc
+*log
