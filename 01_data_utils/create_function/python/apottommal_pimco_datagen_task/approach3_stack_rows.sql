@@ -113,7 +113,7 @@ select
     ,* exclude(date, time, vendorupdatetime, mdsreceivetime, mdspublishtime, exchtime)
 from xjoin a
 )
--- something else
+
 select DATE
       ,TIME
       ,SYM
@@ -172,9 +172,7 @@ select DATE
       ,STRGYCDN
       ,OFFBKCDN
       ,PRCQL2
-from xjoin
+from to_str
 )
 )
 ;
-
-select count(*) from tick_data_synthetic_lg;
