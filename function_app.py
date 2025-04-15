@@ -97,7 +97,10 @@ def get_following_users(bsky_client: Client, bsky_handle: str, follows_limit: in
     return following_users 
 
 
-# Get a dataframe ready to be written to blob store-- prepare its filename, add 
+# Get a dataframe ready to be written to blob store
+#   1) Prepare filename/blob name
+#   2) Add some metadata columns 
+#   3) Convert dataframe to string buffer so it can be passed to another function and written to blobstore
 def set_data_outbound(df: pd.DataFrame) -> None:
     # filename format is posts_<extraction_date>_<file_ordinal>.csv, where <final ordinal> is an incremental int
     # ex) If 3 files are generated on New Years Day 2025, the names are ['posts_2025-01-01_1.csv', 'posts_2025-01-01_2.csv', 'posts_2025-01-01_3.csv']
@@ -127,8 +130,7 @@ def set_data_outbound(df: pd.DataFrame) -> None:
     df['azure_blobpath'] = AZR_TGT_DIR
     df['azure_blobname'] = filename.split('/')[-1]
     csv_buffer = StringIO
-    csv_buffer = df.to_csv(csv_buffer,
-                           index=False,
+    csv_buffer = df.to_csv(index=False,
                            encoding='utf-8',
                            quoting=csv.QUOTE_ALL, # Wrap all fields in quotes -- hopefully this handles weird chars like line separators or paragraph separators
                            quotechar='"',         
@@ -161,7 +163,7 @@ def chunk_check(schema_input: dict, filesize_limit_mb: int = 300, dict_input: di
         print(f"Current calculated space of df is {size:,.2f} MB")
     if size >= filesize_limit_mb:
         print("SIZE LIMIT TRIGGERED")
-        write_chunk(dataframe_input)
+        set_data_outbound(dataframe_input)
         return pd.DataFrame(), schema_input
     return dataframe_input, dict_input
     
@@ -387,7 +389,7 @@ def extract_feed(myTimer: func.TimerRequest) -> None:
                 df, _ = chunk_check(schema_input=SCHEMA, dataframe_input=df)
     if len(df) > 0:
         # ensure any remaining data less than 100 MB is still written
-        write_chunk(df)
+        set_data_outbound(df)
     print(f"\nFeed Ingestion Complete! Uploading to Azure now...\n")
     
     files = [file for file in os.listdir(C_AZR_SRC_DIR) if file.endswith('.csv')]
