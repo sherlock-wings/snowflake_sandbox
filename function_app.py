@@ -99,13 +99,11 @@ def get_following_users(bsky_client: Client, bsky_handle: str, follows_limit: in
 
 
 # write a chunk of post data to CSV
-def write_chunk(df: pd.DataFrame, output_path: str=None) -> None:
-    if not output_path:
-        output_path = C_AZR_SRC_DIR
+def write_chunk(df: pd.DataFrame) -> None:
     # filename format is posts_<extraction_date>_<file_ordinal>.csv, where <final ordinal> is an incremental int
     # ex) If 3 files are generated on New Years Day 2025, the names are ['posts_2025-01-01_1.csv', 'posts_2025-01-01_2.csv', 'posts_2025-01-01_3.csv']
     rn = datetime.now().strftime('%Y-%m-%d')
-    filename = f"{output_path}/posts_{rn}_"
+    filename = f"posts_{rn}_"
     last_file_num = -1
     
     # generating the incremental int correctly means checking, both in the cloud and locally, for any CSVs which already exist whose name includes the current date 
@@ -129,8 +127,8 @@ def write_chunk(df: pd.DataFrame, output_path: str=None) -> None:
     df['azure_blobpath'] = AZR_TGT_DIR
     print(f"\nWriting {filename}...")
     df['azure_blobname'] = filename.split('/')[-1]
-
-    csv_buffer = df.to_csv(filename,
+    csv_buffer = StringIO
+    csv_buffer = df.to_csv(csv_buffer,
                            index=False,
                            encoding='utf-8',
                            quoting=csv.QUOTE_ALL, # Wrap all fields in quotes -- hopefully this handles weird chars like line separators or paragraph separators
@@ -139,7 +137,9 @@ def write_chunk(df: pd.DataFrame, output_path: str=None) -> None:
                            doublequote=True,      
                            lineterminator='\n'    
                           )
-    upload_file_to_azr(csv_buffer, filename) 
+    string_data = csv_buffer.getvalue()
+    csv_buffer.close()
+    upload_file_to_azr(string_data, filename) 
              
 # check if the current file is already "full" (larger than 100 MB, by default)
 # if it is, stash the current data object as CSV and reset a new empty one    
@@ -293,7 +293,7 @@ def stash_user_posts(client_details: str
     return pd.DataFrame(data)
 
 # upload-csv-as-blob function
-def upload_file_to_azr(file_to_upload: str, blob_name) -> None:
+def upload_file_to_azr(df_string_data: str, blob_name) -> None:
     
     # block potential cloud overwrites (check if a blob with a similar name exists)
     azr_files = [blob.name.split('/')[-1] for blob in AZR_CTR_CLI.list_blobs(name_starts_with=AZR_TGT_DIR.rstrip('/') + "/")]
@@ -305,11 +305,9 @@ def upload_file_to_azr(file_to_upload: str, blob_name) -> None:
     blob_cli = BLB_SVC_CLI.get_blob_client(container=AZR_TGT_CTR, blob=blob_name)
 
     try:
-        # Create a BytesIO object from the string buffer
-        buffer_bytes = BytesIO(file_to_upload.encode('utf-8'))
-
-        # Upload the buffer to the blob
-        blob_cli.upload_blob(buffer_bytes, overwrite=True)
+        # upload_blob() is meant to work with binary data-- create a bytes buffer from the input string data
+        df_bytes = BytesIO(df_string_data.encode('utf-8'))
+        blob_cli.upload_blob(df_bytes, overwrite=True)
         print(f"Uploaded buffer as blob: {blob_name}")
 
     except Exception as e:
