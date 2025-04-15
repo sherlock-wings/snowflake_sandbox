@@ -14,29 +14,28 @@ import pytz
 import time
 from typing import Tuple
 
-# TEST
 ###
 ### AZURE CONFIG
 ###
 
 # instantiate blob Service Client (dependency of container client)
 AZR_DFT_CRD = DefaultAzureCredential()
-AZR_ACT_URL = f"https://{os.getenv('AZR_STR_ACT')}.blob.core.windows.net"
+AZR_ACT_URL = f"https://{os.environ['AZR_STR_ACT']}.blob.core.windows.net"
 BLB_SVC_CLI = BlobServiceClient(AZR_ACT_URL, AZR_DFT_CRD)
 
 # instantiate container client (needed for reads/writes of blob data to/from bluesky_posts azr directory)
-AZR_TGT_CTR = os.getenv('AZR_TGT_CTR')
+AZR_TGT_CTR = os.environ['AZR_TGT_CTR']
 AZR_CTR_CLI = BLB_SVC_CLI.get_container_client(AZR_TGT_CTR)
-C_AZR_SRC_DIR = os.getenv('C_AZR_SRC_DIR')
-AZR_TGT_DIR = f"{os.getenv('AZR_TGT_DIR')}/"  # apparently a trailing slash is required? 
+C_AZR_SRC_DIR = os.environ['C_AZR_SRC_DIR']
+AZR_TGT_DIR = f"{os.environ['AZR_TGT_DIR']}/"  # apparently a trailing slash is required? 
 
 
 ###
 ### BLUESKY CLIENT CONFIG
 ###
 
-USR = os.getenv('BSY_USR').lower()
-KEY = os.getenv('BSY_KEY')
+USR = os.environ['BSY_USR'].lower()
+KEY = os.environ['BSY_KEY']
 
 ###
 ### OTHER IMPORTANT LOCAL VARS
@@ -68,7 +67,7 @@ SCHEMA = {'content_id':                               []
 
 # Control-table directory 
 # This table will be used for the "high-watermark" stratgegy for incremental ingestion 
-L_XTR_DIR = os.getenv('L_XTR_DIR')
+L_XTR_DIR = os.environ['L_XTR_DIR']
 
 # Instantiate a BlueSky session
 def bluesky_login() -> Tuple[Client, str]:
@@ -98,8 +97,8 @@ def get_following_users(bsky_client: Client, bsky_handle: str, follows_limit: in
     return following_users 
 
 
-# write a chunk of post data to CSV
-def write_chunk(df: pd.DataFrame) -> None:
+# Get a dataframe ready to be written to blob store-- prepare its filename, add 
+def set_data_outbound(df: pd.DataFrame) -> None:
     # filename format is posts_<extraction_date>_<file_ordinal>.csv, where <final ordinal> is an incremental int
     # ex) If 3 files are generated on New Years Day 2025, the names are ['posts_2025-01-01_1.csv', 'posts_2025-01-01_2.csv', 'posts_2025-01-01_3.csv']
     rn = datetime.now().strftime('%Y-%m-%d')
@@ -123,9 +122,9 @@ def write_chunk(df: pd.DataFrame) -> None:
         filename += f"{last_file_num}.csv"
     else:
         filename += "1.csv"
+    print(f"\nWriting {filename}...")
     df['azure_container_name'] = AZR_TGT_CTR
     df['azure_blobpath'] = AZR_TGT_DIR
-    print(f"\nWriting {filename}...")
     df['azure_blobname'] = filename.split('/')[-1]
     csv_buffer = StringIO
     csv_buffer = df.to_csv(csv_buffer,
@@ -348,7 +347,7 @@ def get_watermark_table() -> bool:
 # Driver function
 app = func.FunctionApp()
 
-@app.timer_trigger(schedule="0 0 9 */2 * *", arg_name="myTimer", run_on_startup=False,
+@app.timer_trigger(schedule="0 0 9 */2 * *", arg_name="timer_trigger", run_on_startup=False,
               use_monitor=False) 
 def extract_feed(myTimer: func.TimerRequest) -> None:
     cli, session_usr = bluesky_login()
