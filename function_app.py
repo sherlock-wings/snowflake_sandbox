@@ -349,9 +349,11 @@ def get_watermark_table() -> bool:
 # Driver function
 app = func.FunctionApp()
 
-@app.timer_trigger(schedule="0 0 9 */2 * *", arg_name="myTimer", run_on_startup=False,
-              use_monitor=False) 
-def extract_feed(myTimer: func.TimerRequest) -> None:
+@app.function_name(schedule="0 0 9 */2 * *"
+                  ,arg_name="timer_trigger"
+                  ,run_on_startup=False
+                  ,use_monitor=False) 
+def extract_feed(timer_trigger: func.TimerRequest) -> None:
     cli, session_usr = bluesky_login()
     
     # to collect information from bluesky, you need a bluesky client. 
