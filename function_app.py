@@ -166,7 +166,7 @@ def chunk_check(schema_input: dict, filesize_limit_mb: int = 300, dict_input: di
         set_data_outbound(dataframe_input)
         return pd.DataFrame(), schema_input
     return dataframe_input, dict_input
-    
+     
 # write User Feed data as a series of one or more CSVs
 def stash_user_posts(client_details: str
                     ,schema_input: dict
