@@ -70,6 +70,6 @@ jobs:
           app-name: 'bskyxfeed'
           slot-name: 'Production'
           package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_9E109E9CFA8A450796860D403C6ADB6C }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_0766D8C9FC494189AF2AFA8D98564519 }}
           sku: 'flexconsumption'
         
