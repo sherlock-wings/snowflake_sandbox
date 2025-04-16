@@ -1,4 +1,3 @@
-from atproto import Client
 import logging
 import azure.functions as func
 # foo
