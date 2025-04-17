@@ -223,7 +223,7 @@ def stash_user_posts(client_details: str
                 watermark_ts = datetime(1900, 1, 1, 0, 0, 0, 0, pytz.utc) # default value
                 try:
                     # look up the timestamp in the watermark table for the user who authored the post
-                    watermark_ts = timestamp_parser.parse(wtm_tbl['post_created_timestamp'][wtm_tbl['post_author_did'].index(bsky_did)])
+                    watermark_ts = timestamp_parser.parse(wtm_tbl.query(f"post_author_did == '{bsky_did}'")['post_created_timestamp'].iloc[0])
                 except ValueError:
                     pass # watermark keeps default value if a later watermark for that user is not found
 
