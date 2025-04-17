@@ -136,7 +136,7 @@ __azurite_db*__.json
 
 # Project-specific filepaths
 nuke_everything.sql
-*extract_feed_control_tbl.csv
+*csv
 scratch*
 *pyc
 *log

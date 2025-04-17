@@ -1,6 +1,7 @@
 from atproto import Client
 from atproto.exceptions import NetworkError 
-from azure.storage.blob import BlobServiceClient
+from azure.identity import DefaultAzureCredential
+from azure.storage.blob import BlobServiceClient, ContainerClient
 import csv
 from datetime import datetime
 from dateutil import parser as timestamp_parser
@@ -16,7 +17,7 @@ AZR_XCT_STR = os.getenv('AZR_XCT_STR')
 BLB_SVC_CLI = BlobServiceClient.from_connection_string(AZR_XCT_STR)
 AZR_TGT_CTR = os.getenv('AZR_TGT_CTR')
 AZR_CTR_CLI = BLB_SVC_CLI.get_container_client(AZR_TGT_CTR)
-AZR_SRC_DIR = os.getenv('AZR_SRC_DIR')
+L_AZR_SRC_DIR = os.getenv('L_AZR_SRC_DIR')
 AZR_TGT_DIR = f"{os.getenv('AZR_TGT_DIR')}/"  # apparently a trailing slash is required? 
 
 # BlueSky Client Account Config
@@ -49,7 +50,7 @@ SCHEMA = {'content_id':                               []
 
 # Control-table directory 
 # This table will be used for the "high-watermark" stratgegy for incremental ingestion 
-WTM_TBL_DIR = os.getenv('WTM_TBL_DIR')
+L_XTR_DIR = os.getenv('L_XTR_DIR')
 
 # Instantiate a BlueSky session
 def bluesky_login() -> Tuple[Client, str]:
@@ -82,7 +83,7 @@ def get_following_users(bsky_client: Client, bsky_handle: str, follows_limit: in
 # write a chunk of post data to CSV
 def write_chunk(df: pd.DataFrame, output_path: str=None) -> None:
     if not output_path:
-        output_path = AZR_SRC_DIR
+        output_path = L_AZR_SRC_DIR
     # filename format is posts_<extraction_date>_<file_ordinal>.csv, where <final ordinal> is an incremental int
     # ex) If 3 files are generated on New Years Day 2025, the names are ['posts_2025-01-01_1.csv', 'posts_2025-01-01_2.csv', 'posts_2025-01-01_3.csv']
     rn = datetime.now().strftime('%Y-%m-%d')
@@ -128,6 +129,9 @@ def write_chunk(df: pd.DataFrame, output_path: str=None) -> None:
     else:
         filename += "1.csv"
     print(f"\nWriting {filename}...")
+    df['azure_container_name'] = AZR_TGT_CTR
+    df['azure_blobpath'] = AZR_TGT_DIR
+    df['azure_blobname'] = filename.split('/')[-1]
     df.to_csv(filename,
               index=False,
               encoding='utf-8',
@@ -168,7 +172,7 @@ def stash_user_posts(client_details: str
                     ,bsky_client:Client
                     ,bsky_did:str
                     ,bsky_username:str
-                    ,wtm_tbl: dict
+                    ,wtm_tbl: dict | None = None
                     ,max_retries: int = 5
                     ,wait_period_increment_seconds: int=300) -> pd.DataFrame:
     
@@ -177,12 +181,11 @@ def stash_user_posts(client_details: str
     pages_remain = True
     page_num     = 0
     watermark_crossed = False
+    default_timezone = pytz.timezone('UTC')
+    known_content_ids = set() # idk why but the same user will have the same posts repeated many times-- block em with a set
 
     # Iterate through every post in their account's post history
     while pages_remain and not watermark_crossed:
-        if watermark_crossed:
-            break
-        
         # Retrieve a paginated post-feed for a specific bluesky user
         page_num += 1  
         retry_count = 0
@@ -204,67 +207,72 @@ def stash_user_posts(client_details: str
         # reverse-chron sort feed. This helps optimize our watermark logic
         feed = resp.feed
         for item in feed: 
-            item.post.record.created_at = timestamp_parser.parse(item.post.record.created_at)
+            ts = timestamp_parser.parse(item.post.record.created_at)
+            if not ts.tzinfo:
+                ts = default_timezone.localize(ts)
+            item.post.record.created_at = ts
+
         feed.sort(key=lambda item: item.post.record.created_at, reverse=True)
-        
         print(f"Ingesting {page_num:,} pages of post-data from user @{bsky_username}...", end='\r')
         #
         # i drink your data! i DRINK IT UP ლಠ益ಠ)ლ
         # 
         for item in feed:
-            ts = item.post.record.created_at
-            # WATERMARK STRATEGY-- don't ingest the same record more than once 
-            watermark_ts = datetime(1900, 1, 1, 0, 0, 0, 0, pytz.utc) # default value
-            try:
-                # look up the timestamp in the watermark table for the user who authored the post
-                watermark_ts = timestamp_parser.parse(wtm_tbl['post_created_timestamp'][wtm_tbl['post_author_did'].index(bsky_did)])
-            except ValueError:
-                pass # watermark keeps default value if a later watermark for that user is not found
+            if not wtm_tbl.empty:
+                # WATERMARK STRATEGY-- don't ingest the same record more than once 
+                watermark_ts = datetime(1900, 1, 1, 0, 0, 0, 0, pytz.utc) # default value
+                try:
+                    # look up the timestamp in the watermark table for the user who authored the post
+                    watermark_ts = timestamp_parser.parse(wtm_tbl.query(f"post_author_did == '{bsky_did}'")['post_created_timestamp'].iloc[0])
+                except ValueError:
+                    pass # watermark keeps default value if a later watermark for that user is not found
 
-            if ts <= watermark_ts:
-                watermark_crossed = True
-                print(f"\n\nHit high watermark for user {client_details.split('|')[1]}")
-                print(f"Encountered post creation timestamp is {datetime.strftime(ts, '%Y-%m-%d %H:%M:%S.%f %z')}, latest known timestamp for this user is {datetime.strftime(watermark_ts, '%Y-%m-%d %H:%M:%S.%f %z')}")
-                print("Ingestion for this user will now stop.\n")
-                break
-            # if stash_user_posts() gets to this line, the given post has not been ingested before, so the program continues...
-            data['post_created_timestamp'].append(ts)   
-            data['content_id'].append(item.post.cid)
-            data['post_uri'].append(item.post.uri)
-            data['like_count'].append(item.post.like_count)
-            data['quote_count'].append(item.post.quote_count)
-            data['reply_count'].append(item.post.reply_count)
-            data['repost_count'].append(item.post.repost_count)
-            data['text'].append(item.post.record.text)
-            data['tags'].append(item.post.record.tags)
-            
-            # post may or may not have external links
-            try:
-                data['embedded_link_title'].append(item.post.record.embed.external.title)
-            except AttributeError:
-                data['embedded_link_title'].append('null')
-            try:
-                data['embedded_link_description'].append(item.post.record.embed.external.description)
-            except AttributeError:
-                data['embedded_link_description'].append('null')
-            try:
-                data['embedded_link_uri'].append(item.post.record.embed.external.uri)
-            except AttributeError:
-                data['embedded_link_uri'].append('null')
+                if item.post.record.created_at <= watermark_ts:
+                    watermark_crossed = True
+                    print(f"\n\nHit high watermark for user {bsky_username}")
+                    print(f"Encountered post creation timestamp is {datetime.strftime(item.post.record.created_at, '%Y-%m-%d %H:%M:%S.%f %z')}, latest known timestamp for this user is {datetime.strftime(watermark_ts, '%Y-%m-%d %H:%M:%S.%f %z')}")
+                    break
+            # idk why but the same user will have the same posts repeated many times-- block em with a set
+            if item.post.cid not in known_content_ids:
+            # if stash_user_posts() gets to this line, the given post has not been ingested before, so the program continues...        
+                known_content_ids.add(item.post.cid)
+                data['content_id'].append(item.post.cid)
+                data['post_created_timestamp'].append(ts)
+                data['post_uri'].append(item.post.uri)
+                data['like_count'].append(item.post.like_count)
+                data['quote_count'].append(item.post.quote_count)
+                data['reply_count'].append(item.post.reply_count)
+                data['repost_count'].append(item.post.repost_count)
+                data['text'].append(item.post.record.text)
+                data['tags'].append(item.post.record.tags)
+                
+                # post may or may not have external links
+                try:
+                    data['embedded_link_title'].append(item.post.record.embed.external.title)
+                except AttributeError:
+                    data['embedded_link_title'].append('null')
+                try:
+                    data['embedded_link_description'].append(item.post.record.embed.external.description)
+                except AttributeError:
+                    data['embedded_link_description'].append('null')
+                try:
+                    data['embedded_link_uri'].append(item.post.record.embed.external.uri)
+                except AttributeError:
+                    data['embedded_link_uri'].append('null')
 
-            data['post_author_did'].append(bsky_did)
-            data['post_author_username'].append(item.post.author.handle)
-            data['post_author_displayname'].append(item.post.author.display_name)
-            data['post_author_account_created_timestamp'].append(item.post.author.created_at) 
-            
-            # client details passed as input arg
-            data['bluesky_client_account_did'].append(client_details.split('|')[0])
-            data['bluesky_client_account_username'].append(client_details.split('|')[1])
-            data['bluesky_client_account_displayname'].append(client_details.split('|')[2])
-            
-            data['bluesky_client_account_created_timestamp'].append(client_details.split('|')[3])
-            ts = datetime.now(pytz.timezone('America/New_York')).astimezone(pytz.timezone('UTC'))
-            data['record_captured_timestamp'].append(ts) 
+                data['post_author_did'].append(bsky_did)
+                data['post_author_username'].append(item.post.author.handle)
+                data['post_author_displayname'].append(item.post.author.display_name)
+                data['post_author_account_created_timestamp'].append(item.post.author.created_at) 
+                
+                # client details passed as input arg
+                data['bluesky_client_account_did'].append(client_details.split('|')[0])
+                data['bluesky_client_account_username'].append(client_details.split('|')[1])
+                data['bluesky_client_account_displayname'].append(client_details.split('|')[2])
+                
+                data['bluesky_client_account_created_timestamp'].append(client_details.split('|')[3])
+                ts = datetime.now(pytz.timezone('America/New_York')).astimezone(pytz.timezone('UTC'))
+                data['record_captured_timestamp'].append(ts) 
         
         '''
         TODO -- Figure out why the below call never gets a "hit". It's like the only time
@@ -276,6 +284,7 @@ def stash_user_posts(client_details: str
                 user finishes/before the next user is begun.
         '''
         if watermark_crossed:
+            print("Ingestion for this user will now stop.\n")
             break
         _, data = chunk_check(schema_input=SCHEMA, dict_input=data)
         if not resp.cursor:
@@ -296,33 +305,39 @@ def upload_file_to_azr(file_to_upload: str) -> None:
     with open(file_to_upload, "rb") as data:
         blob_cli.upload_blob(data, overwrite=True)
         print(f"Uploaded file: {blob_name}")
-
+ 
 def clear_local_dir() -> None:
     # collect all filenames in blob dir, then limit the list of files to those labeled with the most recent date
     azr_files = [blob.name.split('/')[-1] for blob in AZR_CTR_CLI.list_blobs()]
-    local_files = [file for file in os.listdir(AZR_SRC_DIR)]
+    local_files = [file for file in os.listdir(L_AZR_SRC_DIR)]
 
     for file in local_files:
         if file in azr_files:
-            os.remove(f"{AZR_SRC_DIR}/{file}")
+            os.remove(f"{L_AZR_SRC_DIR}/{file}")
         else:
             print(f"File {file} detected locally but not detected in Azure Storage account!!\nYou may have some local data missing from the cloud. Consider reuploading.")
-    if len(os.listdir(AZR_SRC_DIR)) == 0:
-        os.rmdir(AZR_SRC_DIR)
+    if len(os.listdir(L_AZR_SRC_DIR)) == 0:
+        os.rmdir(L_AZR_SRC_DIR)
 
 # generate a control table for the "High-Watermark" strategy
 # This is an incremental ingestion strategy-- it should ensure that the same record is never sent to the Azure Storage acct more than once
-def write_watermark_table() -> None: 
+def get_watermarks() -> pd.DataFrame:
     azr_files = [blob.name for blob in AZR_CTR_CLI.list_blobs()]
     if len(azr_files) == 0:
         print(f"\n\nWARNING! WARNING! WARNING!\n\nZero CSV files found in Azure Blob directory {AZR_TGT_DIR}, container {AZR_TGT_CTR}")
         print("This means incremental ingestion will not be applied. If that is unexpected, then this run may be ingesting duplicate records.")
         print("If you don't want that, cancel this ingestion now with CTRL+C!\n")
+        return pd.DataFrame() # Indicate no watermark found with empty dataframe
 
-    max_date = max([datetime.strptime(filename.split('/')[-1].split('_')[1], '%Y-%m-%d').date() for filename in azr_files])
+    max_date = max([datetime.strptime(filename.split('/')[-1].split('_')[1], '%Y-%m-%d').date() for filename in azr_files if filename.endswith('.csv')])
     file_datestring = datetime.strftime(max_date, '%Y-%m-%d')
     azr_files = [file for file in azr_files if file_datestring in file]
-    print(f"{len(azr_files):,} files with max date {max_date} detected in Azure Cloud Storage.\nDownloading files to generate watermark table...")
+    if len(azr_files) > 0:
+        print(f"{len(azr_files):,} files with max date {max_date} detected in Azure Cloud Storage.\nDownloading files to generate watermark table...")
+    else:
+        print("Files were detected in Azure Container, but zero of them contained date-like filenames. No watermark table data found.")
+        return pd.DataFrame()
+
     df = pd.DataFrame(SCHEMA)
     for i in range(len(azr_files)):
         blob_client = BLB_SVC_CLI.get_blob_client(container=AZR_TGT_CTR, blob=azr_files[i])
@@ -331,13 +346,13 @@ def write_watermark_table() -> None:
         if not df_next.empty:
             df = pd.concat([df, df_next])
         print(f"{i+1} of {len(azr_files)} max-date files downloaded from Azure")
-
-
-    df = df.groupby('post_author_did')['post_created_timestamp'].max().reset_index()
-    print("Writing control table...")
-    df.to_csv(f"{WTM_TBL_DIR}/extract_feed_control_tbl.csv", index=False)
-    print(f"High-Watermark Control table written to {WTM_TBL_DIR}/extract_feed_control_tbl.csv\n")
-
+    if not df.empty:
+        print(f"{len(df.index):,} rows of watermark data read from date {max_date.strftime('%Y-%m-%d')}")
+        return df.groupby('post_author_did')['post_created_timestamp'].max().reset_index()
+    else:
+        print("Files with date-like filenames were detected in Azure Container, but these files appear to be empty.")
+        return pd.DataFrame()
+    
 # Driver function
 def extract_feed() -> None:
     cli, session_usr = bluesky_login()
@@ -354,10 +369,8 @@ def extract_feed() -> None:
     
     # before parsing begins, write a control table locally
     # this should prevent records already saved in Azure from being ingested again
-    print(f"New BlueSky feed-extract session opened at {datetime.now(pytz.timezone("America/New_York")).strftime('%Y-%m-%d %H:%M:%S %Z')}")
     print(f"Logging in as BlueSky User {USR}... \nLET'S GET THIS DATA! ( ͡⌐■ ͜ʖ ͡-■)\n\n")
-    write_watermark_table()
-    watermark_tbl = pd.read_csv(f"{WTM_TBL_DIR}/extract_feed_control_tbl.csv").to_dict(orient='list')
+    watermark_tbl = get_watermarks()
     
     following_users = {item.handle: [item.did, item.display_name] for item in get_following_users(cli, session_usr)}
     print(f"Detected {len(following_users):,} BlueSky Users being followed by user @{session_usr}")
@@ -382,11 +395,11 @@ def extract_feed() -> None:
         write_chunk(df)
     print(f"\nFeed Ingestion Complete! Uploading to Azure now...\n")
     
-    files = [file for file in os.listdir(AZR_SRC_DIR) if file.endswith('.csv')]
+    files = [file for file in os.listdir(L_AZR_SRC_DIR) if file.endswith('.csv')]
     print(f"{len(files)} total CSV files detected.")
     for i in range(len(files)):
         print(f"\nUploading {files[i]}, {i+1} of {len(files)}")
-        upload_file_to_azr(f"{AZR_SRC_DIR}/{files[i]}")
+        upload_file_to_azr(f"{L_AZR_SRC_DIR}/{files[i]}")
     print(f"File upload complete!")
     
     clear_local_dir()
