@@ -218,7 +218,7 @@ def stash_user_posts(client_details: str
         # i drink your data! i DRINK IT UP ლಠ益ಠ)ლ
         # 
         for item in feed:
-            if wtm_tbl:
+            if not wtm_tbl.empty:
                 # WATERMARK STRATEGY-- don't ingest the same record more than once 
                 watermark_ts = datetime(1900, 1, 1, 0, 0, 0, 0, pytz.utc) # default value
                 try:
@@ -321,18 +321,23 @@ def clear_local_dir() -> None:
 
 # generate a control table for the "High-Watermark" strategy
 # This is an incremental ingestion strategy-- it should ensure that the same record is never sent to the Azure Storage acct more than once
-def write_watermark_table() -> bool: 
+def get_watermarks() -> pd.DataFrame:
     azr_files = [blob.name for blob in AZR_CTR_CLI.list_blobs()]
     if len(azr_files) == 0:
         print(f"\n\nWARNING! WARNING! WARNING!\n\nZero CSV files found in Azure Blob directory {AZR_TGT_DIR}, container {AZR_TGT_CTR}")
         print("This means incremental ingestion will not be applied. If that is unexpected, then this run may be ingesting duplicate records.")
         print("If you don't want that, cancel this ingestion now with CTRL+C!\n")
-        return False # Indicate watermark-write failure to function caller
-    
-    max_date = max([datetime.strptime(filename.split('/')[-1].split('_')[1], '%Y-%m-%d').date() for filename in azr_files])
+        return pd.DataFrame() # Indicate no watermark found with empty dataframe
+
+    max_date = max([datetime.strptime(filename.split('/')[-1].split('_')[1], '%Y-%m-%d').date() for filename in azr_files if filename.endswith('.csv')])
     file_datestring = datetime.strftime(max_date, '%Y-%m-%d')
     azr_files = [file for file in azr_files if file_datestring in file]
-    print(f"{len(azr_files):,} files with max date {max_date} detected in Azure Cloud Storage.\nDownloading files to generate watermark table...")
+    if len(azr_files) > 0:
+        print(f"{len(azr_files):,} files with max date {max_date} detected in Azure Cloud Storage.\nDownloading files to generate watermark table...")
+    else:
+        print("Files were detected in Azure Container, but zero of them contained date-like filenames. No watermark table data found.")
+        return pd.DataFrame()
+
     df = pd.DataFrame(SCHEMA)
     for i in range(len(azr_files)):
         blob_client = BLB_SVC_CLI.get_blob_client(container=AZR_TGT_CTR, blob=azr_files[i])
@@ -341,14 +346,13 @@ def write_watermark_table() -> bool:
         if not df_next.empty:
             df = pd.concat([df, df_next])
         print(f"{i+1} of {len(azr_files)} max-date files downloaded from Azure")
-
-
-    df = df.groupby('post_author_did')['post_created_timestamp'].max().reset_index()
-    print("Writing control table...")
-    df.to_csv(f"{L_XTR_DIR}/extract_feed_control_tbl.csv", index=False)
-    print(f"High-Watermark Control table written to {L_XTR_DIR}/extract_feed_control_tbl.csv\n")
-    return True # Indicate watermark-write success to function caller
-
+    if not df.empty:
+        print(f"{len(df.index):,} rows of watermark data read from date {max_date.strftime('%Y-%m-%d')}")
+        return df.groupby('post_author_did')['post_created_timestamp'].max().reset_index()
+    else:
+        print("Files with date-like filenames were detected in Azure Container, but these files appear to be empty.")
+        return pd.DataFrame()
+    
 # Driver function
 def extract_feed() -> None:
     cli, session_usr = bluesky_login()
@@ -366,11 +370,7 @@ def extract_feed() -> None:
     # before parsing begins, write a control table locally
     # this should prevent records already saved in Azure from being ingested again
     print(f"Logging in as BlueSky User {USR}... \nLET'S GET THIS DATA! ( ͡⌐■ ͜ʖ ͡-■)\n\n")
-    watermark_tbl_written = write_watermark_table()
-    if watermark_tbl_written:
-        watermark_tbl = pd.read_csv(f"{L_XTR_DIR}/extract_feed_control_tbl.csv").to_dict(orient='list')
-    else:
-        watermark_tbl = None
+    watermark_tbl = get_watermarks()
     
     following_users = {item.handle: [item.did, item.display_name] for item in get_following_users(cli, session_usr)}
     print(f"Detected {len(following_users):,} BlueSky Users being followed by user @{session_usr}")
