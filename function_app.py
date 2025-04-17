@@ -424,7 +424,7 @@ def extract_feed(myTimer: func.TimerRequest) -> None:
 #         else:
 #             print(f"File {file} detected locally but not detected in Azure Storage account!!\nYou may have some local data missing from the cloud. Consider reuploading.")
 #     if len(os.listdir(C_AZR_SRC_DIR)) == 0:
-#         os.rmdir(C_AZR_SRC_DIR)
+#         os.rmdir(C_AZR_SRC_DIR) 
 
 # generate a control table for the "High-Watermark" strategy
 # This is an incremental ingestion strategy-- it should ensure that the same record is never sent to the Azure Storage acct more than once
