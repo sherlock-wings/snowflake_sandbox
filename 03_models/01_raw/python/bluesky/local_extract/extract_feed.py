@@ -24,18 +24,6 @@ AZR_TGT_DIR = f"{os.getenv('AZR_TGT_DIR')}/"  # apparently a trailing slash is r
 USR = os.getenv('BSY_USR').lower()
 KEY = os.getenv('BSY_KEY')
 
-# Azure connection config
-AZR_XCT_STR = os.getenv('AZR_XCT_STR')
-BLB_SVC_CLI = BlobServiceClient.from_connection_string(AZR_XCT_STR)
-AZR_TGT_CTR = os.getenv('AZR_TGT_CTR')
-AZR_CTR_CLI = BLB_SVC_CLI.get_container_client(AZR_TGT_CTR)
-L_AZR_SRC_DIR = os.getenv('L_AZR_SRC_DIR')
-AZR_TGT_DIR = f"{os.getenv('AZR_TGT_DIR')}/"  # apparently a trailing slash is required? 
-
-# BlueSky Client Account Config
-USR = os.getenv('BSY_USR').lower()
-KEY = os.getenv('BSY_KEY')
-
 # schema for all tabular data collected in this file
 SCHEMA = {'content_id':                               []
          ,'post_uri':                                 []
