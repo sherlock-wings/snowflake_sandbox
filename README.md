@@ -7,13 +7,13 @@
 5. [Object Naming Conventions](#object-naming-conventions)
 
 # Data Model
-
+ 
 Our data model consists of three simple schema. This schema-triplet will exist across multiple environments, and each environment will be held in a single database.
 
 When referring to these schema outside of the context of any specific environment, we refer to them as "Prototype schema".
 
 Our prototype schema are:
-
+    
 1. `RAW`
     - Here we will keep all of our source data
     - Data should be as close to as it existed in the source system as possible

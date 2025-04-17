@@ -25,6 +25,9 @@ create table if not exists thehippus_feed (
 ,bluesky_client_account_displayname varchar
 ,bluesky_client_account_created_timestamp varchar
 ,record_captured_timestamp varchar
+,azure_container_name varchar
+,azure_blobpath varchar
+,azure_blobname varchar
 );
 
 create or replace stage stg_thehippus_feed
