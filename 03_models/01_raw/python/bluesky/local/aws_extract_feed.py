@@ -1,7 +1,6 @@
 from atproto import Client
 from atproto.exceptions import NetworkError 
-from azure.identity import DefaultAzureCredential
-from azure.storage.blob import BlobServiceClient, ContainerClient
+import boto3
 import csv
 from datetime import datetime
 from dateutil import parser as timestamp_parser
@@ -9,20 +8,19 @@ from io import StringIO
 import os
 import pandas as pd
 import pytz
+from re import match as regex_match
 import time
 from typing import Tuple
 
-# Azure connection config
-AZR_XCT_STR = os.getenv('AZR_XCT_STR')
-BLB_SVC_CLI = BlobServiceClient.from_connection_string(AZR_XCT_STR)
-AZR_TGT_CTR = os.getenv('AZR_TGT_CTR')
-AZR_CTR_CLI = BLB_SVC_CLI.get_container_client(AZR_TGT_CTR)
-L_AZR_SRC_DIR = os.getenv('L_AZR_SRC_DIR')
-AZR_TGT_DIR = f"{os.getenv('AZR_TGT_DIR')}/"  # apparently a trailing slash is required? 
+# AWS S3 connection config
+L_AWS_SRC_DIR = os.environ['L_AWS_SRC_DIR']
+AWS_TGT_BKT = os.environ['AWS_TGT_BKT']
+AWS_TGT_DIR = os.environ['AWS_TGT_DIR']
+S3_CLI = boto3.client('s3')
 
 # BlueSky Client Account Config
-USR = os.getenv('BSY_USR').lower()
-KEY = os.getenv('BSY_KEY')
+USR = os.environ['BSY_USR'].lower()
+KEY = os.environ['BSY_KEY']
 
 # schema for all tabular data collected in this file
 SCHEMA = {'content_id':                               []
@@ -50,7 +48,7 @@ SCHEMA = {'content_id':                               []
 
 # Control-table directory 
 # This table will be used for the "high-watermark" stratgegy for incremental ingestion 
-L_XTR_DIR = os.getenv('L_XTR_DIR')
+L_XTR_DIR = os.environ['L_XTR_DIR']
 
 # Instantiate a BlueSky session
 def bluesky_login() -> Tuple[Client, str]:
@@ -292,20 +290,38 @@ def stash_user_posts(client_details: str
         csr = resp.cursor        # reset cursor when another page of posts is available
     return pd.DataFrame(data)
 
-# upload-csv-as-blob function
-def upload_file_to_azr(file_to_upload: str) -> None:
-    # block potential cloud overwrites
-    azr_files = [blob.name.split('/')[-1] for blob in AZR_CTR_CLI.list_blobs()]
-    blob_name = f"{AZR_TGT_DIR.rstrip('/')}/{os.path.basename(file_to_upload)}"
-    if file_to_upload.split('/')[-1] in azr_files:
-        print(f"\nFile {file_to_upload.split('/')[-1]} was found both in the Azure Storage Location and on the local machine.\nSkipping the upload for the local version of {file_to_upload.split('/')[-1]} to avoid overwriting existing cloud data.\n")
-        return None
-    blob_cli = BLB_SVC_CLI.get_blob_client(container=AZR_TGT_CTR, blob=blob_name)
-    # If no overwrite-danger is detected, upload the file (supports large files via chunking)
-    with open(file_to_upload, "rb") as data:
-        blob_cli.upload_blob(data, overwrite=True)
-        print(f"Uploaded file: {blob_name}")
- 
+# # upload-csv-as-blob function
+# def upload_file_to_azr(file_to_upload: str) -> None:
+#     # block potential cloud overwrites
+#     azr_files = [blob.name.split('/')[-1] for blob in AZR_CTR_CLI.list_blobs()]
+#     blob_name = f"{AZR_TGT_DIR.rstrip('/')}/{os.path.basename(file_to_upload)}"
+#     if file_to_upload.split('/')[-1] in azr_files:
+#         print(f"\nFile {file_to_upload.split('/')[-1]} was found both in the Azure Storage Location and on the local machine.\nSkipping the upload for the local version of {file_to_upload.split('/')[-1]} to avoid overwriting existing cloud data.\n")
+#         return None
+#     blob_cli = BLB_SVC_CLI.get_blob_client(container=AZR_TGT_CTR, blob=blob_name)
+#     # If no overwrite-danger is detected, upload the file (supports large files via chunking)
+#     with open(file_to_upload, "rb") as data:
+#         blob_cli.upload_blob(data, overwrite=True)
+#         print(f"Uploaded file: {blob_name}")
+
+def upload_file_to_aws(file_to_upload: str) -> bool: 
+    aws_files = S3_CLI.list_objects_v2(Bucket=AWS_TGT_BKT, Prefix=AWS_TGT_DIR)['Contents']
+    match_str = r'^.+\/.+\.csv'
+
+    aws_files = [file['Key'].split('/')[-1] for file in aws_files if regex_match(match_str, file['Key'])]
+    if os.path.basename(file_to_upload) in aws_files:
+        print(f"Local filename {file_to_upload} also discovered in S3 bucket {AWS_TGT_BKT} at path {AWS_TGT_DIR}/{file_to_upload}")
+        print("To avoid file overwrites, this upload request will be skipped")
+        return False # return False to indicate file upload failure
+    else:
+        try:
+            S3_CLI.upload_file(file_to_upload, AWS_TGT_BKT, f"{AWS_TGT_DIR}/{os.path.basename(file_to_upload)}")
+            print(f"Uploaded file {file_to_upload} to bucket {AWS_TGT_BKT} at path {AWS_TGT_DIR}/{os.path.basename(file_to_upload)}")
+        except Exception as e:
+            print(f"Upload failed-- encountered {e}")
+            return False # return False to indicate file upload failure
+        return True #indicate success
+    
 def clear_local_dir() -> None:
     # collect all filenames in blob dir, then limit the list of files to those labeled with the most recent date
     azr_files = [blob.name.split('/')[-1] for blob in AZR_CTR_CLI.list_blobs()]
