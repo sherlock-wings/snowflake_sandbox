@@ -79,39 +79,39 @@ def get_following_users(bsky_client: Client, bsky_handle: str, follows_limit: in
 
 
 # write a chunk of post data to CSV
-def write_chunk(df: pd.DataFrame, output_path: str=None) -> None:
+def write_chunk(df: pd.DataFrame, output_path: str=None, search_pattern: str = r'^.+\/.+\.csv$') -> None:
     if not output_path:
-        output_path = L_AZR_SRC_DIR
+        output_path = L_AWS_SRC_DIR
     # filename format is posts_<extraction_date>_<file_ordinal>.csv, where <final ordinal> is an incremental int
     # ex) If 3 files are generated on New Years Day 2025, the names are ['posts_2025-01-01_1.csv', 'posts_2025-01-01_2.csv', 'posts_2025-01-01_3.csv']
+    aws_files = S3_CLI.list_objects_v2(Bucket=AWS_TGT_BKT, Prefix=AWS_TGT_DIR)['Contents']
+    aws_files = [file['Key'].split('/')[-1] for file in aws_files if regex_match(search_pattern, file['Key'])]
+
     rn = datetime.now().strftime('%Y-%m-%d')
     filename = f"{output_path}/posts_{rn}_"
     last_file_num = local_last_file_num = cloud_last_file_num = -1
-    
-    # generating the incremental int correctly means checking, both in the cloud and locally, for any CSVs which already exist whose name includes the current date 
-    # check Azure Cloud Storage location first to determine the name for the next generated CSV
-    azr_files = [blob.name for blob in AZR_CTR_CLI.list_blobs()]
-    if len(azr_files) > 0:
-        cloud_file_numbers = [int(file.split('_')[-1].split('.')[0]) for file in azr_files if file.split('.')[-1] == 'csv' and rn in file]
+
+    if len(aws_files) > 0:
+        cloud_file_numbers = [int(file.split('_')[-1].split('.')[0]) for file in aws_files if file.split('.')[-1] == 'csv' and rn in file]
         cloud_file_numbers.sort()
         try:
             cloud_last_file_num = cloud_file_numbers[-1]+1
         except IndexError:
-            cloud_last_file_num = 0    
-    else:
+            cloud_last_file_num = 0
+    else: 
         cloud_last_file_num = 0
-        
+
     if os.path.exists(f"{output_path}/posts_{rn}_1.csv"):
-        # get a list of ints where each item is the number just before the '.csv' part in the file name-- get CSV filenames only
-        local_file_numbers = [int(file.split('_')[-1].split('.')[0]) for file in os.listdir(output_path) if file.split('.')[-1] == 'csv']
-        local_file_numbers.sort()
-        try:
-            local_last_file_num = local_file_numbers[-1]+1
-        except IndexError:
-            local_last_file_num = 0
+            # get a list of ints where each item is the number just before the '.csv' part in the file name-- get CSV filenames only
+            local_file_numbers = [int(file.split('_')[-1].split('.')[0]) for file in os.listdir(output_path) if file.split('.')[-1] == 'csv']
+            local_file_numbers.sort()
+            try:
+                local_last_file_num = local_file_numbers[-1]+1
+            except IndexError:
+                local_last_file_num = 0
     else:
         local_last_file_num = 0
-    
+
     if local_last_file_num > cloud_last_file_num:
         last_file_num = local_last_file_num 
     elif cloud_last_file_num > local_last_file_num:
@@ -127,18 +127,19 @@ def write_chunk(df: pd.DataFrame, output_path: str=None) -> None:
     else:
         filename += "1.csv"
     print(f"\nWriting {filename}...")
-    df['azure_container_name'] = AZR_TGT_CTR
-    df['azure_blobpath'] = AZR_TGT_DIR
-    df['azure_blobname'] = filename.split('/')[-1]
+    df['s3_bucket_name'] = AZR_TGT_CTR
+    df['s3_bucket_filepath'] = AZR_TGT_DIR
+    df['s3_bucket_filename'] = filename.split('/')[-1]
     df.to_csv(filename,
-              index=False,
-              encoding='utf-8',
-              quoting=csv.QUOTE_ALL, # Wrap all fields in quotes -- hopefully this handles weird chars like line separators or paragraph separators
-              quotechar='"',         
-              escapechar='\\',       
-              doublequote=True,      
-              lineterminator='\n'    
-             )           
+                index=False,
+                encoding='utf-8',
+                quoting=csv.QUOTE_ALL, # Wrap all fields in quotes -- hopefully this handles weird chars like line separators or paragraph separators
+                quotechar='"',         
+                escapechar='\\',       
+                doublequote=True,      
+                lineterminator='\n'    
+                )
+           
 # check if the current file is already "full" (larger than 100 MB, by default)
 # if it is, stash the current data object as CSV and reset a new empty one    
 def chunk_check(schema_input: dict, filesize_limit_mb: int = 300, dict_input: dict=None, dataframe_input: pd.DataFrame=pd.DataFrame(), callout_size: bool=False) -> Tuple[pd.DataFrame, dict]:
@@ -290,25 +291,11 @@ def stash_user_posts(client_details: str
         csr = resp.cursor        # reset cursor when another page of posts is available
     return pd.DataFrame(data)
 
-# # upload-csv-as-blob function
-# def upload_file_to_azr(file_to_upload: str) -> None:
-#     # block potential cloud overwrites
-#     azr_files = [blob.name.split('/')[-1] for blob in AZR_CTR_CLI.list_blobs()]
-#     blob_name = f"{AZR_TGT_DIR.rstrip('/')}/{os.path.basename(file_to_upload)}"
-#     if file_to_upload.split('/')[-1] in azr_files:
-#         print(f"\nFile {file_to_upload.split('/')[-1]} was found both in the Azure Storage Location and on the local machine.\nSkipping the upload for the local version of {file_to_upload.split('/')[-1]} to avoid overwriting existing cloud data.\n")
-#         return None
-#     blob_cli = BLB_SVC_CLI.get_blob_client(container=AZR_TGT_CTR, blob=blob_name)
-#     # If no overwrite-danger is detected, upload the file (supports large files via chunking)
-#     with open(file_to_upload, "rb") as data:
-#         blob_cli.upload_blob(data, overwrite=True)
-#         print(f"Uploaded file: {blob_name}")
-
-def upload_file_to_aws(file_to_upload: str) -> bool: 
+def upload_file_to_aws(file_to_upload: str, search_pattern: str = r'^.+\/.+\.csv$') -> bool: 
+    # get list of files, then filter to only those matching our search_pattern
+    # by default, search for any CSV file
     aws_files = S3_CLI.list_objects_v2(Bucket=AWS_TGT_BKT, Prefix=AWS_TGT_DIR)['Contents']
-    match_str = r'^.+\/.+\.csv'
-
-    aws_files = [file['Key'].split('/')[-1] for file in aws_files if regex_match(match_str, file['Key'])]
+    aws_files = [file['Key'].split('/')[-1] for file in aws_files if regex_match(search_pattern, file['Key'])]
     if os.path.basename(file_to_upload) in aws_files:
         print(f"Local filename {file_to_upload} also discovered in S3 bucket {AWS_TGT_BKT} at path {AWS_TGT_DIR}/{file_to_upload}")
         print("To avoid file overwrites, this upload request will be skipped")
@@ -325,15 +312,15 @@ def upload_file_to_aws(file_to_upload: str) -> bool:
 def clear_local_dir() -> None:
     # collect all filenames in blob dir, then limit the list of files to those labeled with the most recent date
     azr_files = [blob.name.split('/')[-1] for blob in AZR_CTR_CLI.list_blobs()]
-    local_files = [file for file in os.listdir(L_AZR_SRC_DIR)]
+    local_files = [file for file in os.listdir(L_AWS_SRC_DIR)]
 
     for file in local_files:
         if file in azr_files:
-            os.remove(f"{L_AZR_SRC_DIR}/{file}")
+            os.remove(f"{L_AWS_SRC_DIR}/{file}")
         else:
             print(f"File {file} detected locally but not detected in Azure Storage account!!\nYou may have some local data missing from the cloud. Consider reuploading.")
-    if len(os.listdir(L_AZR_SRC_DIR)) == 0:
-        os.rmdir(L_AZR_SRC_DIR)
+    if len(os.listdir(L_AWS_SRC_DIR)) == 0:
+        os.rmdir(L_AWS_SRC_DIR)
 
 # generate a control table for the "High-Watermark" strategy
 # This is an incremental ingestion strategy-- it should ensure that the same record is never sent to the Azure Storage acct more than once
@@ -411,11 +398,11 @@ def extract_feed() -> None:
         write_chunk(df)
     print(f"\nFeed Ingestion Complete! Uploading to Azure now...\n")
     
-    files = [file for file in os.listdir(L_AZR_SRC_DIR) if file.endswith('.csv')]
+    files = [file for file in os.listdir(L_AWS_SRC_DIR) if file.endswith('.csv')]
     print(f"{len(files)} total CSV files detected.")
     for i in range(len(files)):
         print(f"\nUploading {files[i]}, {i+1} of {len(files)}")
-        upload_file_to_azr(f"{L_AZR_SRC_DIR}/{files[i]}")
+        upload_file_to_azr(f"{L_AWS_SRC_DIR}/{files[i]}")
     print(f"File upload complete!")
     
     clear_local_dir()
