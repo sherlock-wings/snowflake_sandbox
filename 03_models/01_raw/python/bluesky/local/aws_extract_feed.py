@@ -77,6 +77,23 @@ def get_following_users(bsky_client: Client, bsky_handle: str, follows_limit: in
         csr = resp.cursor
     return following_users 
 
+# list files in a s3 directory
+# use AWS's built-in pagination to make this function robust for directories with many (>1000) files
+def list_files_in_s3_dir(S3_CLI: boto3.botocore.client.S3, bucket_name: str = AWS_TGT_BKT, bucket_filepath: str = AWS_TGT_DIR) -> list:
+    file_ls = []
+    paginator = S3_CLI.get_paginator('list_objects_v2')
+    pages = paginator.paginate(Bucket=bucket_name, Prefix=AWS_TGT_DIR)
+    try:
+        for page in pages:
+            if 'Contents' in page:
+                for obj in page['Contents']:
+                    if not obj['Key'].endswith('/'): # don't append directory names to this list-- filenames only
+                        file_ls.append(obj['Key'])
+        return file_ls
+    except  Exception as e:
+        print(f"Exception encountered while listing files from bucket `{AWS_TGT_BKT}`, dirpath `{AWS_TGT_DIR}`:s\n{e}")
+        return []
+     
 
 # write a chunk of post data to CSV
 def write_chunk(df: pd.DataFrame, output_path: str=None, search_pattern: str = r'^.+\/.+\.csv$') -> None:
@@ -127,18 +144,18 @@ def write_chunk(df: pd.DataFrame, output_path: str=None, search_pattern: str = r
     else:
         filename += "1.csv"
     print(f"\nWriting {filename}...")
-    df['s3_bucket_name'] = AZR_TGT_CTR
-    df['s3_bucket_filepath'] = AZR_TGT_DIR
+    df['s3_bucket_name'] = AWS_TGT_BKT
+    df['s3_bucket_directory'] = AWS_TGT_DIR
     df['s3_bucket_filename'] = filename.split('/')[-1]
     df.to_csv(filename,
-                index=False,
-                encoding='utf-8',
-                quoting=csv.QUOTE_ALL, # Wrap all fields in quotes -- hopefully this handles weird chars like line separators or paragraph separators
-                quotechar='"',         
-                escapechar='\\',       
-                doublequote=True,      
-                lineterminator='\n'    
-                )
+              index=False,
+              encoding='utf-8',
+              quoting=csv.QUOTE_ALL, # Wrap all fields in quotes -- hopefully this handles weird chars like line separators or paragraph separators
+              quotechar='"',         
+              escapechar='\\',       
+              doublequote=True,      
+              lineterminator='\n'    
+             )
            
 # check if the current file is already "full" (larger than 100 MB, by default)
 # if it is, stash the current data object as CSV and reset a new empty one    
