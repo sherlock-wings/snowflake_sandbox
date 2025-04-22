@@ -101,9 +101,8 @@ def write_chunk(df: pd.DataFrame, output_path: str=None, search_pattern: str = r
         output_path = L_AWS_SRC_DIR
     # filename format is posts_<extraction_date>_<file_ordinal>.csv, where <final ordinal> is an incremental int
     # ex) If 3 files are generated on New Years Day 2025, the names are ['posts_2025-01-01_1.csv', 'posts_2025-01-01_2.csv', 'posts_2025-01-01_3.csv']
-    aws_files = list_files_in_s3_dir(S3_CLI)
-    aws_files = [file['Key'].split('/')[-1] for file in aws_files if regex_match(search_pattern, file['Key'])]
-
+    aws_files = [os.path.basename(file) for file in list_files_in_s3_dir(S3_CLI)]
+    
     rn = datetime.now().strftime('%Y-%m-%d')
     filename = f"{output_path}/posts_{rn}_"
     last_file_num = local_last_file_num = cloud_last_file_num = -1
@@ -188,10 +187,9 @@ def stash_user_posts(client_details: str
                     ,bsky_client:Client
                     ,bsky_did:str
                     ,bsky_username:str
-                    ,wtm_tbl: dict | None = None
+                    ,wtm_tbl: pd.DataFrame = pd.DataFrame()
                     ,max_retries: int = 5
                     ,wait_period_increment_seconds: int=300) -> pd.DataFrame:
-    
     data         = {col: [] for col in schema_input} 
     csr          = None
     pages_remain = True
@@ -240,9 +238,14 @@ def stash_user_posts(client_details: str
                 try:
                     # look up the timestamp in the watermark table for the user who authored the post
                     watermark_ts = timestamp_parser.parse(wtm_tbl.query(f"post_author_did == '{bsky_did}'")['post_created_timestamp'].iloc[0])
-                except ValueError:
+                except IndexError:
                     pass # watermark keeps default value if a later watermark for that user is not found
-
+                except Exception as e:
+                    wtm_tbl.to_csv('bad_watermark.csv', index=False)
+                    raise Exception(f"""Unusual exception encountered '{e}'
+Unusual exception encountered with bsky_did '{bsky_did}'
+Downloading watermark data where this exception is encountered to bad_watermark.csv""")
+                    
                 if item.post.record.created_at <= watermark_ts:
                     watermark_crossed = True
                     print(f"\n\nHit high watermark for user {bsky_username}")
@@ -329,7 +332,7 @@ def upload_file_to_aws(file_to_upload: str, search_pattern: str = r'^.+\/.+\.csv
     
 def clear_local_dir() -> None:
     # collect all filenames in blob dir, then limit the list of files to those labeled with the most recent date
-    aws_files = list_files_in_s3_dir(S3_CLI)
+    aws_files = [os.path.basename(file) for file in list_files_in_s3_dir(S3_CLI)]
     local_files = [file for file in os.listdir(L_AWS_SRC_DIR)]
 
     for file in local_files:
@@ -357,8 +360,7 @@ def get_watermarks() -> pd.DataFrame:
         print(f"{len(aws_files):,} files with max date {max_date} detected in S3 Cloud Storage.\nDownloading files to generate watermark table...")
     else:
         print(f"{len(list_files_in_s3_dir(S3_CLI)):,} files were detected in S3 Bucket at directory `{AWS_TGT_DIR}`, but none of them had date-like filenames. No watermark table data found.")
-        # return pd.DataFrame()
-    S3_CLI.download_file(AWS_TGT_BKT, F"{AWS_TGT_DIR}/foo.csv", f"{L_AWS_SRC_DIR}/foo.csv")
+        return pd.DataFrame()
 
     df = pd.DataFrame(SCHEMA)
     for i in range(len(aws_files)):
@@ -367,12 +369,12 @@ def get_watermarks() -> pd.DataFrame:
         if not df_next.empty:
             df = pd.concat([df, df_next])
         print(f"{(i+1):,} of {len(aws_files):,} max-date files downloaded from S3")
-        if not df.empty:
-            print(f"{len(df.index):,} rows of watermark data read from date {max_date.strftime('%Y-%m-%d')}")
-            # return df.groupby('post_author_did')['post_created_timestamp'].max().reset_index()
-        else:
-            print("Files with date-like filenames were detected in S3 Bucket, but these files appear to be empty.")
-            # return pd.DataFrame()
+    if not df.empty:
+        print(f"{len(df.index):,} rows of watermark data read from date {max_date.strftime('%Y-%m-%d')}\n\n")
+        return df.groupby('post_author_did')['post_created_timestamp'].max().reset_index()
+    else:
+        print("Files with date-like filenames were detected in S3 Bucket, but these files appear to be empty.\n\n")
+        return pd.DataFrame()
 
     
 # Driver function
