@@ -350,7 +350,7 @@ def get_watermarks() -> pd.DataFrame:
         print("If you don't want that, cancel this ingestion now with CTRL+C!\n")
         return pd.DataFrame() # Indicate no watermark found with empty dataframe
 
-    file_dates = [datetime.strptime(file.split('/')[-1].split('_')[0], '%Y-%m-%d').date() for file in aws_files]
+    file_dates = [datetime.strptime(file.split('/')[-1].split('_')[1], '%Y-%m-%d').date() for file in aws_files]
     max_date = max(file_dates)
 
     if len(aws_files) > 0:
