@@ -311,17 +311,17 @@ def stash_user_posts(client_details: str
 def upload_file_to_aws(file_to_upload: str, search_pattern: str = r'^.+\/.+\.csv$') -> bool: 
     # get list of files, then filter to only those matching our search_pattern
     # by default, search for any CSV file
-    aws_files = list_files_in_s3_dir(S3_CLI)
-    aws_files = [file['Key'].split('/')[-1] for file in aws_files if regex_match(search_pattern, file['Key'])]
-
-    if os.path.basename(file_to_upload) in aws_files:
-        print(f"Local filename {file_to_upload} also discovered in S3 bucket {AWS_TGT_BKT} at path {AWS_TGT_DIR}/{file_to_upload}")
+    aws_files = [os.path.basename(file) for file in list_files_in_s3_dir(S3_CLI)]
+    basename_file_to_upload = os.path.basename(file_to_upload)
+    
+    if basename_file_to_upload in aws_files:
+        print(f"Local filename {basename_file_to_upload} also discovered in S3 bucket {AWS_TGT_BKT} at path {AWS_TGT_DIR}/{basename_file_to_upload}")
         print("To avoid file overwrites, this upload request will be skipped")
         return False # return False to indicate file upload failure
     else:
         try:
-            S3_CLI.upload_file(file_to_upload, AWS_TGT_BKT, f"{AWS_TGT_DIR}/{os.path.basename(file_to_upload)}")
-            print(f"Uploaded file {file_to_upload} to bucket {AWS_TGT_BKT} at path {AWS_TGT_DIR}/{os.path.basename(file_to_upload)}")
+            S3_CLI.upload_file(file_to_upload, AWS_TGT_BKT, f"{AWS_TGT_DIR}/{basename_file_to_upload}")
+            print(f"Uploaded file {file_to_upload} to bucket {AWS_TGT_BKT} at path {AWS_TGT_DIR}/{basename_file_to_upload}")
         except Exception as e:
             print(f"Upload failed-- encountered {e}")
             return False # return False to indicate file upload failure
