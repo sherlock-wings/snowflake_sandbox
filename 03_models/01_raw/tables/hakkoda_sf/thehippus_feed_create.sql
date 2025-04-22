@@ -25,13 +25,28 @@ create table if not exists thehippus_feed (
 ,bluesky_client_account_displayname varchar
 ,bluesky_client_account_created_timestamp varchar
 ,record_captured_timestamp varchar
-,azure_container_name varchar
-,azure_blobpath varchar
-,azure_blobname varchar
+,s3_bucket_name varchar
+,s3_bucket_directory varchar
+,s3_bucket_filename varchar
 );
 
-create or replace stage stg_thehippus_feed
-  URL = 'azure://pfcstack1.blob.core.windows.net/sfsandbox/bluesky_posts/'
-    CREDENTIALS = (  AZURE_SAS_TOKEN = '***' );
-
 list @stg_thehippus_feed;
+
+/*
+This side-project began with using Azure, but I couldn't figure out how to get a Function App to work--
+at least not fast enough for my liking. The below comments show the code that was in place when this project
+used azure, along with some ALTERs that had to be done to change certain fields to the new, AWS specific 
+column names.
+*/
+-- alter table thehippus_feed
+-- rename column azure_container_name to s3_bucket_name;
+-- alter table thehippus_feed
+-- rename column azure_blobpath to s3_bucket_directory;
+-- alter table thehippus_feed
+-- rename column azure_blobname to s3_bucket_filename;
+
+
+-- create or replace stage stg_thehippus_feed
+--   URL = 'azure://pfcstack1.blob.core.windows.net/sfsandbox/bluesky_posts/'
+--     CREDENTIALS = (  AZURE_SAS_TOKEN = '***' );
+

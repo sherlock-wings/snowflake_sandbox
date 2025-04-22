@@ -421,7 +421,7 @@ def extract_feed() -> None:
     print(f"{len(files)} total CSV files detected.")
     for i in range(len(files)):
         print(f"\nUploading {files[i]}, {i+1} of {len(files)}")
-        upload_file_to_azr(f"{L_AWS_SRC_DIR}/{files[i]}")
+        upload_file_to_aws(f"{L_AWS_SRC_DIR}/{files[i]}")
     print(f"File upload complete!")
     
     clear_local_dir()
