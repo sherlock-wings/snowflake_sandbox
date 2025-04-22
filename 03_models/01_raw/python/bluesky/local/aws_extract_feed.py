@@ -79,10 +79,10 @@ def get_following_users(bsky_client: Client, bsky_handle: str, follows_limit: in
 
 # list files in a s3 directory
 # use AWS's built-in pagination to make this function robust for directories with many (>1000) files
-def list_files_in_s3_dir(S3_CLI: boto3.botocore.client.S3, bucket_name: str = AWS_TGT_BKT, bucket_filepath: str = AWS_TGT_DIR) -> list:
+def list_files_in_s3_dir(S3_CLI, bucket_name: str = AWS_TGT_BKT, bucket_filepath: str = AWS_TGT_DIR) -> list:
     file_ls = []
     paginator = S3_CLI.get_paginator('list_objects_v2')
-    pages = paginator.paginate(Bucket=bucket_name, Prefix=AWS_TGT_DIR)
+    pages = paginator.paginate(Bucket=bucket_name, Prefix=bucket_filepath)
     try:
         for page in pages:
             if 'Contents' in page:
@@ -91,7 +91,7 @@ def list_files_in_s3_dir(S3_CLI: boto3.botocore.client.S3, bucket_name: str = AW
                         file_ls.append(obj['Key'])
         return file_ls
     except  Exception as e:
-        print(f"Exception encountered while listing files from bucket `{AWS_TGT_BKT}`, dirpath `{AWS_TGT_DIR}`:s\n{e}")
+        print(f"Exception encountered while listing files from bucket `{bucket_name}`, dirpath `{bucket_filepath}`:s\n{e}")
         return []
      
 
@@ -101,7 +101,7 @@ def write_chunk(df: pd.DataFrame, output_path: str=None, search_pattern: str = r
         output_path = L_AWS_SRC_DIR
     # filename format is posts_<extraction_date>_<file_ordinal>.csv, where <final ordinal> is an incremental int
     # ex) If 3 files are generated on New Years Day 2025, the names are ['posts_2025-01-01_1.csv', 'posts_2025-01-01_2.csv', 'posts_2025-01-01_3.csv']
-    aws_files = S3_CLI.list_objects_v2(Bucket=AWS_TGT_BKT, Prefix=AWS_TGT_DIR)['Contents']
+    aws_files = list_files_in_s3_dir(S3_CLI)
     aws_files = [file['Key'].split('/')[-1] for file in aws_files if regex_match(search_pattern, file['Key'])]
 
     rn = datetime.now().strftime('%Y-%m-%d')
@@ -311,8 +311,9 @@ def stash_user_posts(client_details: str
 def upload_file_to_aws(file_to_upload: str, search_pattern: str = r'^.+\/.+\.csv$') -> bool: 
     # get list of files, then filter to only those matching our search_pattern
     # by default, search for any CSV file
-    aws_files = S3_CLI.list_objects_v2(Bucket=AWS_TGT_BKT, Prefix=AWS_TGT_DIR)['Contents']
+    aws_files = list_files_in_s3_dir(S3_CLI)
     aws_files = [file['Key'].split('/')[-1] for file in aws_files if regex_match(search_pattern, file['Key'])]
+
     if os.path.basename(file_to_upload) in aws_files:
         print(f"Local filename {file_to_upload} also discovered in S3 bucket {AWS_TGT_BKT} at path {AWS_TGT_DIR}/{file_to_upload}")
         print("To avoid file overwrites, this upload request will be skipped")
@@ -328,50 +329,51 @@ def upload_file_to_aws(file_to_upload: str, search_pattern: str = r'^.+\/.+\.csv
     
 def clear_local_dir() -> None:
     # collect all filenames in blob dir, then limit the list of files to those labeled with the most recent date
-    azr_files = [blob.name.split('/')[-1] for blob in AZR_CTR_CLI.list_blobs()]
+    aws_files = list_files_in_s3_dir(S3_CLI)
     local_files = [file for file in os.listdir(L_AWS_SRC_DIR)]
 
     for file in local_files:
-        if file in azr_files:
+        if file in aws_files:
             os.remove(f"{L_AWS_SRC_DIR}/{file}")
         else:
-            print(f"File {file} detected locally but not detected in Azure Storage account!!\nYou may have some local data missing from the cloud. Consider reuploading.")
+            print(f"File {file} detected locally but not detected in S3 Bucket!!\nYou may have some local data not yet uploaded to S3. Consider reuploading.")
     if len(os.listdir(L_AWS_SRC_DIR)) == 0:
         os.rmdir(L_AWS_SRC_DIR)
 
 # generate a control table for the "High-Watermark" strategy
-# This is an incremental ingestion strategy-- it should ensure that the same record is never sent to the Azure Storage acct more than once
+# This is an incremental ingestion strategy-- it should ensure that the same record is never sent to the S3 Bucket more than once
 def get_watermarks() -> pd.DataFrame:
-    azr_files = [blob.name for blob in AZR_CTR_CLI.list_blobs()]
-    if len(azr_files) == 0:
-        print(f"\n\nWARNING! WARNING! WARNING!\n\nZero CSV files found in Azure Blob directory {AZR_TGT_DIR}, container {AZR_TGT_CTR}")
+    aws_files = list_files_in_s3_dir(S3_CLI)
+    if len(aws_files) == 0:
+        print(f"\n\nWARNING! WARNING! WARNING!\n\nZero CSV files found in S3 directory `{AWS_TGT_DIR}`, bucket `{AWS_TGT_BKT}`")
         print("This means incremental ingestion will not be applied. If that is unexpected, then this run may be ingesting duplicate records.")
         print("If you don't want that, cancel this ingestion now with CTRL+C!\n")
         return pd.DataFrame() # Indicate no watermark found with empty dataframe
 
-    max_date = max([datetime.strptime(filename.split('/')[-1].split('_')[1], '%Y-%m-%d').date() for filename in azr_files if filename.endswith('.csv')])
-    file_datestring = datetime.strftime(max_date, '%Y-%m-%d')
-    azr_files = [file for file in azr_files if file_datestring in file]
-    if len(azr_files) > 0:
-        print(f"{len(azr_files):,} files with max date {max_date} detected in Azure Cloud Storage.\nDownloading files to generate watermark table...")
+    file_dates = [datetime.strptime(file.split('/')[-1].split('_')[0], '%Y-%m-%d').date() for file in aws_files]
+    max_date = max(file_dates)
+
+    if len(aws_files) > 0:
+        print(f"{len(aws_files):,} files with max date {max_date} detected in S3 Cloud Storage.\nDownloading files to generate watermark table...")
     else:
-        print("Files were detected in Azure Container, but zero of them contained date-like filenames. No watermark table data found.")
-        return pd.DataFrame()
+        print(f"{len(list_files_in_s3_dir(S3_CLI)):,} files were detected in S3 Bucket at directory `{AWS_TGT_DIR}`, but none of them had date-like filenames. No watermark table data found.")
+        # return pd.DataFrame()
+    S3_CLI.download_file(AWS_TGT_BKT, F"{AWS_TGT_DIR}/foo.csv", f"{L_AWS_SRC_DIR}/foo.csv")
 
     df = pd.DataFrame(SCHEMA)
-    for i in range(len(azr_files)):
-        blob_client = BLB_SVC_CLI.get_blob_client(container=AZR_TGT_CTR, blob=azr_files[i])
-        blob_data = blob_client.download_blob().readall()
-        df_next = pd.read_csv(StringIO(blob_data.decode('utf-8')))
+    for i in range(len(aws_files)):
+        resp = S3_CLI.get_object(Bucket=AWS_TGT_BKT, Key=aws_files[i])
+        df_next = pd.read_csv(StringIO(resp['Body'].read().decode('utf-8')))
         if not df_next.empty:
             df = pd.concat([df, df_next])
-        print(f"{i+1} of {len(azr_files)} max-date files downloaded from Azure")
-    if not df.empty:
-        print(f"{len(df.index):,} rows of watermark data read from date {max_date.strftime('%Y-%m-%d')}")
-        return df.groupby('post_author_did')['post_created_timestamp'].max().reset_index()
-    else:
-        print("Files with date-like filenames were detected in Azure Container, but these files appear to be empty.")
-        return pd.DataFrame()
+        print(f"{(i+1):,} of {len(aws_files):,} max-date files downloaded from S3")
+        if not df.empty:
+            print(f"{len(df.index):,} rows of watermark data read from date {max_date.strftime('%Y-%m-%d')}")
+            # return df.groupby('post_author_did')['post_created_timestamp'].max().reset_index()
+        else:
+            print("Files with date-like filenames were detected in S3 Bucket, but these files appear to be empty.")
+            # return pd.DataFrame()
+
     
 # Driver function
 def extract_feed() -> None:
@@ -388,7 +390,7 @@ def extract_feed() -> None:
     cli_deets = f"{cli_did}|{cli_username}|{cli_displayname}|{cli_account_created_at}"
     
     # before parsing begins, write a control table locally
-    # this should prevent records already saved in Azure from being ingested again
+    # this should prevent records already saved in S3 from being ingested again
     print(f"Logging in as BlueSky User {USR}... \nLET'S GET THIS DATA! ( ͡⌐■ ͜ʖ ͡-■)\n\n")
     watermark_tbl = get_watermarks()
     
@@ -413,7 +415,7 @@ def extract_feed() -> None:
     if len(df) > 0:
         # ensure any remaining data less than 100 MB is still written
         write_chunk(df)
-    print(f"\nFeed Ingestion Complete! Uploading to Azure now...\n")
+    print(f"\nFeed Ingestion Complete! Uploading to S3 now...\n")
     
     files = [file for file in os.listdir(L_AWS_SRC_DIR) if file.endswith('.csv')]
     print(f"{len(files)} total CSV files detected.")
