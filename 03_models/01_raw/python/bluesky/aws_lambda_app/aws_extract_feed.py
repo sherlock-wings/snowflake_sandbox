@@ -390,7 +390,7 @@ def extract_feed() -> bool:
         logger.info(f"Caught General Exception:\n{e}\n\n")
         return False 
 
-def lambda_handler(event, context):
+def lambda_function(event, context):
     success = extract_feed()
     if success:
         return {
