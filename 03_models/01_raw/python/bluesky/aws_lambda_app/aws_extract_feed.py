@@ -9,12 +9,11 @@ from io import BytesIO, StringIO
 import os
 import pandas as pd
 import pytz
-from re import match as regex_match
 import time
 from typing import Tuple
 
 # AWS S3 connection config
-L_AWS_SRC_DIR = os.environ['L_AWS_SRC_DIR']
+# L_AWS_SRC_DIR = os.environ['L_AWS_SRC_DIR']
 AWS_TGT_BKT = os.environ['AWS_TGT_BKT']
 AWS_TGT_DIR = os.environ['AWS_TGT_DIR']
 S3_CLI = boto3.client('s3')
@@ -225,7 +224,7 @@ def stash_user_posts(client_details: str
                     wtm_tbl.to_csv('bad_watermark.csv', index=False)
                     raise Exception(f"""Unusual exception encountered '{e}'
 Unusual exception encountered with bsky_did '{bsky_did}'
-Downloading watermark data where this exception is encountered to bad_watermark.csv""")
+Check max-date CSVs in s3://{AWS_TGT_BKT}/{AWS_TGT_DIR}/ for this DID to troubleshoot""")
                     
                 if item.post.record.created_at <= watermark_ts:
                     watermark_crossed = True
@@ -344,7 +343,6 @@ def get_watermarks() -> pd.DataFrame:
         print("Files with date-like filenames were detected in S3 Bucket, but these files appear to be empty.\n\n")
         return pd.DataFrame()
 
-    
 # Driver function
 def extract_feed() -> None:
     cli, session_usr = bluesky_login()
@@ -382,21 +380,20 @@ def extract_feed() -> None:
                 df = pd.concat([df, df_next])
                 # if the 100 MB threshold is hit between users, stash the data at this point
                 df, _ = chunk_check(schema_input=SCHEMA, dataframe_input=df)
-    if len(df) > 0:
+    if not df.empty:
         # ensure any remaining data less than 100 MB is still written
         set_data_outbound(df)
     print(f"\nFeed Ingestion Complete! Uploading to S3 now...\n")
     
-    files = [file for file in os.listdir(L_AWS_SRC_DIR) if file.endswith('.csv')]
-    print(f"{len(files)} total CSV files detected.")
-    for i in range(len(files)):
-        print(f"\nUploading {files[i]}, {i+1} of {len(files)}")
-        upload_file_to_aws(f"{L_AWS_SRC_DIR}/{files[i]}")
-    print(f"File upload complete!")
-    
+    # files = [file for file in os.listdir(L_AWS_SRC_DIR) if file.endswith('.csv')]
+    # print(f"{len(files)} total CSV files detected.")
+    # for i in range(len(files)):
+    #     print(f"\nUploading {files[i]}, {i+1} of {len(files)}")
+    #     upload_file_to_aws(f"{L_AWS_SRC_DIR}/{files[i]}")
+    # print(f"File upload complete!")
 
 def lambda_handler(event, context):
-    # TODO implement
+    extract_feed()
     return {
         'statusCode': 200,
         'body': json.dumps('Hello from Lambda!')
