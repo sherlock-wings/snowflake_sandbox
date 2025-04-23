@@ -344,57 +344,61 @@ def get_watermarks() -> pd.DataFrame:
         return pd.DataFrame()
 
 # Driver function
-def extract_feed() -> None:
-    cli, session_usr = bluesky_login()
-    
-    # to collect information from bluesky, you need a bluesky client. 
-    # to do that, you need to create a user (with a name, etc) to log into bluesky. the bluesky client session is then tied to this specific user
-    # for completeness, information on the specific user we are logging in as should also be collected
-    cli_did = get_did(cli, session_usr)
-    resp = cli.get_profile(actor=cli_did)
-    cli_username = session_usr
-    cli_displayname = resp.display_name
-    cli_account_created_at = resp.created_at
-    cli_deets = f"{cli_did}|{cli_username}|{cli_displayname}|{cli_account_created_at}"
-    
-    # before parsing begins, write a control table locally
-    # this should prevent records already saved in S3 from being ingested again
-    logger.info(f"Logging in as BlueSky User {USR}... \nLET'S GET THIS DATA! ( ͡⌐■ ͜ʖ ͡-■)\n\n")
-    watermark_tbl = get_watermarks()
-    
-    following_users = {item.handle: [item.did, item.display_name] for item in get_following_users(cli, session_usr)}
-    logger.info(f"Detected {len(following_users):,} BlueSky Users being followed by user @{session_usr}")
-    logger.info(f"Parsing posts...")
-    df = None
-    c = 0
-    for usr in following_users:
-        c += 1
-        logger.info(f"\n\n{str(c).zfill(3)} of {str(len(following_users)).zfill(3)} | Parsing posts from user @{usr}...")
-        # accumulate data across the feeds of many users
-        # stash_user_posts() will save CSV data should it hit the 100 mb threshold mid-ingestion for a single user
-        if c == 1:
-            df = stash_user_posts(cli_deets, schema_input=SCHEMA, bsky_client=cli, bsky_did=following_users[usr][0], bsky_username=usr, wtm_tbl=watermark_tbl)
-        else:
-            df_next = stash_user_posts(cli_deets, schema_input=SCHEMA, bsky_client=cli, bsky_did=following_users[usr][0], bsky_username=usr, wtm_tbl=watermark_tbl)
-            if not df_next.empty:
-                df = pd.concat([df, df_next])
-                # if the 100 MB threshold is hit between users, stash the data at this point
-                df, _ = chunk_check(schema_input=SCHEMA, dataframe_input=df)
-    if not df.empty:
-        # ensure any remaining data less than 100 MB is still written
-        set_data_outbound(df)
-    logger.info(f"\nFeed Ingestion Complete! Uploading to S3 now...\n")
-    
-    # files = [file for file in os.listdir(L_AWS_SRC_DIR) if file.endswith('.csv')]
-    # logger.info(f"{len(files)} total CSV files detected.")
-    # for i in range(len(files)):
-    #     logger.info(f"\nUploading {files[i]}, {i+1} of {len(files)}")
-    #     upload_file_to_aws(f"{L_AWS_SRC_DIR}/{files[i]}")
-    # logger.info(f"File upload complete!")
+def extract_feed() -> bool:
+    try:
+        cli, session_usr = bluesky_login()
+        
+        # to collect information from bluesky, you need a bluesky client. 
+        # to do that, you need to create a user (with a name, etc) to log into bluesky. the bluesky client session is then tied to this specific user
+        # for completeness, information on the specific user we are logging in as should also be collected
+        cli_did = get_did(cli, session_usr)
+        resp = cli.get_profile(actor=cli_did)
+        cli_username = session_usr
+        cli_displayname = resp.display_name
+        cli_account_created_at = resp.created_at
+        cli_deets = f"{cli_did}|{cli_username}|{cli_displayname}|{cli_account_created_at}"
+        
+        # before parsing begins, write a control table locally
+        # this should prevent records already saved in S3 from being ingested again
+        logger.info(f"Logging in as BlueSky User {USR}... \nLET'S GET THIS DATA! ( ͡⌐■ ͜ʖ ͡-■)\n\n")
+        watermark_tbl = get_watermarks()
+        
+        following_users = {item.handle: [item.did, item.display_name] for item in get_following_users(cli, session_usr)}
+        logger.info(f"Detected {len(following_users):,} BlueSky Users being followed by user @{session_usr}")
+        logger.info(f"Parsing posts...")
+        df = None
+        c = 0
+        for usr in following_users:
+            c += 1
+            logger.info(f"\n\n{str(c).zfill(3)} of {str(len(following_users)).zfill(3)} | Parsing posts from user @{usr}...")
+            # accumulate data across the feeds of many users
+            # stash_user_posts() will save CSV data should it hit the 100 mb threshold mid-ingestion for a single user
+            if c == 1:
+                df = stash_user_posts(cli_deets, schema_input=SCHEMA, bsky_client=cli, bsky_did=following_users[usr][0], bsky_username=usr, wtm_tbl=watermark_tbl)
+            else:
+                df_next = stash_user_posts(cli_deets, schema_input=SCHEMA, bsky_client=cli, bsky_did=following_users[usr][0], bsky_username=usr, wtm_tbl=watermark_tbl)
+                if not df_next.empty:
+                    df = pd.concat([df, df_next])
+                    # if the 100 MB threshold is hit between users, stash the data at this point
+                    df, _ = chunk_check(schema_input=SCHEMA, dataframe_input=df)
+        if not df.empty:
+            # ensure any remaining data less than 100 MB is still written
+            set_data_outbound(df)
+        logger.info(f"\nFeed Ingestion Complete! Uploading to S3 now...\n")
+        return True
+    except Exception as e:
+        logger.info(f"Caught General Exception:\n{e}\n\n")
+        return False 
 
 def lambda_handler(event, context):
-    extract_feed()
-    return {
-        'statusCode': 200,
-        'body': json.dumps('Hello from Lambda!')
-    }
+    success = extract_feed()
+    if success:
+        return {
+            'statusCode': 200,
+            'body': json.dumps('Feed extraction completed successfully.')
+        }
+    else:
+        return {
+            'statusCode': 500,
+            'body': json.dumps('Feed extraction failed. Lambda run is aborted.')
+        }
