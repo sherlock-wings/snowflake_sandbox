@@ -4,8 +4,9 @@ import boto3
 import csv
 from datetime import datetime
 from dateutil import parser as timestamp_parser
-import json
 from io import BytesIO, StringIO
+import json
+import logging
 import os
 import pandas as pd
 import pytz
@@ -46,9 +47,8 @@ SCHEMA = {'content_id':                               []
          ,'record_captured_timestamp':                []
         }
 
-# Control-table directory 
-# This table will be used for the "high-watermark" stratgegy for incremental ingestion 
-L_XTR_DIR = os.environ['L_XTR_DIR']
+# logging config
+logger = logging.getLogger(__name__)
 
 # Instantiate a BlueSky session
 def bluesky_login() -> Tuple[Client, str]:
@@ -91,7 +91,7 @@ def list_files_in_s3_dir(S3_CLI, bucket_name: str = AWS_TGT_BKT, bucket_filepath
                         file_ls.append(obj['Key'])
         return file_ls
     except  Exception as e:
-        print(f"Exception encountered while listing files from bucket `{bucket_name}`, dirpath `{bucket_filepath}`:s\n{e}")
+        logger.info(f"Exception encountered while listing files from bucket `{bucket_name}`, dirpath `{bucket_filepath}`:s\n{e}")
         return []
      
 
@@ -119,7 +119,7 @@ def set_data_outbound(df: pd.DataFrame) -> None:
         filename += f"{last_file_num}.csv"
     else:
         filename += "1.csv"
-    print(f"\nWriting {filename}...")
+    logger.info(f"\nWriting {filename}...")
     df['s3_bucket_name'] = AWS_TGT_BKT
     df['s3_bucket_directory'] = AWS_TGT_DIR
     df['s3_bucket_filename'] = filename.split('/')[-1]
@@ -154,9 +154,9 @@ def chunk_check(schema_input: dict, filesize_limit_mb: int = 300, dict_input: di
     '''
     size = dataframe_input.memory_usage(deep=True).sum() / (1000000)
     if callout_size:
-        print(f"Current calculated space of df is {size:,.2f} MB")
+        logger.info(f"Current calculated space of df is {size:,.2f} MB")
     if size >= filesize_limit_mb:
-        print("SIZE LIMIT TRIGGERED")
+        logger.info("SIZE LIMIT TRIGGERED")
         set_data_outbound(dataframe_input)
         return pd.DataFrame(), schema_input
     return dataframe_input, dict_input
@@ -195,8 +195,8 @@ def stash_user_posts(client_details: str
                 if retry_count > max_retries:
                     raise NetworkError(f"Call to atproto.Client.get_author_feed() still blocked after {max_retries} attempts. Aborting.")
                 wait_period_seconds += wait_period_increment_seconds
-                print(f"Call for page {page_num:,} of user @{bsky_username}'s post data was blocked by Rate-Limiting.")
-                print(f"Trying again in {wait_period_seconds:,} seconds (attempt {retry_count} of {max_retries})...")
+                logger.info(f"Call for page {page_num:,} of user @{bsky_username}'s post data was blocked by Rate-Limiting.")
+                logger.info(f"Trying again in {wait_period_seconds:,} seconds (attempt {retry_count} of {max_retries})...")
                 time.sleep(wait_period_seconds)
         # reverse-chron sort feed. This helps optimize our watermark logic
         feed = resp.feed
@@ -207,7 +207,7 @@ def stash_user_posts(client_details: str
             item.post.record.created_at = ts
 
         feed.sort(key=lambda item: item.post.record.created_at, reverse=True)
-        print(f"Ingesting {page_num:,} pages of post-data from user @{bsky_username}...", end='\r')
+        logger.info(f"Ingesting {page_num:,} pages of post-data from user @{bsky_username}...", end='\r')
         #
         # i drink your data! i DRINK IT UP ლಠ益ಠ)ლ
         # 
@@ -228,8 +228,8 @@ Check max-date CSVs in s3://{AWS_TGT_BKT}/{AWS_TGT_DIR}/ for this DID to trouble
                     
                 if item.post.record.created_at <= watermark_ts:
                     watermark_crossed = True
-                    print(f"\n\nHit high watermark for user {bsky_username}")
-                    print(f"Encountered post creation timestamp is {datetime.strftime(item.post.record.created_at, '%Y-%m-%d %H:%M:%S.%f %z')}, latest known timestamp for this user is {datetime.strftime(watermark_ts, '%Y-%m-%d %H:%M:%S.%f %z')}")
+                    logger.info(f"\n\nHit high watermark for user {bsky_username}")
+                    logger.info(f"Encountered post creation timestamp is {datetime.strftime(item.post.record.created_at, '%Y-%m-%d %H:%M:%S.%f %z')}, latest known timestamp for this user is {datetime.strftime(watermark_ts, '%Y-%m-%d %H:%M:%S.%f %z')}")
                     break
             # idk why but the same user will have the same posts repeated many times-- block em with a set
             if item.post.cid not in known_content_ids:
@@ -283,7 +283,7 @@ Check max-date CSVs in s3://{AWS_TGT_BKT}/{AWS_TGT_DIR}/ for this DID to trouble
                 user finishes/before the next user is begun.
         '''
         if watermark_crossed:
-            print("Ingestion for this user will now stop.\n")
+            logger.info("Ingestion for this user will now stop.\n")
             break
         _, data = chunk_check(schema_input=SCHEMA, dict_input=data)
         if not resp.cursor:
@@ -297,16 +297,16 @@ def upload_file_to_aws(string_data: str, upload_filename: str) -> bool:
     aws_files = [os.path.basename(file) for file in list_files_in_s3_dir(S3_CLI)]
     
     if upload_filename in aws_files:
-        print(f"Local filename {upload_filename} also discovered in S3 bucket {AWS_TGT_BKT} at path {AWS_TGT_DIR}/{upload_filename}")
-        print("To avoid file overwrites, this upload request will be skipped")
+        logger.info(f"Local filename {upload_filename} also discovered in S3 bucket {AWS_TGT_BKT} at path {AWS_TGT_DIR}/{upload_filename}")
+        logger.info("To avoid file overwrites, this upload request will be skipped")
         return False # return False to indicate file upload failure
     else:
         try:
             df_bytes = BytesIO(string_data.encode('utf-8'))
             S3_CLI.upload_fileobj(Fileobj=df_bytes, Bucket=AWS_TGT_BKT, Key=f"{AWS_TGT_DIR}/{upload_filename}")
-            print(f"Uploaded file {upload_filename} to bucket {AWS_TGT_BKT} at path {AWS_TGT_DIR}/{upload_filename}")
+            logger.info(f"Uploaded file {upload_filename} to bucket {AWS_TGT_BKT} at path {AWS_TGT_DIR}/{upload_filename}")
         except Exception as e:
-            print(f"Upload failed-- encountered {e}")
+            logger.info(f"Upload failed-- encountered {e}")
             return False # return False to indicate file upload failure
         return True #indicate success
 
@@ -315,18 +315,18 @@ def upload_file_to_aws(string_data: str, upload_filename: str) -> bool:
 def get_watermarks() -> pd.DataFrame:
     aws_files = list_files_in_s3_dir(S3_CLI)
     if len(aws_files) == 0:
-        print(f"\n\nWARNING! WARNING! WARNING!\n\nZero CSV files found in S3 directory `{AWS_TGT_DIR}`, bucket `{AWS_TGT_BKT}`")
-        print("This means incremental ingestion will not be applied. If that is unexpected, then this run may be ingesting duplicate records.")
-        print("If you don't want that, cancel this ingestion now with CTRL+C!\n")
+        logger.info(f"\n\nWARNING! WARNING! WARNING!\n\nZero CSV files found in S3 directory `{AWS_TGT_DIR}`, bucket `{AWS_TGT_BKT}`")
+        logger.info("This means incremental ingestion will not be applied. If that is unexpected, then this run may be ingesting duplicate records.")
+        logger.info("If you don't want that, cancel this ingestion now with CTRL+C!\n")
         return pd.DataFrame() # Indicate no watermark found with empty dataframe
 
     file_dates = [datetime.strptime(file.split('/')[-1].split('_')[1], '%Y-%m-%d').date() for file in aws_files]
     max_date = max(file_dates)
 
     if len(aws_files) > 0:
-        print(f"{len(aws_files):,} files with max date {max_date} detected in S3 Cloud Storage.\nDownloading files to generate watermark table...")
+        logger.info(f"{len(aws_files):,} files with max date {max_date} detected in S3 Cloud Storage.\nDownloading files to generate watermark table...")
     else:
-        print(f"{len(list_files_in_s3_dir(S3_CLI)):,} files were detected in S3 Bucket at directory `{AWS_TGT_DIR}`, but none of them had date-like filenames. No watermark table data found.")
+        logger.info(f"{len(list_files_in_s3_dir(S3_CLI)):,} files were detected in S3 Bucket at directory `{AWS_TGT_DIR}`, but none of them had date-like filenames. No watermark table data found.")
         return pd.DataFrame()
 
     df = pd.DataFrame(SCHEMA)
@@ -335,12 +335,12 @@ def get_watermarks() -> pd.DataFrame:
         df_next = pd.read_csv(StringIO(resp['Body'].read().decode('utf-8')))
         if not df_next.empty:
             df = pd.concat([df, df_next])
-        print(f"{(i+1):,} of {len(aws_files):,} max-date files downloaded from S3")
+        logger.info(f"{(i+1):,} of {len(aws_files):,} max-date files downloaded from S3")
     if not df.empty:
-        print(f"{len(df.index):,} rows of watermark data read from date {max_date.strftime('%Y-%m-%d')}\n\n")
+        logger.info(f"{len(df.index):,} rows of watermark data read from date {max_date.strftime('%Y-%m-%d')}\n\n")
         return df.groupby('post_author_did')['post_created_timestamp'].max().reset_index()
     else:
-        print("Files with date-like filenames were detected in S3 Bucket, but these files appear to be empty.\n\n")
+        logger.info("Files with date-like filenames were detected in S3 Bucket, but these files appear to be empty.\n\n")
         return pd.DataFrame()
 
 # Driver function
@@ -359,17 +359,17 @@ def extract_feed() -> None:
     
     # before parsing begins, write a control table locally
     # this should prevent records already saved in S3 from being ingested again
-    print(f"Logging in as BlueSky User {USR}... \nLET'S GET THIS DATA! ( ͡⌐■ ͜ʖ ͡-■)\n\n")
+    logger.info(f"Logging in as BlueSky User {USR}... \nLET'S GET THIS DATA! ( ͡⌐■ ͜ʖ ͡-■)\n\n")
     watermark_tbl = get_watermarks()
     
     following_users = {item.handle: [item.did, item.display_name] for item in get_following_users(cli, session_usr)}
-    print(f"Detected {len(following_users):,} BlueSky Users being followed by user @{session_usr}")
-    print(f"Parsing posts...")
+    logger.info(f"Detected {len(following_users):,} BlueSky Users being followed by user @{session_usr}")
+    logger.info(f"Parsing posts...")
     df = None
     c = 0
     for usr in following_users:
         c += 1
-        print(f"\n\n{str(c).zfill(3)} of {str(len(following_users)).zfill(3)} | Parsing posts from user @{usr}...")
+        logger.info(f"\n\n{str(c).zfill(3)} of {str(len(following_users)).zfill(3)} | Parsing posts from user @{usr}...")
         # accumulate data across the feeds of many users
         # stash_user_posts() will save CSV data should it hit the 100 mb threshold mid-ingestion for a single user
         if c == 1:
@@ -383,14 +383,14 @@ def extract_feed() -> None:
     if not df.empty:
         # ensure any remaining data less than 100 MB is still written
         set_data_outbound(df)
-    print(f"\nFeed Ingestion Complete! Uploading to S3 now...\n")
+    logger.info(f"\nFeed Ingestion Complete! Uploading to S3 now...\n")
     
     # files = [file for file in os.listdir(L_AWS_SRC_DIR) if file.endswith('.csv')]
-    # print(f"{len(files)} total CSV files detected.")
+    # logger.info(f"{len(files)} total CSV files detected.")
     # for i in range(len(files)):
-    #     print(f"\nUploading {files[i]}, {i+1} of {len(files)}")
+    #     logger.info(f"\nUploading {files[i]}, {i+1} of {len(files)}")
     #     upload_file_to_aws(f"{L_AWS_SRC_DIR}/{files[i]}")
-    # print(f"File upload complete!")
+    # logger.info(f"File upload complete!")
 
 def lambda_handler(event, context):
     extract_feed()
