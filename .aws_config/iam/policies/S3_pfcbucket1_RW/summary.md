@@ -1,6 +1,6 @@
 # Policy name
 `S3GeneralAccessPFCBUCKET1`
 
-# Used for
+# Description
 
-A kind of one-fits all permission set for accessing my `pfcbucket1` s3 store
+This policy grants the bearer with read-write access to the S3 Bucket pfcbucket1
