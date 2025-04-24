@@ -2,3 +2,4 @@ atproto
 boto3
 python-dateutil  
 pandas
+pydantic

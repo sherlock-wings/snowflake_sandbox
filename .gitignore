@@ -4,6 +4,6 @@ scratch*
 *pyc
 *log
 *csv
-*lambda_deps*
+*lambda_pkg*
 */aws*
 *deployment.zip
