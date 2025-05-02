@@ -1,5 +1,6 @@
 use role data_engineer;
 use database pcallahan_sandbox;
+use warehouse compute_wh;
 create schema if not exists raw;
 use schema raw;
 
