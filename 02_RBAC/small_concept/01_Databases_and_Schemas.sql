@@ -2,7 +2,7 @@
 -- BLUESKY_DB Environment
 -- Bare bones concept-- no dev/qa/prod. Just one db, one main schema, and side schemas where we do dev work
 
-USE ROLE ADMIN_FR;
+USE ROLE SYSADMIN;
 CREATE DATABASE IF NOT EXISTS BLUESKY_DB;
 CREATE SCHEMA IF NOT EXISTS BLUESKY_DB.MAIN;
 CREATE SCHEMA IF NOT EXISTS BLUESKY_DB.PFC;
