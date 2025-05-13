@@ -1,0 +1,12 @@
+/*
+Establish ADMIN_FR role. This role will take direct ownership of the inital 
+BLUESKY_DB and will be able to create databases going forward.
+*/
+
+USE ROLE USERADMIN;
+CREATE ROLE IF NOT EXISTS ADMIN_FR;
+GRANT ROLE ADMIN_FR TO ROLE SYSADMIN;
+
+USE ROLE SYSADMIN;
+GRANT CREATE DATABASE ON ACCOUNT TO ROLE ADMIN_FR;
+GRANT CREATE WAREHOUSE ON ACCOUNT TO ROLE ADMIN_FR;
