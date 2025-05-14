@@ -67,21 +67,41 @@ begin
   return query_id;
 end;
 
+-- use this query pair after each run to check if the approximate number of distinct queries between the two tables looks right
 select count(*) from query_log_load_nam_variants;
 select count(distinct query_id) as total_query_ids from query_operator_stats_load_nam_variants;
 
+/*
+SECTION 2 | SECTION 2 | SECTION 2 | SECTION 2 | SECTION 2 | SECTION 2 | SECTION 2 | SECTION 2 | 
+SECTION 2 | SECTION 2 | SECTION 2 | SECTION 2 | SECTION 2 | SECTION 2 | SECTION 2 | SECTION 2 | 
+SECTION 2 | SECTION 2 | SECTION 2 | SECTION 2 | SECTION 2 | SECTION 2 | SECTION 2 | SECTION 2 | 
+SECTION 2 | SECTION 2 | SECTION 2 | SECTION 2 | SECTION 2 | SECTION 2 | SECTION 2 | SECTION 2 | 
+
+    Clean and view log data
+*/
+
 create or replace view query_log_detail_load_nam_variants as (
-select a.QUERY_ID
+with init as (
+select a.QUERY_HASH
       ,a.QUERY_TEXT
+      ,a.COMPILATION_TIME
+      ,a.EXECUTION_TIME
+      ,CASE  -- two query ids have an end_time in 1969. fixed by copy/pasting from query_history page in snowsight
+         WHEN a.QUERY_ID = '01bc5397-0515-30be-0056-3d03128b779e' THEN DATEDIFF(MILLISECONDS, a.START_TIME, '2025-05-13 15:20:12 -0700') 
+         WHEN a.QUERY_ID = '01bc542b-0515-30be-0056-3d03128f047e' THEN DATEDIFF(MILLISECONDS, a.START_TIME, '2025-05-13 14:37:14 -0700') 
+         ELSE a.TOTAL_ELAPSED_TIME
+       END AS TOTAL_ELAPSED_TIME 
       ,a.WAREHOUSE_SIZE
       ,a.START_TIME
-      ,a.END_TIME
+      ,CASE  -- two query ids have an end_time in 1969. fixed by copy/pasting from query_history page in snowsight
+         WHEN a.QUERY_ID = '01bc5397-0515-30be-0056-3d03128b779e' THEN '2025-05-13 15:20:12 -0700'
+         WHEN a.QUERY_ID = '01bc542b-0515-30be-0056-3d03128f047e' THEN '2025-05-13 14:37:14 -0700'
+         ELSE a.END_TIME
+       END AS END_TIME 
       ,a.QUEUED_PROVISIONING_TIME
       ,a.QUEUED_REPAIR_TIME
       ,a.QUEUED_OVERLOAD_TIME
-      ,a.COMPILATION_TIME
-      ,a.EXECUTION_TIME
-      ,a.TOTAL_ELAPSED_TIME
+      ,a.QUERY_ID
       ,b.STEP_ID
       ,b.OPERATOR_ID
       ,b.PARENT_OPERATORS
@@ -123,7 +143,6 @@ select a.QUERY_ID
       ,a.EXTERNAL_FUNCTION_TOTAL_SENT_BYTES
       ,a.EXTERNAL_FUNCTION_TOTAL_RECEIVED_BYTES
       ,a.IS_CLIENT_GENERATED_STATEMENT
-      ,a.QUERY_HASH
       ,a.QUERY_HASH_VERSION
       ,a.QUERY_PARAMETERIZED_HASH
       ,a.QUERY_PARAMETERIZED_HASH_VERSION
@@ -141,8 +160,21 @@ from query_log_load_nam_variants a
 left join query_operator_stats_load_nam_variants b
        on a.query_id = b.query_id
 where a.warehouse_name = 'GATSBY_INGEST_DEV'
-);
+)
 
-select * from query_log_detail_load_nam_variants 
-where query_text not like 'CALL%'
-order by execution_time desc;
+select dense_rank() over (
+       partition by query_hash
+       order     by start_time, operator_id
+       ) as consecutive_execution_number
+      ,cast(operator_statistics:dml:number_of_rows_inserted as number(38,0)) as total_rows_inserted
+      ,cast(operator_statistics:dml:number_of_rows_updated as number(38,0)) as total_rows_updated
+      ,cast(operator_statistics:dml:number_of_rows_deleted as number(38,0)) as total_rows_deleted
+      ,cast(operator_statistics:io:percentage_scanned_from_cache as number(38,4)) as pcnt_data_scanned_from_cache
+      ,cast(operator_statistics:pruning:partitions_scanned as number(38,0)) as partitions_scanned
+      ,cast(operator_statistics:pruning:partitions_total as number(38,0)) as partitions_total
+      ,cast(operator_statistics:spilling:bytes_spilled_local_storage/(1024*1024*1024) as number(38,2)) as local_gb_spillage
+      ,cast(operator_statistics:spilling:bytes_spilled_remote_storage/(1024*1024*1024) as number(38,2)) as remote_gb_spillage
+      ,cast(execution_time_breakdown:overall_percentage as number(38,4)) as pcnt_of_execution_time
+      ,*
+from init
+);
