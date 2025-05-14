@@ -96,7 +96,7 @@ select lag(a.QUERY_HASH, 1) over (
          WHEN a.QUERY_ID = '01bc5397-0515-30be-0056-3d03128b779e' THEN DATEDIFF(MILLISECONDS, a.START_TIME, '2025-05-13 15:20:12 -0700') 
          WHEN a.QUERY_ID = '01bc542b-0515-30be-0056-3d03128f047e' THEN DATEDIFF(MILLISECONDS, a.START_TIME, '2025-05-13 14:37:14 -0700') 
          ELSE a.TOTAL_ELAPSED_TIME
-       END AS TOTAL_ELAPSED_TIME 
+       END AS TOTAL_ELAPSED_TIME_MS 
       ,a.WAREHOUSE_SIZE
       ,a.START_TIME
       ,CASE  -- two query ids have an end_time in 1969. fixed by copy/pasting from query_history page in snowsight
