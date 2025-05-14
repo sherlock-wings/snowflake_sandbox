@@ -82,7 +82,13 @@ SECTION 2 | SECTION 2 | SECTION 2 | SECTION 2 | SECTION 2 | SECTION 2 | SECTION 
 
 create or replace view query_log_detail_load_nam_variants as (
 with init as (
-select a.QUERY_HASH
+select lag(a.QUERY_HASH, 1) over (
+       order by a.START_TIME, b.OPERATOR_ID
+       ) as LAST_HASH
+      ,lag(a.QUERY_HASH, 2) over (
+       order by a.START_TIME, b.OPERATOR_ID
+       ) as SECOND_TO_LAST_HASH
+      ,a.QUERY_HASH
       ,a.QUERY_TEXT
       ,a.COMPILATION_TIME
       ,a.EXECUTION_TIME
@@ -166,6 +172,14 @@ select dense_rank() over (
        partition by query_hash
        order     by start_time, operator_id
        ) as consecutive_execution_number
+      ,count(
+       case 
+         when query_hash != last_hash 
+          and query_hash != second_to_last_hash
+         then 1
+       end
+       ) over (order by start_time, operator_id) 
+       as query_number
       ,cast(operator_statistics:dml:number_of_rows_inserted as number(38,0)) as total_rows_inserted
       ,cast(operator_statistics:dml:number_of_rows_updated as number(38,0)) as total_rows_updated
       ,cast(operator_statistics:dml:number_of_rows_deleted as number(38,0)) as total_rows_deleted
@@ -174,7 +188,7 @@ select dense_rank() over (
       ,cast(operator_statistics:pruning:partitions_total as number(38,0)) as partitions_total
       ,cast(operator_statistics:spilling:bytes_spilled_local_storage/(1024*1024*1024) as number(38,2)) as local_gb_spillage
       ,cast(operator_statistics:spilling:bytes_spilled_remote_storage/(1024*1024*1024) as number(38,2)) as remote_gb_spillage
-      ,cast(execution_time_breakdown:overall_percentage as number(38,4)) as pcnt_of_execution_time
+      ,cast(execution_time_breakdown:overall_percentage  as number(38,4)) as pcnt_of_execution_time
       ,*
 from init
 );
