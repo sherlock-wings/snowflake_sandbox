@@ -9,6 +9,7 @@ import os
 # Replace with your S3 bucket name and AWS credentials/configuration
 uri = "wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post"
 S3_BUCKET_NAME = os.getenv('AWS_TGT_BKT')
+S3_TARGET_FOLDER = os.getenv('AWS_TGT_DIR')
 AWS_REGION = "us-east-2"  # e.g., "us-east-1"
 MAX_IN_MEMORY_SIZE_MB = 1
 MAX_IN_MEMORY_BYTES = MAX_IN_MEMORY_SIZE_MB * 1024 * 1024
@@ -39,17 +40,20 @@ async def firehose_scoop() -> None:
     try:
         async with websockets.connect(uri) as websocket:
             while not file_completed:
+                print(f"The current val for file_completed is {file_completed}")
                 message = await websocket.recv()
                 message_bytes = len(message.encode('utf-8'))
-
+                print('Listening for posts...')
+                print(f"Current memory size is {current_memory_size + message_bytes} bytes")
                 if current_memory_size + message_bytes > MAX_IN_MEMORY_BYTES:
                     # Upload to S3
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    s3_key = f"bluesky_posts_{timestamp}_{file_counter}.jsonl"
+                    s3_key = f"{S3_TARGET_FOLDER}/firehose_posts_{timestamp}.jsonl"
                     in_memory_data.seek(0)  # Go to the beginning of the buffer
                     try:
                         s3_client.upload_fileobj(in_memory_data, S3_BUCKET_NAME, s3_key)
                         print(f"Uploaded {s3_key} to S3")
+                        file_completed = True
                     except Exception as e:
                         print(f"Error uploading to S3: {e}")
 
@@ -67,18 +71,19 @@ async def firehose_scoop() -> None:
         print(f"Connection closed: {e}")
     except Exception as e:
         print(f"Error: {e}")
-    finally:
-        # Upload any remaining data in memory
-        if current_memory_size > 0:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            s3_key = f"bluesky_posts_{timestamp}_{file_counter}.jsonl"
-            in_memory_data.seek(0)
-            try:
-                s3_client.upload_fileobj(in_memory_data, S3_BUCKET_NAME, s3_key)
-                print(f"Uploaded final data as {s3_key} to S3")
-                file_completed = True
-            except Exception as e:
-                print(f"Error uploading final data to S3: {e}")
+    # finally:
+    #     # Upload any remaining data in memory
+    #     if current_memory_size > 0:
+    #         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    #         s3_key = f"bluesky_posts_{timestamp}_{file_counter}.jsonl"
+    #         in_memory_data.seek(0)
+    #         try:
+    #             s3_client.upload_fileobj(in_memory_data, S3_BUCKET_NAME, s3_key)
+    #             print(f"Uploaded final data as {s3_key} to S3")
+                
+    #             print(f"The current val for file_completed is {file_completed}")
+    #         except Exception as e:
+    #             print(f"Error uploading final data to S3: {e}")
 
 if __name__ == "__main__":
     asyncio.run(firehose_scoop())
