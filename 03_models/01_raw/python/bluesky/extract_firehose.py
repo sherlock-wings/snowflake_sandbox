@@ -71,19 +71,6 @@ async def firehose_scoop() -> None:
         print(f"Connection closed: {e}")
     except Exception as e:
         print(f"Error: {e}")
-    # finally:
-    #     # Upload any remaining data in memory
-    #     if current_memory_size > 0:
-    #         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    #         s3_key = f"bluesky_posts_{timestamp}_{file_counter}.jsonl"
-    #         in_memory_data.seek(0)
-    #         try:
-    #             s3_client.upload_fileobj(in_memory_data, S3_BUCKET_NAME, s3_key)
-    #             print(f"Uploaded final data as {s3_key} to S3")
-                
-    #             print(f"The current val for file_completed is {file_completed}")
-    #         except Exception as e:
-    #             print(f"Error uploading final data to S3: {e}")
 
 if __name__ == "__main__":
     asyncio.run(firehose_scoop())
