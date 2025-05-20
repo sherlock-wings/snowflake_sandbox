@@ -31,15 +31,20 @@ async def firehose_scoop(duration_in_seconds: int = 300) -> None:
     # write in-memory data to a Bytes Buffer
     in_memory_data = BytesIO()
     current_memory_size = 0
-    file_counter = 1
     file_completed = False
 
     try:
         async with websockets.connect(uri) as websocket:
+            print(f"Opened websocked at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.\nListening for posts...")
+            opened_at = datetime.now()
             while not file_completed:
                 message = await websocket.recv()
-                opened_at = datetime.now()
-                print(f"Opened websocked at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.\nListening for posts...")
+                message_bytes = len(message.encode('utf-8'))
+                # Write the message to the in-memory buffer
+                in_memory_data.write(message.encode('utf-8'))
+                in_memory_data.write(b'\n')              # Add newline for JSON Lines format
+                current_memory_size += message_bytes + 1 # +1 bc of the newline that must be added for each JSON paylod
+                print(f"{(current_memory_size/1000000):,.2f} MB collected over {(datetime.now()-opened_at).seconds} seconds...", end='\r')
                 
                 # continually check to see if the timer is expired
                 if (datetime.now() - opened_at).seconds >= duration_in_seconds:
@@ -52,11 +57,6 @@ async def firehose_scoop(duration_in_seconds: int = 300) -> None:
                         file_completed = True
                     except Exception as e:
                         print(f"Error uploading to S3: {e}")
-
-                # Write the message to the in-memory buffer
-                in_memory_data.write(message.encode('utf-8'))
-                in_memory_data.write(b'\n')  # Add newline for JSON Lines format
-                # current_memory_size += message_bytes + 1  # +1 for the newline byte
 
     except websockets.ConnectionClosed as e:
         print(f"Connection closed: {e}")

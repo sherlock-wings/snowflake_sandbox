@@ -1,5 +1,5 @@
 # Policy name
-`S3GeneralAccessPFCBUCKET1`
+`S3_pfcbucket1_RW`
 
 # Description
 
