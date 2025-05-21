@@ -9,12 +9,13 @@ import os
 uri = os.get_env('JETSTREAM_URI')
 S3_BUCKET_NAME = os.getenv('AWS_TGT_BKT')
 S3_TARGET_FOLDER = os.getenv('AWS_TGT_DIR')
-AWS_REGION = "us-east-2"  
+AWS_REGION = "us-east-2"
+SCOOP_RUNTIME_IN_SECONDS = os.getenv('SCOOP_RUNTIME_IN_SECONDS')  
 
 # Initialize the S3 client
 s3_client = boto3.client('s3', region_name=AWS_REGION)
 
-async def firehose_scoop(duration_in_seconds: int = 300) -> None:
+async def firehose_scoop(SCOOP_RUNTIME_IN_SECONDS: int = 300) -> None:
     """
     Asynchronous function to "scoop" a portion of post data from Bluesky Firehose, which is
     a kind of streaming service offering realtime post data. Output data is captured as 
@@ -47,7 +48,7 @@ async def firehose_scoop(duration_in_seconds: int = 300) -> None:
                 print(f"{(current_memory_size/1000000):,.2f} MB collected over {(datetime.now()-opened_at).seconds} seconds...", end='\r')
                 
                 # continually check to see if the timer is expired
-                if (datetime.now() - opened_at).seconds >= duration_in_seconds:
+                if (datetime.now() - opened_at).seconds >= SCOOP_RUNTIME_IN_SECONDS:
                     s3_key = f"{S3_TARGET_FOLDER}/firehose_posts_{opened_at.strftime("%Y%m%d_%H%M%S")}.jsonl"
                     in_memory_data.seek(0)  # Go to the beginning of the buffer
                     try:
