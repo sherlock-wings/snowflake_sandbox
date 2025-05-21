@@ -6,10 +6,10 @@ import boto3
 from io import BytesIO
 import os
 
-uri = "wss://jetstream2.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post"
+uri = os.get_env('JETSTREAM_URI')
 S3_BUCKET_NAME = os.getenv('AWS_TGT_BKT')
 S3_TARGET_FOLDER = os.getenv('AWS_TGT_DIR')
-AWS_REGION = "us-east-2"  # e.g., "us-east-1"
+AWS_REGION = "us-east-2"  
 
 # Initialize the S3 client
 s3_client = boto3.client('s3', region_name=AWS_REGION)
