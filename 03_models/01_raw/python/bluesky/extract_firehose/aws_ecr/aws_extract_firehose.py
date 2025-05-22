@@ -45,8 +45,9 @@ async def firehose_scoop(SCOOP_RUNTIME_IN_SECONDS: int = 300) -> None:
                 in_memory_data.write(message.encode('utf-8'))
                 in_memory_data.write(b'\n')              # Add newline for JSON Lines format
                 current_memory_size += message_bytes + 1 # +1 bc of the newline that must be added for each JSON paylod
-                print(f"{(current_memory_size/1000000):,.2f} MB collected over {(datetime.now()-opened_at).seconds} seconds...", end='\r')
                 
+                if (datetime.now()-opened_at).seconds % 10 == 0:
+                    print(f"{(current_memory_size/1000000):,.2f} MB collected over {(datetime.now()-opened_at).seconds} seconds...")
                 # continually check to see if the timer is expired
                 if (datetime.now() - opened_at).seconds >= SCOOP_RUNTIME_IN_SECONDS:
                     s3_key = f"{S3_TARGET_FOLDER}/firehose_posts_{opened_at.strftime('%Y%m%d_%H%M%S')}.jsonl"
