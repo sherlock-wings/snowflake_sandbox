@@ -70,7 +70,7 @@ async def firehose_scoop(capture_mode: str, SCOOP_RUNTIME_IN_SECONDS: int = 300)
     except Exception as e:
         print(f"Error: {e}")
 
-def lambda_handler(event, context, capture_mode: str='SCHEDULED RUN') -> None:
+def lambda_handler(event, context, capture_mode) -> None:
     """
     Handler method. This is what will be directly called by AWS Lambda
     Args:
