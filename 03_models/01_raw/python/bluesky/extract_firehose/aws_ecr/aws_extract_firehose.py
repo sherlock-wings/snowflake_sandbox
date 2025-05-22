@@ -64,10 +64,11 @@ async def firehose_scoop(SCOOP_RUNTIME_IN_SECONDS: int = 300) -> None:
     except Exception as e:
         print(f"Error: {e}")
 
-def lambda_handler() -> None:
+def lambda_handler(event, context) -> None:
     """
     Handler method. This is what will be directly called by AWS Lambda
     Args:
-        None
+        event: idk AWS made me put it here
+        context: idk AWS made me put it here
     """
     asyncio.run(firehose_scoop())
