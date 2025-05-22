@@ -28,6 +28,7 @@ create table if not exists firehose_processed (
 ,scoop_started_at_timestamp timestamp_tz(9)
 ,scoop_stopped_at_timestamp timestamp_tz(9)
 ,scoop_mode varchar
+,s3_path varchar
 );
 
 
@@ -57,6 +58,7 @@ select value
       ,'YYYYMMDDHH24MISS'
        ) as scoop_stopped_at_timestamp
       ,regexp_substr(s3_path, '^.+/([A-Z]+).+$', 1, 1, 'c', 1) as scoop_mode
+      ,s3_path
 from firehose_raw
 where value:commit:operation = 'create'
 )
