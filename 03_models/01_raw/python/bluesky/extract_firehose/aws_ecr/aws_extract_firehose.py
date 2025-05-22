@@ -6,7 +6,7 @@ import boto3
 from io import BytesIO
 import os
 
-uri = os.get_env('JETSTREAM_URI')
+uri = os.getenv('JETSTREAM_URI')
 S3_BUCKET_NAME = os.getenv('AWS_TGT_BKT')
 S3_TARGET_FOLDER = os.getenv('AWS_TGT_DIR')
 AWS_REGION = "us-east-2"
