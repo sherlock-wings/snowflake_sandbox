@@ -1,7 +1,7 @@
 import asyncio
 import websockets
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 import boto3
 from io import BytesIO
 import os
@@ -39,8 +39,8 @@ async def firehose_scoop(capture_mode: str, SCOOP_RUNTIME_IN_SECONDS: int = 300)
 
     try:
         async with websockets.connect(uri) as websocket:
-            print(f"Opened websocked at {datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S %z')}.\nListening for posts...")
-            opened_at = datetime.now(datetime.timezone.utc)
+            print(f"Opened websocked at {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S %z')}.\nListening for posts...")
+            opened_at = datetime.now(timezone.utc)
             while not file_completed:
                 message = await websocket.recv()
                 message_bytes = len(message.encode('utf-8'))
@@ -49,12 +49,12 @@ async def firehose_scoop(capture_mode: str, SCOOP_RUNTIME_IN_SECONDS: int = 300)
                 in_memory_data.write(b'\n')              # Add newline for JSON Lines format
                 current_memory_size += message_bytes + 1 # +1 bc of the newline that must be added for each JSON paylod
                 
-                if (datetime.now(datetime.timezone.utc)-opened_at).seconds % 10 == 0:
-                    print(f"{(current_memory_size/1000000):,.2f} MB collected over {(datetime.now(datetime.timezone.utc)-opened_at).seconds} seconds...")
+                if (datetime.now(timezone.utc)-opened_at).seconds % 10 == 0:
+                    print(f"{(current_memory_size/1000000):,.2f} MB collected over {(datetime.now(timezone.utc)-opened_at).seconds} seconds...")
                     
                 # continually check to see if the timer is expired
-                if (datetime.now(datetime.timezone.utc) - opened_at).seconds >= SCOOP_RUNTIME_IN_SECONDS:
-                    closed_at = datetime.now(datetime.timezone.utc)
+                if (datetime.now(timezone.utc) - opened_at).seconds >= SCOOP_RUNTIME_IN_SECONDS:
+                    closed_at = datetime.now(timezone.utc)
                     s3_key = f"{S3_TARGET_FOLDER}/{capture_mode}_{opened_at.strftime('%Y%m%d_%H%M%S%Z')}_to_{closed_at.strftime('%Y%m%d_%H%M%S%Z')}.jsonl"
                     in_memory_data.seek(0)  # Go to the beginning of the buffer
                     try:
