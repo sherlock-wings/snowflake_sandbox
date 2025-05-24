@@ -16,6 +16,9 @@ declare
     calling_role varchar;
     error_msg varchar;
     step_id number(2,0);
+
+    copy_path varchar;
+    
     
 begin
     -- set log vars
@@ -27,11 +30,17 @@ begin
     call_id := uuid_string();
     step_id := 1;
     error_msg := null;
+
+    -- set retrieval path for s3 keys
+    copy_path := split_part(to_char(current_date()), '-', 1) || '/' 
+              || split_part(to_char(current_date()), '-', 2) || '/' 
+              || split_part(to_char(current_date()), '-', 3) || '/.*\\.jsonl'; 
     
     -- ingest staged JSON
     copy into bluesky_db.main.firehose_raw 
     from (select metadata$filename, $1 from @stg_thehippus_feed)
-    file_format = (type = json);
+    file_format = (type = json)
+    pattern = :copy_path;
     
     row_count := SQLROWCOUNT;
     result := 'SUCCESS';
