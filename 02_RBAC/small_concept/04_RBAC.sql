@@ -784,3 +784,30 @@ grant role BLUESKY_DB_PFC_R_AR    to role READ_FR;
 grant role COMPUTE_WH_UW_AR to role DEV_FR;
 grant role COMPUTE_WH_O_AR  to role ADMIN_FR;
 grant role COMPUTE_WH_U_AR  to role READ_FR;
+
+
+
+
+/*
+Thought, naively, than the near 800 lines of RBAC above would mean it is NOT a giant pain in the ass
+to have a role than can execute a a damn task on schedule.
+
+Apparently that's too much to ask for! 
+
+So now I need to put out another half-dozen RBAC lines to make a one-off, random, inconsistent role whose only 
+purpose is to call this silly task.
+
+I'm annoyed.
+
+(┛ಠ_ಠ)┛彡┻━┻
+
+*/
+
+use role accountadmin;
+create role if not exists task_sproc_runner_fr;
+grant execute task on account to role task_sproc_runner_fr;
+grant usage on database bluesky_db to role task_sproc_runner_fr;
+grant usage on schema bluesky_db.main to role task_sproc_runner_fr;
+grant ownership on task bluesky_db.main.TASK_PROCESS_FIREHOSE_DATA to role task_sproc_runner_fr revoke current grants;
+grant usage on procedure bluesky_db.main.PROCESS_FIREHOSE_DATA() to role task_sproc_runner_fr;
+grant usage on warehouse compute_wh to role task_sproc_runner_fr;
