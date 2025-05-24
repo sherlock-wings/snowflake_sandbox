@@ -32,13 +32,14 @@ begin
     error_msg := null;
 
     -- set retrieval path for s3 keys
-    copy_path := split_part(to_char(current_date()), '-', 1) || '/' 
-              || split_part(to_char(current_date()), '-', 2) || '/' 
-              || split_part(to_char(current_date()), '-', 3) || '/.*\\.jsonl'; 
+    copy_path := 'bluesky_firehose/'
+        || split_part(to_char(current_date()), '-', 1) || '/' 
+        || split_part(to_char(current_date()), '-', 2) || '/' 
+        || split_part(to_char(current_date()), '-', 3) || '/.*';
     
     -- ingest staged JSON
     copy into bluesky_db.main.firehose_raw 
-    from (select metadata$filename, $1 from @stg_thehippus_feed)
+    from (select metadata$filename, $1 from @bluesky_db.main.stg_firehose)
     file_format = (type = json)
     pattern = :copy_path;
     
