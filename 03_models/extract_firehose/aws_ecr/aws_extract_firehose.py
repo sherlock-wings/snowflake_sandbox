@@ -55,7 +55,11 @@ async def firehose_scoop(capture_mode: str, SCOOP_RUNTIME_IN_SECONDS: int = 300)
                 # continually check to see if the timer is expired
                 if (datetime.now(timezone.utc) - opened_at).seconds >= SCOOP_RUNTIME_IN_SECONDS:
                     closed_at = datetime.now(timezone.utc)
-                    s3_key = f"{S3_TARGET_FOLDER}/{capture_mode}_{opened_at.strftime('%Y%m%d_%H%M%S%Z')}_to_{closed_at.strftime('%Y%m%d_%H%M%S%Z')}.jsonl"
+
+                    # each s3 key should be formatted using the datetime of capture
+                    # FOLDER/YEAR/MONTH/DAY/CAPTURE-MODE_START-TIMESTAMP_to_END-TIMESTAMP.jsonl
+                    s3_key = f"{S3_TARGET_FOLDER}/{closed_at.year}/{str(closed_at.month).zfill(2)}/{str(closed_at.day).zfill(2)}"
+                    s3_key += f"/{capture_mode}_{opened_at.strftime('%Y%m%d_%H%M%S%Z')}_to_{closed_at.strftime('%Y%m%d_%H%M%S%Z')}.jsonl"
                     in_memory_data.seek(0)  # Go to the beginning of the buffer
                     try:
                         # write raw JSON to .jsonl in S3
