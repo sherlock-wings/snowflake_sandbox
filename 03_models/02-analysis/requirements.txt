@@ -1,0 +1,3 @@
+pandas
+snowflake-connector-python
+transformers[torch]
