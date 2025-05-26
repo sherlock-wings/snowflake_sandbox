@@ -789,12 +789,17 @@ grant role COMPUTE_WH_U_AR  to role READ_FR;
 
 
 /*
+TASK_SPROC_RUNNER_FR
+
+bc nothing in this world can be easy, even when it is supposed to be 
+(╬ಠ益ಠ)
+
 Thought, naively, than the near 800 lines of RBAC above would mean it is NOT a giant pain in the ass
 to have a role than can execute a a damn task on schedule.
 
 Apparently that's too much to ask for! 
 
-So now I need to put out another half-dozen RBAC lines to make a one-off, random, inconsistent role whose only 
+So now I need to put out DOZEN RBAC lines to make a one-off, random, inconsistent role whose only 
 purpose is to call this silly task.
 
 I'm annoyed.
@@ -805,9 +810,29 @@ I'm annoyed.
 
 use role accountadmin;
 create role if not exists task_sproc_runner_fr;
+
+-- allow role to use the bluesky_db.main schema
 grant execute task on account to role task_sproc_runner_fr;
 grant usage on database bluesky_db to role task_sproc_runner_fr;
 grant usage on schema bluesky_db.main to role task_sproc_runner_fr;
+
+
+-- allow role to operate PROCESS_FIREHOSE_DATA() on schedule via a Task
 grant ownership on task bluesky_db.main.TASK_PROCESS_FIREHOSE_DATA to role task_sproc_runner_fr revoke current grants;
 grant usage on procedure bluesky_db.main.PROCESS_FIREHOSE_DATA() to role task_sproc_runner_fr;
 grant usage on warehouse compute_wh to role task_sproc_runner_fr;
+
+-- allow role to do all the read/write operations associated with calls to PROCESS_FIREHOSE_DATA()
+    -- reads on @stg_firehose
+grant usage on stage bluesky_db.main.stg_firehose to role task_sproc_runner_fr;
+    -- read/write/delete on FIREHOSE_RAW
+grant select on table bluesky_db.main.firehose_raw to role task_sproc_runner_fr;
+grant insert on table bluesky_db.main.firehose_raw to role task_sproc_runner_fr;
+grant truncate on table bluesky_db.main.firehose_raw to role task_sproc_runner_fr;
+
+    -- read/writes on FIREHOSE_PROCESSED
+grant select on table bluesky_db.main.firehose_processed to role task_sproc_runner_fr;
+grant insert on table bluesky_db.main.firehose_processed to role task_sproc_runner_fr;
+    -- read/writes on SPROC_LOG
+grant select on table bluesky_db.main.sproc_log to role task_sproc_runner_fr;
+grant insert on table bluesky_db.main.sproc_log to role task_sproc_runner_fr;
