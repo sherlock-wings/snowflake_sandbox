@@ -1,9 +1,8 @@
-create or replace procedure bluesky_db.main.process_firehose_data()
-returns varchar
-language sql
-execute as owner
-as 
-$$
+CREATE OR REPLACE PROCEDURE BLUESKY_DB.MAIN.PROCESS_FIREHOSE_DATA()
+RETURNS VARCHAR
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS '
 declare
     call_id varchar;
     query_id varchar;
@@ -16,26 +15,28 @@ declare
     calling_role varchar;
     error_msg varchar;
     step_id number(2,0);
-
     copy_path varchar;
+    yesterday_string varchar;
     
     
 begin
     -- set log vars
-    sproc_call := 'PROCESS_FIREHOSE_DATA()';
+    sproc_call := ''PROCESS_FIREHOSE_DATA()'';
     calling_user := current_user();
     calling_role := current_role();
-    query_step := 'Copy files into FIREHOSE_RAW from S3 Stage';
+    query_step := ''Copy files into FIREHOSE_RAW from S3 Stage'';
     initiated_at_timestamp := current_timestamp();
     call_id := uuid_string();
     step_id := 1;
     error_msg := null;
 
+    yesterday_string := to_char(dateadd(day, -1, current_date()));
+    
     -- set retrieval path for s3 keys
-    copy_path := 'bluesky_firehose/'
-        || split_part(to_char(current_date()), '-', 1) || '/' 
-        || split_part(to_char(current_date()), '-', 2) || '/' 
-        || split_part(to_char(current_date()), '-', 3) || '/.*';
+    copy_path := ''bluesky_firehose/''
+        || split_part(:yesterday_string, ''-'', 1) || ''/'' 
+        || split_part(:yesterday_string, ''-'', 2) || ''/'' 
+        || split_part(:yesterday_string, ''-'', 3) || ''/.*'';
     
     -- ingest staged JSON
     copy into bluesky_db.main.firehose_raw 
@@ -44,7 +45,7 @@ begin
     pattern = :copy_path;
     
     row_count := SQLROWCOUNT;
-    result := 'SUCCESS';
+    result := ''SUCCESS'';
     query_id := last_query_id();
     
     -- log 
@@ -63,7 +64,7 @@ begin
     );
 
     -- reset log vars
-    query_step := 'Process records from FIREHOSE_RAW into FIREHOSE_PROCESSED';
+    query_step := ''Process records from FIREHOSE_RAW into FIREHOSE_PROCESSED'';
     initiated_at_timestamp := current_timestamp();
     step_id := 2;
     
@@ -71,34 +72,34 @@ begin
     insert into bluesky_db.main.firehose_processed (
     with init as (
     select value
-          ,cast(trim(value:commit:record:createdAt, '"') as timestamp_tz) as post_created_at_timestamp
-          ,to_timestamp_tz(cast(trim(value:time_us, '"') as number (38,0)) / 1000000) as usa_timestamp
-          ,trim(value:commit:cid, '"') as content_id
+          ,cast(trim(value:commit:record:createdAt, ''"'') as timestamp_tz) as post_created_at_timestamp
+          ,to_timestamp_tz(cast(trim(value:time_us, ''"'') as number (38,0)) / 1000000) as usa_timestamp
+          ,trim(value:commit:cid, ''"'') as content_id
           ,trim(value:commit:record:langs) as detected_languages
-          ,trim(value:commit:record:text, '"') as post_text
-          ,trim(value:commit:record:reply:parent:cid, '"') as reply_parent_content_id
-          ,trim(value:commit:record:reply:parent:uri, '"') as reply_parent_uri
-          ,trim(value:commit:record:reply:root:cid, '"') as reply_root_content_id
-          ,trim(value:commit:record:reply:root:uri, '"') as reply_root_uri
-          ,trim(value:commit:record:embed:external:title, '"') as external_link_title
-          ,trim(value:commit:record:embed:external:uri, '"') as external_link_uri
+          ,trim(value:commit:record:text, ''"'') as post_text
+          ,trim(value:commit:record:reply:parent:cid, ''"'') as reply_parent_content_id
+          ,trim(value:commit:record:reply:parent:uri, ''"'') as reply_parent_uri
+          ,trim(value:commit:record:reply:root:cid, ''"'') as reply_root_content_id
+          ,trim(value:commit:record:reply:root:uri, ''"'') as reply_root_uri
+          ,trim(value:commit:record:embed:external:title, ''"'') as external_link_title
+          ,trim(value:commit:record:embed:external:uri, ''"'') as external_link_uri
           ,to_timestamp_tz(
-           regexp_substr(s3_path, '^.+[A-Z]_(\\d+)_(\\d+)UTC_to_(\\d+)_(\\d+)UTC.jsonl$', 1, 1, 'c', 1)
-        || regexp_substr(s3_path, '^.+[A-Z]_(\\d+)_(\\d+)UTC_to_(\\d+)_(\\d+)UTC.jsonl$', 1, 1, 'c', 2)
-          ,'YYYYMMDDHH24MISS'
+           regexp_substr(s3_path, ''^.+[A-Z]_(\\\\d+)_(\\\\d+)UTC_to_(\\\\d+)_(\\\\d+)UTC.jsonl$'', 1, 1, ''c'', 1)
+        || regexp_substr(s3_path, ''^.+[A-Z]_(\\\\d+)_(\\\\d+)UTC_to_(\\\\d+)_(\\\\d+)UTC.jsonl$'', 1, 1, ''c'', 2)
+          ,''YYYYMMDDHH24MISS''
            ) as scoop_started_at_timestamp
           ,to_timestamp_tz(
-           regexp_substr(s3_path, '^.+[A-Z]_(\\d+)_(\\d+)UTC_to_(\\d+)_(\\d+)UTC.jsonl$', 1, 1, 'c', 3)
-        || regexp_substr(s3_path, '^.+[A-Z]_(\\d+)_(\\d+)UTC_to_(\\d+)_(\\d+)UTC.jsonl$', 1, 1, 'c', 4)
-          ,'YYYYMMDDHH24MISS'
+           regexp_substr(s3_path, ''^.+[A-Z]_(\\\\d+)_(\\\\d+)UTC_to_(\\\\d+)_(\\\\d+)UTC.jsonl$'', 1, 1, ''c'', 3)
+        || regexp_substr(s3_path, ''^.+[A-Z]_(\\\\d+)_(\\\\d+)UTC_to_(\\\\d+)_(\\\\d+)UTC.jsonl$'', 1, 1, ''c'', 4)
+          ,''YYYYMMDDHH24MISS''
            ) as scoop_stopped_at_timestamp
-          ,regexp_substr(s3_path, '^.+/([A-Z]+).+$', 1, 1, 'c', 1) as scoop_mode
+          ,regexp_substr(s3_path, ''^.+/([A-Z]+).+$'', 1, 1, ''c'', 1) as scoop_mode
           ,s3_path
           ,current_timestamp()
           ,current_user()
           ,current_role()
     from firehose_raw
-    where value:commit:operation = 'create'
+    where value:commit:operation = ''create''
     )
 
     -- remove potential dupes in incoming data 
@@ -139,7 +140,7 @@ begin
     );
 
     -- reset log vars
-    query_step := 'Truncate FIREHOSE_RAW';
+    query_step := ''Truncate FIREHOSE_RAW'';
     initiated_at_timestamp := current_timestamp();
     step_id := 3;
 
@@ -163,11 +164,11 @@ begin
            ,:calling_role as calling_role
     );
     
-    return 'Success!';
+    return ''Success!'';
 exception
 
     when other then
-        result := 'FAILURE';
+        result := ''FAILURE'';
         error_msg := SQLERRM;
         row_count := null;
         
@@ -185,6 +186,6 @@ exception
                ,:calling_user as calling_user
                ,:calling_role as calling_role
         );
-        return 'Error Sproc in process_firehose_data: ' || SQLERRM;
+        return ''Error Sproc in process_firehose_data: '' || SQLERRM;
 end;
-$$;
+';
