@@ -1,6 +1,6 @@
 
 /*
-For background on how bluesky_db.pfc.ner_sentana_five_percent_sample_output is created, see 
+For background on how bluesky_db.pfc.NER_SENTANA_OUTPUT_SAMPLE is created, see 
 snowflake_sandbox/03_models/02-analysis/nlp.ipynb
 */
 create or replace view bluesky_db.pfc.nersentana_output_vw as (
@@ -18,7 +18,7 @@ select a.content_id
       ,trim(a2.value:entity_group, '"') as ner_detected_group
       ,trim(a2.value:word, '"') as ner_detected_entity
       ,cast(a2.value:score as number(5,4)) as ner_confidence_score
-from bluesky_db.pfc.ner_sentana_five_percent_sample_output a
+from bluesky_db.pfc.NER_SENTANA_OUTPUT_SAMPLE a
 left join table(flatten(input => parse_json(a.ner_analysis))) a2
 left join label_map_roberta_base_sentiment b
        on trim(a.sentiment_analysis:label, '"') = b.model_label_name
