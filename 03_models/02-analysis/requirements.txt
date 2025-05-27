@@ -1,3 +1,6 @@
+ipykernel
+ipywidgets
 pandas
-snowflake-connector-python
+snowflake-connector-python[pandas]
+tqdm
 transformers[torch]
