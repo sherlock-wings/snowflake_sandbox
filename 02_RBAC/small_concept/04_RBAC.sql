@@ -791,21 +791,19 @@ grant role COMPUTE_WH_U_AR  to role READ_FR;
 /*
 TASK_SPROC_RUNNER_FR
 
-bc nothing in this world can be easy, even when it is supposed to be 
-(╬ಠ益ಠ)
+bc nothing in this world can be easy, even when it is supposed to be (╬ಠ益ಠ)
 
-Thought, naively, than the near 800 lines of RBAC above would mean it is NOT a giant pain in the ass
+Thought, naively, that the near 800 lines of RBAC above would mean it is NOT a giant pain in the ass
 to have a role than can execute a a damn task on schedule.
 
 Apparently that's too much to ask for! 
 
-So now I need to put out DOZEN RBAC lines to make a one-off, random, inconsistent role whose only 
-purpose is to call this silly task.
+So now I need to put out DOZENS of extra RBAC lines to make a one-off, random, inconsistent role whose 
+only purpose is to call this silly task.
 
 I'm annoyed.
 
 (┛ಠ_ಠ)┛彡┻━┻
-
 */
 
 use role accountadmin;

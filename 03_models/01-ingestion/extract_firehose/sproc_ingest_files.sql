@@ -69,7 +69,10 @@ begin
     step_id := 2;
     
     -- consume raw data
-    insert into bluesky_db.main.firehose_processed (
+    merge into bluesky_db.main.firehose_processed tgt
+    using
+    (
+    select * from (
     with init as (
     select value
           ,cast(trim(value:commit:record:createdAt, ''"'') as timestamp_tz) as post_created_at_timestamp
@@ -95,31 +98,63 @@ begin
            ) as scoop_stopped_at_timestamp
           ,regexp_substr(s3_path, ''^.+/([A-Z]+).+$'', 1, 1, ''c'', 1) as scoop_mode
           ,s3_path
-          ,current_timestamp()
-          ,current_user()
-          ,current_role()
+          ,current_timestamp() as record_inserted_at_timestamp
+          ,current_user() as record_inserted_by_user
+          ,current_role() as record_inserted_with_role 
     from firehose_raw
     where value:commit:operation = ''create''
     )
 
     -- remove potential dupes in incoming data 
-    ,deduped as (
     select *
     from init
     qualify row_number() over (
             partition by content_id 
             order     by post_created_at_timestamp
-    ) = 1
-    )
-
-    -- use a "Exclusion Join" to prevent any deduped incoming records from matching existing records
-    select a.*
-    from deduped a 
-    left join bluesky_db.main.firehose_processed b
-           on a.content_id = b.content_id
-    where b.content_id is null
-    
-    );
+            ) = 1
+       )
+    ) src
+    on src.content_id = tgt.content_id
+    when not matched then insert (
+    post_created_at_timestamp
+   ,usa_timestamp
+   ,content_id
+   ,detected_languages
+   ,post_text
+   ,reply_parent_content_id
+   ,reply_parent_uri
+   ,reply_root_content_id
+   ,reply_root_uri
+   ,external_link_title
+   ,external_link_uri
+   ,scoop_started_at_timestamp
+   ,scoop_stopped_at_timestamp
+   ,scoop_mode
+   ,s3_path
+   ,record_inserted_at_timestamp
+   ,record_inserted_by_user
+   ,record_inserted_with_role
+   )
+   values (
+    src.post_created_at_timestamp
+   ,src.usa_timestamp
+   ,src.content_id
+   ,src.detected_languages
+   ,src.post_text
+   ,src.reply_parent_content_id
+   ,src.reply_parent_uri
+   ,src.reply_root_content_id
+   ,src.reply_root_uri
+   ,src.external_link_title
+   ,src.external_link_uri
+   ,src.scoop_started_at_timestamp
+   ,src.scoop_stopped_at_timestamp
+   ,src.scoop_mode
+   ,src.s3_path
+   ,src.record_inserted_at_timestamp
+   ,src.record_inserted_by_user
+   ,src.record_inserted_with_role
+   );
     
     row_count := SQLROWCOUNT;
     query_id := last_query_id();
@@ -140,14 +175,14 @@ begin
     );
 
     -- reset log vars
-    query_step := ''Truncate FIREHOSE_RAW'';
+    query_step := ''DELETE all records in FIREHOSE_RAW'';
     initiated_at_timestamp := current_timestamp();
     step_id := 3;
 
-    truncate table bluesky_db.main.firehose_raw;
+    delete from bluesky_db.main.firehose_raw;
 
     query_id := last_query_id();
-    row_count := null;
+    row_count := SQLROWCOUNT;
 
     -- log 
     insert into bluesky_db.main.sproc_log (
