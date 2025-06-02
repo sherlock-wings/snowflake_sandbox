@@ -70,11 +70,9 @@ begin
     
     -- consume raw data
     merge into bluesky_db.main.firehose_processed tgt
-    using
-    (
-    select * from (
-    with init as (
-    select value
+    using (
+    select distinct 
+           value
           ,cast(trim(value:commit:record:createdAt, ''"'') as timestamp_tz) as post_created_at_timestamp
           ,to_timestamp_tz(cast(trim(value:time_us, ''"'') as number (38,0)) / 1000000) as usa_timestamp
           ,trim(value:commit:cid, ''"'') as content_id
@@ -103,18 +101,7 @@ begin
           ,current_role() as record_inserted_with_role 
     from firehose_raw
     where value:commit:operation = ''create''
-    )
-
-    -- remove potential dupes in incoming data 
-    select *
-    from init
-    qualify row_number() over (
-            partition by content_id 
-            order     by post_created_at_timestamp
-            ) = 1
-       )
-    ) src
-    on src.content_id = tgt.content_id
+    ) src on src.content_id = tgt.content_id
     when not matched then insert (
     post_created_at_timestamp
    ,usa_timestamp
