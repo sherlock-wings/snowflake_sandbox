@@ -71,42 +71,47 @@ begin
     -- consume raw data
     merge into bluesky_db.main.firehose_processed tgt
     using (
-    select distinct 
-           value
-          ,cast(trim(value:commit:record:createdAt, ''"'') as timestamp_tz) as post_created_at_timestamp
-          ,to_timestamp_tz(cast(trim(value:time_us, ''"'') as number (38,0)) / 1000000) as usa_timestamp
-          ,trim(value:commit:cid, ''"'') as content_id
-          ,trim(value:commit:record:langs) as detected_languages
-          ,trim(value:commit:record:text, ''"'') as post_text
-          ,trim(value:commit:record:reply:parent:cid, ''"'') as reply_parent_content_id
-          ,trim(value:commit:record:reply:parent:uri, ''"'') as reply_parent_uri
-          ,trim(value:commit:record:reply:root:cid, ''"'') as reply_root_content_id
-          ,trim(value:commit:record:reply:root:uri, ''"'') as reply_root_uri
-          ,trim(value:commit:record:embed:external:title, ''"'') as external_link_title
-          ,trim(value:commit:record:embed:external:uri, ''"'') as external_link_uri
-          ,to_timestamp_tz(
-           regexp_substr(s3_path, ''^.+[A-Z]_(\\\\d+)_(\\\\d+)UTC_to_(\\\\d+)_(\\\\d+)UTC.jsonl$'', 1, 1, ''c'', 1)
-        || regexp_substr(s3_path, ''^.+[A-Z]_(\\\\d+)_(\\\\d+)UTC_to_(\\\\d+)_(\\\\d+)UTC.jsonl$'', 1, 1, ''c'', 2)
-          ,''YYYYMMDDHH24MISS''
-           ) as scoop_started_at_timestamp
-          ,to_timestamp_tz(
-           regexp_substr(s3_path, ''^.+[A-Z]_(\\\\d+)_(\\\\d+)UTC_to_(\\\\d+)_(\\\\d+)UTC.jsonl$'', 1, 1, ''c'', 3)
-        || regexp_substr(s3_path, ''^.+[A-Z]_(\\\\d+)_(\\\\d+)UTC_to_(\\\\d+)_(\\\\d+)UTC.jsonl$'', 1, 1, ''c'', 4)
-          ,''YYYYMMDDHH24MISS''
-           ) as scoop_stopped_at_timestamp
-          ,regexp_substr(s3_path, ''^.+/([A-Z]+).+$'', 1, 1, ''c'', 1) as scoop_mode
-          ,s3_path
-          ,current_timestamp() as record_inserted_at_timestamp
-          ,current_user() as record_inserted_by_user
-          ,current_role() as record_inserted_with_role 
-    from firehose_raw
-    where value:commit:operation = ''create''
+       select distinct 
+              value
+             ,cast(trim(a.value:commit:record:createdAt, ''"'') as timestamp_tz) as post_created_at_timestamp
+             ,to_timestamp_tz(cast(trim(a.value:time_us, ''"'') as number (38,0)) / 1000000) as usa_timestamp
+             ,trim(a.value:commit:cid, ''"'') as content_id
+             ,trim(a.value:commit:record:langs) as detected_language_codes
+             ,trim(a.value:commit:record:text, ''"'') as post_text
+             ,trim(a.value:commit:record:reply:parent:cid, ''"'') as reply_parent_content_id
+             ,trim(a.value:commit:record:reply:parent:uri, ''"'') as reply_parent_uri
+             ,trim(a.value:commit:record:reply:root:cid, ''"'') as reply_root_content_id
+             ,trim(a.value:commit:record:reply:root:uri, ''"'') as reply_root_uri
+             ,trim(a.value:commit:record:embed:external:title, ''"'') as external_link_title
+             ,trim(a.value:commit:record:embed:external:uri, ''"'') as external_link_uri
+             ,to_timestamp_tz(
+                    regexp_substr(a.s3_path, ''^.+[A-Z]_(\\\\d+)_(\\\\d+)UTC_to_(\\\\d+)_(\\\\d+)UTC.jsonl$'', 1, 1, ''c'', 1)
+             || regexp_substr(a.s3_path, ''^.+[A-Z]_(\\\\d+)_(\\\\d+)UTC_to_(\\\\d+)_(\\\\d+)UTC.jsonl$'', 1, 1, ''c'', 2)
+             ,''YYYYMMDDHH24MISS''
+                    ) as scoop_started_at_timestamp
+             ,to_timestamp_tz(
+                    regexp_substr(a.s3_path, ''^.+[A-Z]_(\\\\d+)_(\\\\d+)UTC_to_(\\\\d+)_(\\\\d+)UTC.jsonl$'', 1, 1, ''c'', 3)
+             || regexp_substr(a.s3_path, ''^.+[A-Z]_(\\\\d+)_(\\\\d+)UTC_to_(\\\\d+)_(\\\\d+)UTC.jsonl$'', 1, 1, ''c'', 4)
+             ,''YYYYMMDDHH24MISS''
+                    ) as scoop_stopped_at_timestamp
+             ,regexp_substr(a.s3_path, ''^.+/([A-Z]+).+$'', 1, 1, ''c'', 1) as scoop_mode
+             ,s3_path
+             ,current_timestamp() as record_inserted_at_timestamp
+             ,current_user() as record_inserted_by_user
+             ,current_role() as record_inserted_with_role 
+             ,b.language_name_in_english as first_detected_language
+       from bluesky_db.main.firehose_raw a
+       left join bluesky_db.main.iso_language_codes b
+              on regexp_replace(trim(parse_json(a.value:commit:record:langs)[0], ''"'')
+                            ,''\-[A-Za-z]+'', ''''
+                            ) = b.iso_alpha_2_code
+       where value:commit:operation = ''create''
     ) src on src.content_id = tgt.content_id
     when not matched then insert (
     post_created_at_timestamp
    ,usa_timestamp
    ,content_id
-   ,detected_languages
+   ,detected_language_codes
    ,post_text
    ,reply_parent_content_id
    ,reply_parent_uri
@@ -121,12 +126,13 @@ begin
    ,record_inserted_at_timestamp
    ,record_inserted_by_user
    ,record_inserted_with_role
+   ,first_detected_language
    )
    values (
     src.post_created_at_timestamp
    ,src.usa_timestamp
    ,src.content_id
-   ,src.detected_languages
+   ,src.detected_language_codes
    ,src.post_text
    ,src.reply_parent_content_id
    ,src.reply_parent_uri
@@ -141,6 +147,7 @@ begin
    ,src.record_inserted_at_timestamp
    ,src.record_inserted_by_user
    ,src.record_inserted_with_role
+   ,src.first_detected_language
    );
     
     row_count := SQLROWCOUNT;
