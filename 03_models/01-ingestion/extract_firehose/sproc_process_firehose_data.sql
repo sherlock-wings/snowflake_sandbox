@@ -108,7 +108,8 @@ begin
        where value:commit:operation = ''create''
     ) src on src.content_id = tgt.content_id
     when not matched then insert (
-    post_created_at_timestamp
+    value
+   ,post_created_at_timestamp
    ,usa_timestamp
    ,content_id
    ,detected_language_codes
@@ -129,7 +130,8 @@ begin
    ,first_detected_language
    )
    values (
-    src.post_created_at_timestamp
+    src.value
+   ,src.post_created_at_timestamp
    ,src.usa_timestamp
    ,src.content_id
    ,src.detected_language_codes
