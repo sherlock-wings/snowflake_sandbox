@@ -9,3 +9,5 @@ scratch*
 *deployment.zip
 helper.txt
 nlp_env*
+snowcli_env*
+config.toml

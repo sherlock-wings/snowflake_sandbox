@@ -24,7 +24,7 @@ begin
     sproc_call := ''PROCESS_FIREHOSE_DATA()'';
     calling_user := current_user();
     calling_role := current_role();
-    query_step := ''Copy files into FIREHOSE_RAW from S3 Stage'';
+    query_step := ''Copy files into INT_FIREHOSE_RAW from S3 Stage'';
     initiated_at_timestamp := current_timestamp();
     call_id := uuid_string();
     step_id := 1;
@@ -39,7 +39,7 @@ begin
         || split_part(:yesterday_string, ''-'', 3) || ''/.*'';
     
     -- ingest staged JSON
-    copy into bluesky_db.main.firehose_raw 
+    copy into bluesky_db.main.int_firehose_raw 
     from (select metadata$filename, $1 from @bluesky_db.main.stg_firehose)
     file_format = (type = json)
     pattern = :copy_path;
@@ -64,7 +64,7 @@ begin
     );
 
     -- reset log vars
-    query_step := ''Process records from FIREHOSE_RAW into FIREHOSE_PROCESSED'';
+    query_step := ''Process records from INT_FIREHOSE_RAW into FIREHOSE_PROCESSED'';
     initiated_at_timestamp := current_timestamp();
     step_id := 2;
     
@@ -100,7 +100,7 @@ begin
              ,current_user() as record_inserted_by_user
              ,current_role() as record_inserted_with_role 
              ,b.language_name_in_english as first_detected_language
-       from bluesky_db.main.firehose_raw a
+       from bluesky_db.main.int_firehose_raw a
        left join bluesky_db.main.iso_language_codes b
               on regexp_replace(trim(parse_json(a.value:commit:record:langs)[0], ''"'')
                             ,''\-[A-Za-z]+'', ''''
@@ -171,11 +171,11 @@ begin
     );
 
     -- reset log vars
-    query_step := ''DELETE all records in FIREHOSE_RAW'';
+    query_step := ''DELETE all records in INT_FIREHOSE_RAW'';
     initiated_at_timestamp := current_timestamp();
     step_id := 3;
 
-    delete from bluesky_db.main.firehose_raw;
+    delete from bluesky_db.main.int_firehose_raw;
 
     query_id := last_query_id();
     row_count := SQLROWCOUNT;
