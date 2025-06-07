@@ -127,7 +127,8 @@ def writeback_batch(source_table_query: str
                    ,target_schema: str = SF_SC
                    ,conn: snowflake.connector.connection.SnowflakeConnection = SF_XCT
                    ,cursor: snowflake.connector.cursor.SnowflakeCursor = CSR
-                   ,connection_parameters: dict = xct_params):
+                   ,connection_parameters: dict = xct_params
+                   ):
     """
     This query is used for all the NLP workflows on this project. It works like this:
 
@@ -207,7 +208,6 @@ def writeback_batch(source_table_query: str
         # execute NER analysis 
         nlp_output = nlp_params['transformer_pipeline'](batch_dataset[nlp_params['target_text_colname']])
         batch[nlp_params['nlp_metric'].upper()] = nlp_output
-        print(f"Just put the NLP output into batch as a column.\nCurrent batch cols are {batch.columns}")
         
         # NER is called first-- if that's what we're doing, then fill in an empty sentana column for now-- we'll get it later
         if nlp_params['nlp_metric'].upper() == 'NER_ANALYSIS' and 'SENTIMENT_ANALYSIS' not in batch.columns:
@@ -231,7 +231,7 @@ def writeback_batch(source_table_query: str
         #### more prints to show velocity 
         # ... of this specific batch
         batch_finished_at = datetime.now()
-        print(f"Batch {(c):,} completed at {batch_finished_at.strftime('%Y-%m-%d %H:%M:S%')}")
+        print(f"Batch {(c):,} completed at {batch_finished_at.strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"{len(batch):,} rows from batch written to {target_table_name} ({(pcnt_progress):,.1f}% of source rows processed)")
         total_seconds_for_batch = (batch_finished_at - batch_started_at).total_seconds()
         minute_time_for_batch = int(total_seconds_for_batch // 60)
@@ -252,26 +252,22 @@ def writeback_batch(source_table_query: str
 if __name__ == "__main__":
     ## NER ANALYSIS
     query = f"""
-    select a.content_id
-          ,a.usa_timestamp as POST_CREATED_USA_TIMESTAMP
-          ,a.post_text
-    from bluesky_db.main.firehose_processed a
-    left join bluesky_db.main.int_firehose_nlp b
-        on a.content_id = b.content_id
-    where (a.first_detected_language = 'English'
-        or  a.first_detected_language is null
-        )
-    and a.post_created_at_timestamp between to_timestamp_tz('2025-05-25 00:00:00+0000')
-                                        and to_timestamp_tz('2025-05-31 23:59:59+0000')
-    and b.content_id is null; 
+    select content_id
+          ,usa_timestamp as POST_CREATED_USA_TIMESTAMP
+          ,post_text
+    from {SF_DB}.{SF_SC}.firehose_processed
+    where usa_timestamp <= to_timestamp_tz('2025-05-24 23:59:59+0000')
+      and (first_detected_language = 'English'
+           or first_detected_language is null
+          )
+      and content_id not in (select content_id from {SF_DB}.{SF_SC}.firehose_nlp_labeled); 
     """
-    src_filter = """a left join bluesky_db.main.int_firehose_nlp b on a.content_id = b.content_id
-    where (a.first_detected_language = 'English'
-        or  a.first_detected_language is null
-        )
-    and a.post_created_at_timestamp between to_timestamp_tz('2025-05-25 00:00:00+0000')
-                                        and to_timestamp_tz('2025-05-31 23:59:59+0000')
-    and b.content_id is null; """
+    src_filter = """
+    where usa_timestamp <= to_timestamp_tz('2025-05-24 23:59:59+0000')
+      and (first_detected_language = 'English'
+           or first_detected_language is null
+          )
+      and content_id not in (select content_id from {SF_DB}.{SF_SC}.firehose_nlp_labeled)"""
     nlp_params = {'nlp_metric': 'NER_ANALYSIS'
                  ,'transformer_pipeline': PIPL_NER
                  ,'target_text_colname': 'POST_TEXT'
@@ -312,7 +308,7 @@ if __name__ == "__main__":
     """
 
     CSR = execute_query(query)
-    print(f"{(CSR.fetchone()[1]):,} rows updated in INT_FIREHOSE_NLP.SENTIMENT_ANALYSIS, using TMP_MERGE_SRC")
+    print(f"Sentiment Analysis MERGE into INT_FIREHOSE_NLP.SENTIMENT_ANALYSIS using TMP_MERGE_SRC complete!")
 
     query = f"""
     insert into {SF_DB}.{SF_SC}.firehose_nlp_labeled
@@ -332,6 +328,8 @@ if __name__ == "__main__":
     left join table(flatten(input => parse_json(a.ner_analysis))) a2
     left join {SF_DB}.{SF_SC}.label_map_roberta_base_sentiment b
            on trim(a.sentiment_analysis:label, '"') = b.model_label_name
+    left join {SF_DB}.{SF_SC}.firehose_nlp_labeled tgt
+    where tgt.content_id is null
     )
 
     select sha2(nvl(to_char(content_id), 'NULL') 
@@ -346,8 +344,9 @@ if __name__ == "__main__":
     """
     try:
         CSR = execute_query(query)
-        print(f"{(CSR.fetchone()[0]):,} rows inserted to final target FIREHOSE_NLP_LABELED")
-        if CSR.fetchone()[0] > 0:
+        inserted_rows = CSR.fetchone()[0]
+        print(f"{(inserted_rows):,} rows inserted to final target FIREHOSE_NLP_LABELED")
+        if inserted_rows > 0:
             CSR = execute_query(f'truncate table {SF_DB}.{SF_SC}.INT_FIREHOSE_NLP')
             CSR = execute_query(f"drop table {SF_DB}.{SF_SC}.TMP_MERGE_SRC")
             print("Successfully cleared INT_FIREHOSE_NLP and inserted all data to FIREHOSE_NLP_LABELED")
