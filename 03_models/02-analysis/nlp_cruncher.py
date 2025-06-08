@@ -255,17 +255,15 @@ if __name__ == "__main__":
           ,usa_timestamp as POST_CREATED_USA_TIMESTAMP
           ,post_text
     from {SF_DB}.{SF_SC}.firehose_processed
-    where usa_timestamp between to_timestamp_tz('2025-05-25 00:00:00+0000')
-                            and to_timestamp_tz('2025-05-31 23:59:59+0000')
-      and (first_detected_language = 'English'
+    where (first_detected_language = 'English'
            or first_detected_language is null
           )
-      and content_id not in (select content_id from {SF_DB}.{SF_SC}.firehose_nlp_labeled); 
+      and content_id not in (select content_id from {SF_DB}.{SF_SC}.firehose_nlp_labeled)
+      and content_id not in (select content_id from {SF_DB}.{SF_SC}.int_firehose_nlp)
+      ; 
     """
     src_filter = f"""
-    where usa_timestamp between to_timestamp_tz('2025-05-25 00:00:00+0000')
-                            and to_timestamp_tz('2025-05-31 23:59:59+0000')
-      and (first_detected_language = 'English'
+    where (first_detected_language = 'English'
            or first_detected_language is null
           )
       and content_id not in (select content_id from {SF_DB}.{SF_SC}.firehose_nlp_labeled)"""
@@ -332,9 +330,6 @@ if __name__ == "__main__":
     left join table(flatten(input => parse_json(a.ner_analysis))) a2
     left join {SF_DB}.{SF_SC}.label_map_roberta_base_sentiment b
            on trim(a.sentiment_analysis:label, '"') = b.model_label_name
-    left join {SF_DB}.{SF_SC}.firehose_nlp_labeled tgt
-           on tgt.content_id = a.content_id
-    where tgt.content_id is null
     )
 
     select sha2(nvl(to_char(content_id), 'NULL') 
