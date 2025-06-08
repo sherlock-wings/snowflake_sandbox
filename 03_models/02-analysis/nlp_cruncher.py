@@ -85,7 +85,6 @@ def execute_query(query: str
         connection_parameters: A dict containing the username, authentication, etc that lets you into Snowflake
         retry_attempts: Total number of times this function will reattempt to connect and query before giving 
                         up.
-
     """
     try:
         cursor.execute(query)
