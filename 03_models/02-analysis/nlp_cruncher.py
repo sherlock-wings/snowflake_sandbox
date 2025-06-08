@@ -250,65 +250,65 @@ def writeback_batch(source_table_query: str
 ### DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER |
 
 if __name__ == "__main__":
-    ## NER ANALYSIS
-    query = f"""
-    select content_id
-          ,usa_timestamp as POST_CREATED_USA_TIMESTAMP
-          ,post_text
-    from {SF_DB}.{SF_SC}.firehose_processed
-    where usa_timestamp <= to_timestamp_tz('2025-05-24 23:59:59+0000')
-      and (first_detected_language = 'English'
-           or first_detected_language is null
-          )
-      and content_id not in (select content_id from {SF_DB}.{SF_SC}.firehose_nlp_labeled); 
-    """
-    src_filter = f"""
-    where usa_timestamp <= to_timestamp_tz('2025-05-24 23:59:59+0000')
-      and (first_detected_language = 'English'
-           or first_detected_language is null
-          )
-      and content_id not in (select content_id from {SF_DB}.{SF_SC}.firehose_nlp_labeled)"""
-    nlp_params = {'nlp_metric': 'NER_ANALYSIS'
-                 ,'transformer_pipeline': PIPL_NER
-                 ,'target_text_colname': 'POST_TEXT'
-                 }
-    target_cols = ['CONTENT_ID', 'POST_CREATED_USA_TIMESTAMP', 'POST_TEXT', 'NER_ANALYSIS', 'SENTIMENT_ANALYSIS']
+    # ## NER ANALYSIS
+    # query = f"""
+    # select content_id
+    #       ,usa_timestamp as POST_CREATED_USA_TIMESTAMP
+    #       ,post_text
+    # from {SF_DB}.{SF_SC}.firehose_processed
+    # where usa_timestamp <= to_timestamp_tz('2025-05-24 23:59:59+0000')
+    #   and (first_detected_language = 'English'
+    #        or first_detected_language is null
+    #       )
+    #   and content_id not in (select content_id from {SF_DB}.{SF_SC}.firehose_nlp_labeled); 
+    # """
+    # src_filter = f"""
+    # where usa_timestamp <= to_timestamp_tz('2025-05-24 23:59:59+0000')
+    #   and (first_detected_language = 'English'
+    #        or first_detected_language is null
+    #       )
+    #   and content_id not in (select content_id from {SF_DB}.{SF_SC}.firehose_nlp_labeled)"""
+    # nlp_params = {'nlp_metric': 'NER_ANALYSIS'
+    #              ,'transformer_pipeline': PIPL_NER
+    #              ,'target_text_colname': 'POST_TEXT'
+    #              }
+    # target_cols = ['CONTENT_ID', 'POST_CREATED_USA_TIMESTAMP', 'POST_TEXT', 'NER_ANALYSIS', 'SENTIMENT_ANALYSIS']
 
-    # writeback NER
-    writeback_batch(query, 'FIREHOSE_PROCESSED', 'INT_FIREHOSE_NLP', target_cols, nlp_params, source_table_filter=src_filter)
+    # # writeback NER
+    # writeback_batch(query, 'FIREHOSE_PROCESSED', 'INT_FIREHOSE_NLP', target_cols, nlp_params, source_table_filter=src_filter)
     
-    ## SENTIMENT ANALYSIS
-    query = f"""create or replace table {SF_DB}.{SF_SC}.TMP_MERGE_SRC(
-     content_id varchar
-    ,post_created_usa_timestamp timestamp_tz(9)
-    ,post_text varchar
-    ,sentiment_analysis variant
-    )"""
-    CSR = execute_query(query)
+    # ## SENTIMENT ANALYSIS
+    # query = f"""create or replace table {SF_DB}.{SF_SC}.TMP_MERGE_SRC(
+    #  content_id varchar
+    # ,post_created_usa_timestamp timestamp_tz(9)
+    # ,post_text varchar
+    # ,sentiment_analysis variant
+    # )"""
+    # CSR = execute_query(query)
     
-    query = "select * from bluesky_db.main.int_firehose_nlp;"
-    nlp_params = {'nlp_metric': 'SENTIMENT_ANALYSIS'
-                 ,'transformer_pipeline': PIPL_SNT
-                 ,'target_text_colname': 'POST_TEXT'
-                 }
-    target_cols = ['POST_TEXT', 'CONTENT_ID', 'SENTIMENT_ANALYSIS']
+    # query = "select * from bluesky_db.main.int_firehose_nlp;"
+    # nlp_params = {'nlp_metric': 'SENTIMENT_ANALYSIS'
+    #              ,'transformer_pipeline': PIPL_SNT
+    #              ,'target_text_colname': 'POST_TEXT'
+    #              }
+    # target_cols = ['POST_TEXT', 'CONTENT_ID', 'SENTIMENT_ANALYSIS']
     
-    # writeback SENTIMENT
-    writeback_batch(query, 'INT_FIREHOSE_NLP', 'TMP_MERGE_SRC', target_cols, nlp_params)
+    # # writeback SENTIMENT
+    # writeback_batch(query, 'INT_FIREHOSE_NLP', 'TMP_MERGE_SRC', target_cols, nlp_params)
 
-    # At this point, we have the NER data in INT_FIREHOSE_NLP. We have the SENT data in TMP_MERGE_SRC. So we have to
-    # 1. MERGE the SENT data from TMP_MERGE_SRC to INT_FIREHOSE_NLP
-    # 2. INSERT everything in INT_FIREHOSE_NLP to FIREHOSE_NLP_LABELED
-    query=f"""
-    merge into {SF_DB}.{SF_SC}.INT_FIREHOSE_NLP tgt
-    using {SF_DB}.{SF_SC}.TMP_MERGE_SRC src
-       on src.content_id = tgt.content_id
-    when matched then update 
-    set tgt.SENTIMENT_ANALYSIS = src.SENTIMENT_ANALYSIS
-    """
+    # # At this point, we have the NER data in INT_FIREHOSE_NLP. We have the SENT data in TMP_MERGE_SRC. So we have to
+    # # 1. MERGE the SENT data from TMP_MERGE_SRC to INT_FIREHOSE_NLP
+    # # 2. INSERT everything in INT_FIREHOSE_NLP to FIREHOSE_NLP_LABELED
+    # query=f"""
+    # merge into {SF_DB}.{SF_SC}.INT_FIREHOSE_NLP tgt
+    # using {SF_DB}.{SF_SC}.TMP_MERGE_SRC src
+    #    on src.content_id = tgt.content_id
+    # when matched then update 
+    # set tgt.SENTIMENT_ANALYSIS = src.SENTIMENT_ANALYSIS
+    # """
 
-    CSR = execute_query(query)
-    print(f"Sentiment Analysis MERGE into INT_FIREHOSE_NLP.SENTIMENT_ANALYSIS using TMP_MERGE_SRC complete!")
+    # CSR = execute_query(query)
+    # print(f"Sentiment Analysis MERGE into INT_FIREHOSE_NLP.SENTIMENT_ANALYSIS using TMP_MERGE_SRC complete!")
 
     query = f"""
     insert into {SF_DB}.{SF_SC}.firehose_nlp_labeled
@@ -318,8 +318,8 @@ if __name__ == "__main__":
           ,b.readable_label_name as sentiment_detected_label
           ,cast(sentiment_analysis:score as number(5,4)) as sentiment_confidence_score
           ,row_number() over (
-           partition by content_id
-           order     by post_created_usa_timestamp, trim(a2.value:word, '"')
+           partition by a.content_id
+           order     by a.post_created_usa_timestamp, trim(a2.value:word, '"')
            ) as post_entity_number
           ,trim(a2.value:entity_group, '"') as ner_detected_group
           ,trim(a2.value:word, '"') as ner_detected_entity
@@ -329,6 +329,7 @@ if __name__ == "__main__":
     left join {SF_DB}.{SF_SC}.label_map_roberta_base_sentiment b
            on trim(a.sentiment_analysis:label, '"') = b.model_label_name
     left join {SF_DB}.{SF_SC}.firehose_nlp_labeled tgt
+           on tgt.content_id = a.content_id
     where tgt.content_id is null
     )
 
