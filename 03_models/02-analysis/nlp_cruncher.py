@@ -264,7 +264,8 @@ if __name__ == "__main__":
       and content_id not in (select content_id from {SF_DB}.{SF_SC}.firehose_nlp_labeled); 
     """
     src_filter = f"""
-    where usa_timestamp <= to_timestamp_tz('2025-05-24 23:59:59+0000')
+    where usa_timestamp between to_timestamp_tz('2025-05-25 00:00:00+0000')
+                            and to_timestamp_tz('2025-05-31 23:59:59+0000')
       and (first_detected_language = 'English'
            or first_detected_language is null
           )
