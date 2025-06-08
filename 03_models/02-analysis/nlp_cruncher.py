@@ -324,6 +324,9 @@ if __name__ == "__main__":
           ,trim(a2.value:entity_group, '"') as ner_detected_group
           ,trim(a2.value:word, '"') as ner_detected_entity
           ,cast(a2.value:score as number(5,4)) as ner_confidence_score
+          ,current_timestamp() as record_inserted_at_timestamp
+          ,current_user() as record_inserted_by_user
+          ,current_role() as record_inserted_with_role
     from {SF_DB}.{SF_SC}.int_firehose_nlp a
     left join table(flatten(input => parse_json(a.ner_analysis))) a2
     left join {SF_DB}.{SF_SC}.label_map_roberta_base_sentiment b
