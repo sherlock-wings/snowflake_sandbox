@@ -256,7 +256,8 @@ if __name__ == "__main__":
           ,usa_timestamp as POST_CREATED_USA_TIMESTAMP
           ,post_text
     from {SF_DB}.{SF_SC}.firehose_processed
-    where usa_timestamp <= to_timestamp_tz('2025-05-24 23:59:59+0000')
+    where usa_timestamp between to_timestamp_tz('2025-05-25 00:00:00+0000')
+                            and to_timestamp_tz('2025-05-31 23:59:59+0000')
       and (first_detected_language = 'English'
            or first_detected_language is null
           )
@@ -353,7 +354,7 @@ if __name__ == "__main__":
         if inserted_rows > 0:
             CSR = execute_query(f'truncate table {SF_DB}.{SF_SC}.INT_FIREHOSE_NLP')
             CSR = execute_query(f"drop table {SF_DB}.{SF_SC}.TMP_MERGE_SRC")
-            print("Successfully cleared INT_FIREHOSE_NLP and inserted all data to FIREHOSE_NLP_LABELED")
+            print(f"Operation completed at {datetime.now()}\nSuccessfully cleared INT_FIREHOSE_NLP and inserted all data to FIREHOSE_NLP_LABELED")
             CSR.close()
             SF_XCT.close()
     except Exception as e:
