@@ -201,7 +201,7 @@ def writeback_batch(source_table_query: str
         c              += 1
         rows_processed += 1
         pcnt_progress  += (len(batch)/total_rows_in_source) * 100
-        print(f"\n{len(batch):,} rows downloaded from batch {(c):,}")
+        print(f"\n{len(batch):,} rows downloaded from batch {(c):,} at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
         # using this thing as input is more efficient than using `batch` directly for whatever reason
         batch_dataset = Dataset.from_pandas(batch[[nlp_params['target_text_colname']]], preserve_index=False)
