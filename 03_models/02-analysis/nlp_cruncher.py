@@ -193,7 +193,7 @@ def writeback_batch(source_table_query: str
                           ,connection_parameters=connection_parameters
                           )
     process_started_at = datetime.now()
-    print(f"\nInitiated NLP Workflow '{nlp_params['nlp_metric']}' at\n{process_started_at}")
+    print(f"\nInitiated NLP Workflow '{nlp_params['nlp_metric']}' at\n{process_started_at.strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"Downloading {(total_rows_in_source):,} total rows from {source_table_name.upper()}...\n\n")
 
     for batch in cursor.fetch_pandas_batches():
@@ -236,13 +236,13 @@ def writeback_batch(source_table_query: str
         total_seconds_for_batch = (batch_finished_at - batch_started_at).total_seconds()
         minute_time_for_batch = int(total_seconds_for_batch // 60)
         second_time_for_batch = total_seconds_for_batch % 60
-        print(f"Batch Process Time = {(minute_time_for_batch):,}min {(second_time_for_batch):,.1f}s")
+        print(f"Batch Process Time = {(minute_time_for_batch):,}m {(second_time_for_batch):,.1f}s")
            
     process_finished_at = datetime.now()
     total_seconds_for_process = (process_finished_at - process_started_at).total_seconds()
     minute_time_for_process = total_seconds_for_process // 60
     second_time_for_process = total_seconds_for_process % 60
-    print(f"\n{(c):,} batches totaling {(total_rows_in_source):,} rows were processed in {round(minute_time_for_process, 0)}min {(second_time_for_process):,.1f}s")
+    print(f"\n{(c):,} batches totaling {(total_rows_in_source):,} rows were processed in {round(minute_time_for_process, 0)}m {(second_time_for_process):,.1f}s")
     print(f"Average process velocity is {round((total_rows_in_source/(total_seconds_for_process/60)), 1):,.1f}")
 
 ### DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER |
@@ -355,7 +355,7 @@ if __name__ == "__main__":
         if inserted_rows > 0:
             CSR = execute_query(f'truncate table {SF_DB}.{SF_SC}.INT_FIREHOSE_NLP')
             CSR = execute_query(f"drop table {SF_DB}.{SF_SC}.TMP_MERGE_SRC")
-            print(f"Operation completed at {datetime.now()}\nSuccessfully cleared INT_FIREHOSE_NLP and inserted all data to FIREHOSE_NLP_LABELED")
+            print(f"Operation completed at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\nSuccessfully cleared INT_FIREHOSE_NLP and inserted all data to FIREHOSE_NLP_LABELED")
             CSR.close()
             SF_XCT.close()
     except Exception as e:
