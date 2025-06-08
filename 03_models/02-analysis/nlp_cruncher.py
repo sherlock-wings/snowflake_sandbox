@@ -116,8 +116,8 @@ def execute_query(query: str
             raise last_error_msg 
   
 def writeback_batch(source_table_query: str
-                   ,source_table_name
-                   ,target_table_name
+                   ,source_table_name: str
+                   ,target_table_name: str
                    ,target_columns: list
                    ,nlp_params: dict
                    ,source_table_filter: str = None
