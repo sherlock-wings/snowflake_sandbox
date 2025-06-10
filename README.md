@@ -156,5 +156,5 @@ We collect data with the following tech stack:
 
 # Architecture Diagram
 
-8. ![image](readme_img/ArchDiagram.jpg)
+![image](readme_img/ArchDiagram.jpg)
 
