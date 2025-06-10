@@ -1,5 +1,10 @@
 create or replace view bluesky_db.main.firehose_nlp_vw as (
-select a.post_created_usa_timestamp as post_created_at
+select a.post_created_usa_timestamp as post_created_timestamp
+      ,year(a.post_created_usa_timestamp) as year_post_created_at
+      ,quarter(a.post_created_usa_timestamp) as quarter_post_created_at
+      ,month(a.post_created_usa_timestamp) as month_post_created_at
+      ,day(a.post_created_usa_timestamp) as day_post_created_at
+      ,hour(a.post_created_usa_timestamp) as hour_post_created_at
       ,b.post_text
       ,length(b.post_text) as total_post_characters
       ,b.first_detected_language as language
