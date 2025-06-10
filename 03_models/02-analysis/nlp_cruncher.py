@@ -250,6 +250,7 @@ def writeback_batch(source_table_query: str
 
 if __name__ == "__main__":
     ## NER ANALYSIS
+    CSR = execute_query(f'truncate table {SF_DB}.{SF_SC}.INT_FIREHOSE_NLP')
     query = f"""
     select content_id
           ,usa_timestamp as POST_CREATED_USA_TIMESTAMP
