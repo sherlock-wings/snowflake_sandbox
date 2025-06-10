@@ -1,247 +1,160 @@
-# Table of Contents 
-
-1. [Data Model](#data-model)
-1. [Project RBAC](#project-rbac)
-3. [Environment Summary Diagram](#environment-summary-diagram)
-4. [Role Distribution by Enviornment](#role-distribution-by-environment)
-5. [Object Naming Conventions](#object-naming-conventions)
-
-# Data Model
- 
-Our data model consists of three simple schema. This schema-triplet will exist across multiple environments, and each environment will be held in a single database.
-
-When referring to these schema outside of the context of any specific environment, we refer to them as "Prototype schema".
-
-Our prototype schema are:
-    
-1. `RAW`
-    - Here we will keep all of our source data
-    - Data should be as close to as it existed in the source system as possible
-    - Stages and other ingestion constructs (pipes, streams, etc) will be kept here as well
-3. `STAGE`
-    - Light-touch transforms on source data, (usually) instantiated as views
-    - Intermediate persisted tables & views
-5. `MODEL`
-    - Reporting parent layer
-    - Model constructs (as persisted tables) are kept here
-    - For kimball, this means your dimensions, facts, fact aggregates, and other entities like bridge/mapping tables are kept here
-  
+# What is this project? 
+
+This is a project is focused on the Social Media app Bluesky. It uses NLP Modeling to attempt to get an understanding of what users generally like to talk about, and how they feel about those things.
+
+## What is Bluesky?
+
+[Bluesky](https://en.wikipedia.org/wiki/Bluesky) is a social media app that aims to offer a decentralized and user-controlled experience, similar to early iterations of the web. It originated as a project within Twitter, founded by Jack Dorsey, but later became an independent entity. The platform allows users to post short text updates, images, and videos, with a character limit and interface that often draws comparisons to Twitter (now X).
+
+Key features of Bluesky include its reliance on the open-source [AT Protocol](https://atproto.com) (a.k.a. atproto), which enables transparency and allows users to potentially move their data and connections across different services. Users have significant control over their feeds through customizable algorithms and moderation tools, allowing for personalized content consumption. While it's growing rapidly, Bluesky's core appeal lies in its emphasis on user autonomy and fostering a more open, community-driven online space, contrasting with the more centralized control seen on other major platforms.
+
+# Project Architecture
+
+## Firehose and Jetstream
+
+This project uses a feature of atproto called Firehose. It is an aggregated stream of all the public data updates in the Bluesky network. Working with it directly is possible, but it is more complex due to the Firehose wire format, since using that involves decoding binary CBOR data and CAR files. Jetstream, a side project originally written by Bluesky Engineer [Jaz](https://bsky.app/profile/jaz.bsky.social), provides an extremely efficient method for compressing Firehose data and serving it in an easily read JSON format. 
+
+### For more information...
+
+- [You can learn more about how Jetstream was created and the incredible efficiency gains Jaz was able to make possible in their blog post here](https://jazco.dev/2024/09/24/jetstream/).
+- [For technical details on Jetstream, see the GitRepo](https://github.com/bluesky-social/jetstream)
+- [For a live feed of Firehose (great to get a visual understanding), check out Firesky](https://firesky.tv/)
+
+## Data Collection
+
+We collect data with the following tech stack:
+
+### For Ingestion...
+
+1. **Python**
+   1. [`boto3` (v 1.38.20)](https://aws.amazon.com/sdk-for-python/)
+   2. [`websockets` (12.0)](https://websockets.readthedocs.io/en/stable/)
+2. AWS 
+   1. [S3 (for file storage)](https://aws.amazon.com/s3/)
+   2. [Lambda (to execute the ingestion script)](https://aws.amazon.com/lambda/)
+   3. [EventBridge (to trigger ingestions on Schedule)](https://aws.amazon.com/eventbridge/)
+   4. [Elastic Container Registry (for containerizing the ingestion process)](https://aws.amazon.com/ecr/)
+3. Snowflake
+   1. This is our "landing zone" for raw and processed Bluesky data
+   2. External Stages are used to view S3 Files in Snowflake
+   3. Scheduled Tasks and Stored procedures are used to process raw data from Stage on Schedule
+
+### For Modeling...
+
+1. [Snowflake connector for Python](https://pypi.org/project/snowflake-connector-python/)
+2. [PyTorch](https://pytorch.org/get-started/locally/)
+3. [:hugs: Transformers](https://huggingface.co/docs/transformers/en/index)
+
+### Execution pattern:
+
+1. In AWS, the `extractBlueskyFirehose` is configured to open a websocket and listen to Jetstream for posts every 3 hours at 12 AM, 3 AM, 6 AM, and 9 AM, then again at 12 PM, 3 PM, 6 PM, and 9 PM
+
+2. This process repeats 7 days a week
+
+3. Each time a websocket is opened, the extraction lasts for 5 minutes
+
+4. Once the extraction completes, the resulting .jsonl files are written to an S3 bucket
+
+5. That S3 bucket is visible in Snowflake as an External Stage
+
+6. From that stage, a stored procedure copies files into a Raw landing table called `INT_FIREHOSE_RAW`
+
+   1. Here's a sample of one of those JSON files:
+
+      ```json
+      {
+        "commit": {
+          "cid": "bafyreiad3luasuqoeopagywpsgyfwtmrbh4hqqgg73gjax3ckptraov4ri",
+          "collection": "app.bsky.feed.post",
+          "operation": "create",
+          "record": {
+            "$type": "app.bsky.feed.post",
+            "createdAt": "2025-06-09T07:16:56.665Z",
+            "embed": {
+              "$type": "app.bsky.embed.external",
+              "external": {
+                "description": "California National Guard arrived in Los Angeles on Sunday, deployed by President Donald Trump after two days of protests by hundreds of demonstrators against immigration raids carried out as part of Trump's hardline policy.",
+                "thumb": {
+                  "$type": "blob",
+                  "mimeType": "image/jpeg",
+                  "ref": {
+                    "$link": "bafkreidbvptsujnvf55hr4ob43lpaihadwxblj22xjzqj54uqnesiq7lje"
+                  },
+                  "size": 647776
+                },
+                "title": "National Guard deployed in Los Angeles amid protests against immigration raids",
+                "uri": "https://www.reuters.com/world/us/national-guard-deployed-los-angeles-amid-protests-against-immigration-raids-2025-06-08/"
+              }
+            },
+            "facets": [
+              {
+                "features": [
+                  {
+                    "$type": "app.bsky.richtext.facet#link",
+                    "uri": "https://www.reuters.com/world/us/national-guard-deployed-los-angeles-amid-protests-against-immigration-raids-2025-06-08/"
+                  }
+                ],
+                "index": {
+                  "byteEnd": 273,
+                  "byteStart": 242
+                }
+              }
+            ],
+            "langs": [
+              "en"
+            ],
+            "text": "California governor calls Trump National Guard deployment in LA unlawful\n\nThird day of immigration protests in Los Angeles\n\nDemocratic governor Newsom calls on Trump to withdraw troops\n\nNewsom announced law case against Federal Government \n\n www.reuters.com/world/us/nat..."
+          },
+          "rev": "3lr5tiu5sfi2f",
+          "rkey": "3lr5tirb6wk24"
+        },
+        "did": "did:plc:h4dnm3ajj4r2mswd42e6ales",
+        "kind": "commit",
+        "time_us": 1749453420602509
+      }
+      ```
+
+      
+
+7. The sproc then processes the raw files into an Incremental Table called `FIREHOSE_PROCESSED`.
+
+   1. A sample of the processed records can be seen below
+
+   2. 
+
+   3. | POST_CREATED_AT_TIMESTAMP     | FIRST_DETECTED_LANGUAGE | POST_TEXT                                                    |
+      | ----------------------------- | ----------------------- | ------------------------------------------------------------ |
+      | 2025-05-24 03:06:03.000 +0000 | Japanese                | 大腸がん発症、腸内細菌が出す毒素「コリバクチン」が関係…細胞の遺伝子を傷つける性質 https://www.yomiuri.co.jp/medical/20250524-OYT1T50055/ |
+      | 2025-05-24 03:03:06.651 +0000 | English                 | More random records....                                      |
+      | 2025-05-24 10:21:19.767 +0000 | Japanese                | 今までの人生で二度ほど「モーニングに連載してそうな絵柄」と言われたことがあるのが密かな誇り　でもモーニング自体は「昨日何食べた？」しかちゃんと読んだことが無く、どちらかというとアフタヌーンを愛読して育ったのですが… |
+      | 2025-05-24 01:20:04.556 +0000 | English                 | Hey @majorarschloch.bsky.social thats your signal iirc       |
+      | 2025-05-24 16:19:04.546 +0000 | English                 | Who dares disturb my Caturday celebrations of comfortably napping in a sunbeam?! Shoo! I have more napping to partake in! |
+      | 2025-05-24 03:03:45.862 +0000 | English                 | I thought Cruella and Maleficent were my top two contenders for Disney's worst live action takes on their classic movies just because of the level of weird lore reworking they did in order to make these irredeemably evil protagonists Relatable™, but this is just insulting lol |
+      | 2025-05-24 16:17:17.411 +0000 | English                 | Siden 1990 (cirka) har Norge øget det nationale N-udslip til havet med >400% og P-udslippet med >100%. Trods OSPARs 50% reduktionsmålsætning. Andre europæiske lande har reduceret udslippene. Min spådom: Norske farvande vil imudvikle sig til et large-scale ‘eutrophication problem area’. Trist. |
+      | 2025-05-24 04:17:10.061 +0000 | Japanese                | え、普通に古文書とって突き進んでる                           |
+      | 2025-05-24 04:17:25.534 +0000 | English                 | Soto is becoming an embarrassment.                           |
+      | 2025-05-24 10:19:37.402 +0000 | English                 | FIGHTING THE GOOD FIGHT AGAINST THE WOKE AGENDA!!!           |
+
+8. The processed data is then ingested into a Python Script that applies these NLP Workflows:
+
+   
+
+   | NLP Workflow                                                 | Model Used                                                   |
+   | ------------------------------------------------------------ | ------------------------------------------------------------ |
+   | [Sentiment Analysis](https://en.wikipedia.org/wiki/Sentiment_analysis) | [Twitter-roBERTa-base for Sentiment Analysis](https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment) |
+   | [Named-Entity Recognition](https://en.wikipedia.org/wiki/Named-entity_recognition) | [dslim/bert-base-NER](https://huggingface.co/dslim/bert-base-NER) |
+
+   A sample of the final data looks like this: 
+
+   | TIMESTAMP_POST_CREATED  | POST_TEXT                                                    | SENTIMENT_DETECTED_LABEL | SENTIMENT_CONFIDENCE_SCORE | NER_DETECTED_GROUP | NER_DETECTED_ENTITY | NER_CONFIDENCE_SCORE |
+   | ----------------------- | ------------------------------------------------------------ | ------------------------ | -------------------------- | ------------------ | ------------------- | -------------------- |
+   | 2025-06-08 18:22:00.111 | #TacoGestapo                                                 | Neutral                  | 0.7079                     | Organization       | TacoGestapo         | 0.9582               |
+   | 2025-06-08 18:21:59.501 | Queer ally Paladin is ready for Pride!                       | Positive                 | 0.7334                     | Miscellaneous      | Pride!              | 0.7154               |
+   | 2025-06-08 18:21:59.406 | How do you think she and Trump would react if a Democratic governor sent this out today? | Neutral                  | 0.8209                     | Miscellaneous      | Democratic          | 0.9997               |
+   | 2025-06-08 18:21:59.406 | How do you think she and Trump would react if a Democratic governor sent this out today? | Neutral                  | 0.8209                     | Person             | Trump               | 0.9995               |
+   | 2025-06-08 18:21:59.376 | #LosAngeles #NationalGuard #ICE #Immigration Dictators often provoke people and incite anger through human rights violations or other inflammatory actions. When the masses react, they are blamed for breaking the law, giving the dictator an excuse to use violence against them and justify repression. | Negative                 | 0.9320                     | Organization       | LosAngeles          | 0.8174               |
+
+# Architecture Diagram
+
+8. ![image](readme_img\ArchDiagram.jpg)
 
-## Access rights within a single Environment
-
-The below diagram depicts the typical architecture for environments like Dev, QA, and Prod. 
-
-![Fig. 1: Access Types for all Functional Roles across Prototype Schema](https://github.com/sherlock-wings/snowflake_sandbox/blob/dev/02_RBAC/miro/structure_within_an_environment.jpg)
-
-*Exceptions to this general architecture for specific environments such as Prod, Sandbox, etc. are detailed in further sections. The above architecture is most accurate for the Dev and QA Environments. 
-
-
-# Project RBAC 
-The above Role-access Control (RBAC) setup will be achieved with `GRANT` statements that leverage [managed schema](https://docs.snowflake.com/en/user-guide/security-access-control-configure#label-managed-access-schemas) in Snowflake. 
-
-## Schema Access Roles and their Types
-Grants on these managed schema will be given to one of three types of schema-based access roles. These types are
-- "Read" Access Role
-- "Read-Write" Access Role
-- "Full" Access Role
-
-Every functional role in this project will have some combination of read, read-write, and/or full access roles granted to it. Each schema-based access role applies to one and only one schema. 
-
-## Warehouse Access Roles and their Types
-To use compute to process any data in the above-mentioned schemas, a warehouse is required. Like with schema-based access roles, warehouse-based access roles come in three types: 
-
-- "Use" Access Role
-    - This access role grants `USAGE` on the warehouse 
-- "Use-Watch" Access Role
-    - This access role grants both `USAGE` and `MONITOR` on the warehouse 
-- "Owner" Access Role
-    - This access role grants ultimate `OWNERSHIP` on the warehouse 
-
-
-## Access Roles & Functional Roles
-For each of the three access types, a specific access role exists for each schema in our Data Models. For example, if you had one schema caleld `EDW_DB.RAW`, for example, you would have three access roles for that:
-1. `EDW_DB_RAW_R_AR` ("Read" access role)
-1. `EDW_DB_RAW_RW_AR` ("Read-Write" access role)
-1. `EDW_DB_RAW_FULL_AR` ("Full" access role)
-
-For the warehouses, you would have roles like:
-1. `COMPUTE_WH_U_AR` ("Use" access role)
-1. `COMPUTE_WH_UW_AR` ("Use-Watch" access role)
-1. `COMPUTE_WH_O_AR` ("Owner" access role)
- 
-
-Each of these roles are combined to create *Functional Roles* (ex. `DEV_ENGINEER_FR`), which can have highly-configurable privileges. The flexibility these roles have is achieved by granting one or more access roles to a functional role. 
-
-## Access rights definitions
-
-For detailed documentation on what "Read", "Read-Write", "Full", etc. access actually means, and how specifically it is implemented for warehouses and schemas, see the directory `*RBAC/access_definitions`. 
-
-## Personas/Functional Roles in this Project
-
-We use all the various access roles to sum together four functional roles, each corresponding to one "persona" in this project.
-
-1. `*_ADMIN_FR`
-    - This role is dedicated to anyone who serves an administrative role on the project
-    - Persons with this role will have ownership over most schema-child objects and will have the the most permissive access out of all Functional Roles
-1. `*_ENGINEER_FR`
-    - This role is dedicated to anyone who is developing code on the project
-    - Persons with this role can create and modify most objects, but they do not have ownership over anything
-    - Persons with this role will be able to read from higher environments, but cannot write to any environment but the one that applies to their current role
-        - This feature is called "read ups" and will be discussed in detail further below
-1. `*_SVCTRANSFORM_FR`
-    - Service account role
-    - This role should be used by orchestrators or any sort of non-human application that will refresh data pipelines on a regular schedule
-    - This role is very similar to the `*_ENGINEER_FR` role, with two important exceptions:
-        1. This role does not support read ups
-        2. This role *does* have production write access, whereas the human-facing *_ENGINEER_FR` role, for obvious reasons, does not
-1. `*_ANALYST_FR`
-    - Read-only persona
-    - Used for any person or application that needs to query the data but does not need to change it in any way
-  
-### One `*_SYSADMIN` to own them all
-
-To consolidate high-level privileges for a single environment, we establish one final "persona" called `*_SYSADMIN`. This is analogous to the Snowflake system role called [`SYSADMIN`](https://docs.snowflake.com/en/user-guide/security-access-control-overview#label-access-control-overview-roles-system), except that its permissions apply to a single environment. 
-
-Each environment will have such a role. This role will ultimately inherit:
-1. All the read, read-write, and full-access roles in the environment
-2. Ownership of the Warehouse dedicated to that environment
-
-To complete the inheritance cycle, all `*_SYSADMIN` roles are granted to the Snowflake-default `SYSADMIN` role.  
-
-## On Warehouses
-
-I try to keep the approach for warehouses as simple as possible. The only rules we follow on this project with respect to warehouses are:
-
-1. Warehouses should be sized appropriately.
-    - Anything bigger than an X-Small ought to have a documented justification for why the extra compute is necessary
-3. One warehouse per environment
-    - Warehouses are where most daily compute is spent. If you're spending money, you ought to know what environments are costing you the most
-    - Splitting Warehouses by enviornment achieves this 
-
-
-## Environment Structure
-
-Each of the prototype schemas and their associated functional roles are duplicated across each of our environments. We have four "full" environments:
-1. SANDBOX
-    - When the team sets out to deliver a new feature or fix a bug, the first lines of code and the first SQL statements executed always happen here
-    - Each developer has their own **set of sandbox schemas**, where each schema's name contains the name of the developer the schema is meant for
-    - More details on this in the following section 
-1. DEV
-    - This is where integration testing takes place
-    - After several Pull requests have been approved and merged, this is the environment they will "land" in
-    - Here, all those features are tested together to ensure they are compatible with each other
-3. QA
-   - This is where User-Acceptance testing takes place
-   - After a new feature or bug fix makes it to QA, it should already have been thoroughly tested for bugs by the developer
-   - QA is where some sort of stakeholder, such as the person who requested the feature in the first place, can inspect the latest changes and ensure they fit expectations and requirements
-5. PROD
-   - This is where the final product of all our work lives for the whole world (or at least the business) to see 
-
-### UTIL Environment
-
-I said we have four "full" environments because we sort of technically have a fifth environment, but it doesn't work like the other four. 
-
-This environment consists of a single database containing a schema called `UTIL`. In diagrams, I refer to this database as `NAMED_DATABASE` because its exact name is arbitrary. In practice, I usually just name it after whatever company I'm doing the given project for. For this project, I decided to name it after my github account-- `SHERLOCK_WINGS`. 
-
-The point of this database and schema is to hold all important quality-of-life objects that are not actual business data. Things like stored procedures (such as the one used to populate the Sandbox environment-- see below), data definitions, etc. will be kept here. 
-
-## How the Sandbox works
-
-The point of the sandbox is to give developers a place where they can execute even the most destructive of SQL operations without causing any problems in any other environment. We enable this by giving each developer their own "workspace". This is done by running many `CREATE SCHEMA... CLONE` statements, essentially. 
-
-### Sandbox Schema Naming Conventions
-
-`<sandbox-db-name>.<developer-name>_<prototype-schema-name>`
-
-Example:
-1. `SANDBOX_EDW_DB.PCALLAHAN_STAGE`
-2. `SANDBOX_EDW_DB.BJONES_MODEL`
-
-### Multiple schemas
-
-While its tempting to think of "your sandbox" as a single object, your Sandbox is actually 3 objects (at least when using our Project's data model). In my case, "my Sandbox" would be a triplet of schemas named like: 
-
-1. `SANDBOX_EDW_DB.PCALLAHAN_RAW`
-1. `SANDBOX_EDW_DB.PCALLAHAN_STAGE`
-2. `SANDBOX_EDW_DB.PCALLAHAN_MODEL`
-
-### Populating the Sandbox
-
-This is never done manually. It is done by using a stored procedure called `CLONE_TO_SANDBOX`. The sproc works by cloning all the schema from a source environment (such as QA, Prod, Dev, etc-- this is specified by the caller) and into the Sandbox. The sproc knows automatically to generate the schemas as clones, using the correct name. Also, it correctly "rebuilds" the RBAC so the schema is is usable as expected post-execution. Finally, every `CLONE`, `GRANT` and `REVOKE` statement ran by that sproc is stored in a view called `CLONE_TO_SANDBOX_CALL_LOG_VW`, meaning all the work done by the sproc is totally traceable. 
-
-This is done using Snowflake's in-built Telemetry features via the JavaScript. [See this article for more information](https://docs.snowflake.com/en/developer-guide/logging-tracing/tracing-javascript).
-
-# Environment Summary Diagram
-
-For a summary of how the roles, schemas, and environments discussed above all work together, see Figure 2 below:
-
-![Fig 2. Environment Summary Diagram](https://github.com/sherlock-wings/snowflake_sandbox/blob/dev/02_RBAC/miro/structure_between_environments.jpg)
-
-# Role Distribution by Enviornment
-
-Supporting this architecture the right way means that the role for a given persona has many "copies" of itself. This is so each persona can be implemented in higher or lower environments as needed. However, it is not as simple as one role per persona and environment. In some environments, certain personas should not have access.
-
-These details are summarized in Figure 3 below:
-
-![Fig 3. Role Distribution across Environments](https://github.com/sherlock-wings/snowflake_sandbox/blob/dev/02_RBAC/miro/roles_across_environments.jpg)
-
-## Role Access by Environment
-
-***No** single functional role has uniform access across all 5 enviornments!*
-1. ANALYST does not need to read access to SANDBOX or UTIL since it is meant only for the consumption of business-data
-2. Personas used by humans (i.e. not `SVCTRANSFORMER`) who also generally get read-write access must **not** have any access in Prod for basic security reasons
-    - That means no Prod-Facing ENGINEER or ADMIN functional roles    
-4. ENGINEER is the only role with support for Readups
-    - This is because basic Development often requires reading from a higher environment so data in a lower environment can be compared or overwritten
-    - Read downs are never supported, regardless
-    - For example, `QA_ENGINEER_FR` can read from Prod and QA but can only write to QA
-    - `SANDBOX_ENGINEER_FR` can read from Dev, QA, and Prod, but can only write to Sandbox. It has no access to UTIL
-5. SVCTRANSFORMER does not need read/write access to SANDBOX or UTIL like ANALYST-- it is only meant for executing orchestrated jobs. These should never be created in SANDBOX or UTIL
-
-# Object Naming Conventions
-
-## Databases
-
-`<environment-prefix>_EDW_DB`
-
-Examples:
-1. `QA_EDW_DB`
-2. `PROD_EDW_DB`
-
-## Roles
-
-### Access Roles
-`<environment_prefix>_<database-name>_<schema-name>_<access-type>_AR`
-
-Examples:
-1. `DEV_EDW_DB_MODEL_RW_AR`
-2. `PROD_EDW_RAW_R_AR`
-
-### Functional Roles
-
-`<persona-name>_FR`
-
-Examples:
-1. `QA_ADMIN_FR`
-2. `SANDBOX_ENGINEER_FR`
-
-### Schema Children
-
-`<object-name>_<object-type-suffix>`
-
-Note that for permanent tables, there is no object type suffix. The trailing `'_'` is omitted from the object name in those cases.
-
-| Object Type    | Suffix |
-| -------- | ------- | 
-| Permanent Table  | None    | 
-| Transient Table  | `TRN`     |
-| Temporary Table    | `TMP`   |
-| View    | `VW`   |
-| Materialized View    | `MVW`   |
-| Sequences    | `SQN`   |
-| File Formats    | `FFM`   |
-| Stages    | `STG`   |
-| Streams    | `STM`   |
-| Stored Procedures    | `STP`   |
-| User Defined Functions (UDFs)    | `UDF`   |
-| Tasks | `TSK` |
