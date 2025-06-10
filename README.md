@@ -16,9 +16,9 @@ This project uses a feature of atproto called Firehose. It is an aggregated stre
 
 ### For more information...
 
-- [You can learn more about how Jetstream was created and the incredible efficiency gains Jaz was able to make possible in their blog post here](https://jazco.dev/2024/09/24/jetstream/).
-- [For technical details on Jetstream, see the GitRepo](https://github.com/bluesky-social/jetstream)
-- [For a live feed of Firehose (great to get a visual understanding), check out Firesky](https://firesky.tv/)
+- You can learn more about how Jetstream was created and the incredible efficiency gains Jaz was able to make possible [in their blog post here](https://jazco.dev/2024/09/24/jetstream/).
+- For technical details on Jetstream, [see the GitRepo](https://github.com/bluesky-social/jetstream)
+- For a live feed of Firehose (great to get a visual understanding), [check out Firesky](https://firesky.tv/)
 
 ## Data Collection
 
