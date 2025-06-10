@@ -1,6 +1,6 @@
 # What is this project? 
 
-This is a project is focused on the Social Media app Bluesky. It uses [NLP Modeling](https://en.wikipedia.org/wiki/Natural_language_processing) to attempt to get an understanding of what users generally like to talk about, and how they feel about those things.
+This is a project a study on the Social Media app Bluesky and what is posted there. It uses [NLP Modeling](https://en.wikipedia.org/wiki/Natural_language_processing) to attempt to get an understanding of what users generally like to talk about, and how they feel about those things.
 
 ## What is Bluesky?
 
