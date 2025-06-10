@@ -120,8 +120,6 @@ We collect data with the following tech stack:
 
    1. A sample of the processed records can be seen below
 
-   2. 
-
    3. | POST_CREATED_AT_TIMESTAMP     | FIRST_DETECTED_LANGUAGE | POST_TEXT                                                    |
       | ----------------------------- | ----------------------- | ------------------------------------------------------------ |
       | 2025-05-24 03:06:03.000 +0000 | Japanese                | 大腸がん発症、腸内細菌が出す毒素「コリバクチン」が関係…細胞の遺伝子を傷つける性質 https://www.yomiuri.co.jp/medical/20250524-OYT1T50055/ |
