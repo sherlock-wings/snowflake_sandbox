@@ -260,7 +260,6 @@ if __name__ == "__main__":
            or first_detected_language is null
           )
       and content_id not in (select content_id from {SF_DB}.{SF_SC}.firehose_nlp_labeled)
-      and content_id not in (select content_id from {SF_DB}.{SF_SC}.int_firehose_nlp)
       ; 
     """
     src_filter = f"""
