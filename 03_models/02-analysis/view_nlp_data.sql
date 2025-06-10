@@ -1,7 +1,7 @@
 create or replace view bluesky_db.main.firehose_nlp_vw as (
 select a.post_created_usa_timestamp as post_created_at
       ,b.post_text
-      ,b.length(post_text) as total_post_characters
+      ,length(b.post_text) as total_post_characters
       ,b.first_detected_language as language
       ,a.sentiment_detected_label
       ,a.sentiment_confidence_score
