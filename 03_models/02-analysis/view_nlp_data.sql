@@ -1,5 +1,8 @@
 create or replace view bluesky_db.main.firehose_nlp_vw as (
-select a.post_created_usa_timestamp as post_created_timestamp
+select a.analysis_id
+      ,a.content_id
+      ,a.post_created_usa_timestamp as timestamp_post_created
+      ,to_date(a.post_created_usa_timestamp) as date_post_created
       ,year(a.post_created_usa_timestamp) as year_post_created_at
       ,quarter(a.post_created_usa_timestamp) as quarter_post_created_at
       ,month(a.post_created_usa_timestamp) as month_post_created_at
@@ -12,6 +15,7 @@ select a.post_created_usa_timestamp as post_created_timestamp
       ,a.sentiment_confidence_score
       ,a.ner_detected_group
       ,a.ner_detected_entity
+      ,length(a.ner_detected_entity) as total_characters_ner_detected_entity
       ,a.post_entity_number
       ,a.ner_confidence_score
 from bluesky_db.main.firehose_nlp_labeled a
