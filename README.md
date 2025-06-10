@@ -1,6 +1,6 @@
 # What is this project? 
 
-This is a project is focused on the Social Media app Bluesky. It uses NLP Modeling to attempt to get an understanding of what users generally like to talk about, and how they feel about those things.
+This is a project is focused on the Social Media app Bluesky. It uses [NLP Modeling](https://en.wikipedia.org/wiki/Natural_language_processing) to attempt to get an understanding of what users generally like to talk about, and how they feel about those things.
 
 ## What is Bluesky?
 
@@ -34,10 +34,10 @@ We collect data with the following tech stack:
    2. [Lambda (to execute the ingestion script)](https://aws.amazon.com/lambda/)
    3. [EventBridge (to trigger ingestions on Schedule)](https://aws.amazon.com/eventbridge/)
    4. [Elastic Container Registry (for containerizing the ingestion process)](https://aws.amazon.com/ecr/)
-3. Snowflake
+3. [Snowflake](https://www.snowflake.com/en/)
    1. This is our "landing zone" for raw and processed Bluesky data
-   2. External Stages are used to view S3 Files in Snowflake
-   3. Scheduled Tasks and Stored procedures are used to process raw data from Stage on Schedule
+   2. [External Stages](https://docs.snowflake.com/en/user-guide/data-load-s3-create-stage) are used to view S3 Files in Snowflake
+   3. [Scheduled Tasks](https://docs.snowflake.com/en/user-guide/tasks-intro) and [Stored procedures](https://docs.snowflake.com/en/sql-reference/sql/create-procedure) are used to process raw data from Stage on Schedule
 
 ### For Modeling...
 
