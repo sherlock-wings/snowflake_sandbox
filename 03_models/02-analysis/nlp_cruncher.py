@@ -54,15 +54,6 @@ PIPL_SNT = pipeline(
 ## for verification, see this link:
 ##      https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment
 
-# named-entity recognition doo-dad instantiation
-PIPL_NER = pipeline(
-    "ner",
-    model="dslim/bert-base-NER",
-    tokenizer="dslim/bert-base-NER",
-    aggregation_strategy="simple",
-    device=DEVICE,
-    batch_size=256 
-)
 
 ### FUNCTIONS | FUNCTIONS | FUNCTIONS | FUNCTIONS | FUNCTIONS | FUNCTIONS | FUNCTIONS | FUNCTIONS | FUNCTIONS | FUNCTIONS | FUNCTIONS | FUNCTIONS 
 ### FUNCTIONS | FUNCTIONS | FUNCTIONS | FUNCTIONS | FUNCTIONS | FUNCTIONS | FUNCTIONS | FUNCTIONS | FUNCTIONS | FUNCTIONS | FUNCTIONS | FUNCTIONS 
@@ -167,7 +158,7 @@ def writeback_batch(source_table_query: str
         connection_parameters: All details used to instantiate a Snowflake 
                                connection              
     """
-
+    
     # need to be able to report progress during execution because this runs for so long
     # track some measures to help do that
     count_all_query = f"select count(*) from {source_database}.{source_schema}.{source_table_name}"
@@ -207,10 +198,6 @@ def writeback_batch(source_table_query: str
         # execute NER analysis 
         nlp_output = nlp_params['transformer_pipeline'](batch_dataset[nlp_params['target_text_colname']])
         batch[nlp_params['nlp_metric'].upper()] = nlp_output
-        
-        # NER is called first-- if that's what we're doing, then fill in an empty sentana column for now-- we'll get it later
-        if nlp_params['nlp_metric'].upper() == 'NER_ANALYSIS' and 'SENTIMENT_ANALYSIS' not in batch.columns:
-            batch['SENTIMENT_ANALYSIS'] = None
         
         # match col order before writing
         try:
@@ -270,89 +257,59 @@ if __name__ == "__main__":
       and content_id not in (select content_id from {SF_DB}.{SF_SC}.int_firehose_nlp)
       ;"""
     nlp_params = {'nlp_metric': 'NER_ANALYSIS'
-                 ,'transformer_pipeline': PIPL_NER
-                 ,'target_text_colname': 'POST_TEXT'
-                 }
-    target_cols = ['CONTENT_ID', 'POST_CREATED_USA_TIMESTAMP', 'POST_TEXT', 'NER_ANALYSIS', 'SENTIMENT_ANALYSIS']
-
-    # writeback NER
-    writeback_batch(query, 'FIREHOSE_PROCESSED', 'INT_FIREHOSE_NLP', target_cols, nlp_params, source_table_filter=src_filter)
-    
-    ## SENTIMENT ANALYSIS
-    query = f"""create or replace table {SF_DB}.{SF_SC}.TMP_MERGE_SRC(
-     content_id varchar
-    ,post_created_usa_timestamp timestamp_tz(9)
-    ,post_text varchar
-    ,sentiment_analysis variant
-    )"""
-    CSR = execute_query(query)
-    
-    query = "select distinct * from bluesky_db.main.int_firehose_nlp;"
-    nlp_params = {'nlp_metric': 'SENTIMENT_ANALYSIS'
                  ,'transformer_pipeline': PIPL_SNT
                  ,'target_text_colname': 'POST_TEXT'
                  }
-    target_cols = ['POST_TEXT', 'CONTENT_ID', 'SENTIMENT_ANALYSIS']
-    
-    # writeback SENTIMENT
-    writeback_batch(query, 'INT_FIREHOSE_NLP', 'TMP_MERGE_SRC', target_cols, nlp_params)
+    target_cols = ['CONTENT_ID', 'POST_CREATED_USA_TIMESTAMP', 'POST_TEXT', 'SENTIMENT_ANALYSIS']
+
+    # writeback NER
+    writeback_batch(query, 'FIREHOSE_PROCESSED', 'INT_FIREHOSE_NLP', target_cols, nlp_params, source_table_filter=src_filter)
 
     # At this point, we have the NER data in INT_FIREHOSE_NLP. We have the SENT data in TMP_MERGE_SRC. So we have to
     # 1. MERGE the SENT data from TMP_MERGE_SRC to INT_FIREHOSE_NLP
     # 2. INSERT everything in INT_FIREHOSE_NLP to FIREHOSE_NLP_LABELED
     query=f"""
-    merge into {SF_DB}.{SF_SC}.INT_FIREHOSE_NLP tgt
-    using {SF_DB}.{SF_SC}.TMP_MERGE_SRC src
-       on src.content_id = tgt.content_id
-    when matched then update 
-    set tgt.SENTIMENT_ANALYSIS = src.SENTIMENT_ANALYSIS
-    """
-
-    CSR = execute_query(query)
-    print(f"Sentiment Analysis MERGE into INT_FIREHOSE_NLP.SENTIMENT_ANALYSIS using TMP_MERGE_SRC complete!")
-
-    query = f"""
-    insert into {SF_DB}.{SF_SC}.firehose_nlp_labeled
-    with src as (
+    merge into  {SF_DB}.{SF_SC}.firehose_nlp_labeled tgt
+    using (
     select a.content_id
           ,a.post_created_usa_timestamp
           ,b.readable_label_name as sentiment_detected_label
           ,cast(sentiment_analysis:score as number(5,4)) as sentiment_confidence_score
-          ,row_number() over (
-           partition by a.content_id
-           order     by a.post_created_usa_timestamp, trim(a2.value:word, '"')
-           ) as post_entity_number
-          ,trim(a2.value:entity_group, '"') as ner_detected_group
-          ,trim(a2.value:word, '"') as ner_detected_entity
-          ,cast(a2.value:score as number(5,4)) as ner_confidence_score
           ,current_timestamp() as record_inserted_at_timestamp
           ,current_user() as record_inserted_by_user
           ,current_role() as record_inserted_with_role
     from {SF_DB}.{SF_SC}.int_firehose_nlp a
-    left join table(flatten(input => parse_json(a.ner_analysis))) a2
     left join {SF_DB}.{SF_SC}.label_map_roberta_base_sentiment b
            on trim(a.sentiment_analysis:label, '"') = b.model_label_name
-    )
+    ) src
+       on src.content_id = tgt.content_id
+    when not matched then insert (
+     content_id
+    ,post_created_usa_timestamp
+    ,sentiment_detected_label
+    ,sentiment_confidence_score
+    ,record_inserted_at_timestamp
+    ,record_inserted_by_user
+    ,record_inserted_with_role
+    ) values (
+     src.content_id
+    ,src.post_created_usa_timestamp
+    ,src.sentiment_detected_label
+    ,src.sentiment_confidence_score
+    ,src.record_inserted_at_timestamp
+    ,src.record_inserted_by_user
+    ,src.record_inserted_with_role
+    )"""
 
-    select sha2(nvl(to_char(content_id), 'NULL') 
-             || '||' 
-             || nvl(to_char(post_entity_number), 'NULL')
-           ) as analysis_id
-          ,*
-    from src 
-    order by content_id
-            ,post_created_usa_timestamp
-            ,ner_detected_entity
-    """
-    try:
-        CSR = execute_query(query)
-        inserted_rows = CSR.fetchone()[0]
-        print(f"{(inserted_rows):,} rows inserted to final target FIREHOSE_NLP_LABELED")
-        if inserted_rows > 0:
-            CSR = execute_query(f'truncate table {SF_DB}.{SF_SC}.INT_FIREHOSE_NLP')
-            CSR = execute_query(f"drop table {SF_DB}.{SF_SC}.TMP_MERGE_SRC")
-            print(f"Operation completed at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\nSuccessfully cleared INT_FIREHOSE_NLP and inserted all data to FIREHOSE_NLP_LABELED")
-            CSR.close()
-            SF_XCT.close()
-    except Exception as e:
-        print(f"Encountered an error during the final target insertion: {e}")
+    CSR = execute_query(query)
+    # make sure you actually inserted something before clearing the table
+    inserted_rows = CSR.fetchone()[0]
+    if inserted_rows > 0:
+        # if you inserted rows then you're good to truncate
+        CSR = execute_query(f'truncate table {SF_DB}.{SF_SC}.INT_FIREHOSE_NLP')
+        print(f"Operation completed at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\nSuccessfully cleared INT_FIREHOSE_NLP and inserted all data to FIREHOSE_NLP_LABELED")
+        CSR.close()
+        SF_XCT.close()
+    else:
+        print("Latest query completed, but zero rows were inserted. INT_FIREHOSE_NLP has *not* been cleared, so no worries.")
+        print("Maybe something is wrong with the last query you ran? Go fix it!")
