@@ -229,7 +229,7 @@ def writeback_batch(source_table_query: str
     minute_time_for_process = total_seconds_for_process // 60
     second_time_for_process = total_seconds_for_process % 60
     print(f"\n{(c):,} batches totaling {(total_rows_in_source):,} rows were processed in {round(minute_time_for_process, 0)}m {(second_time_for_process):,.1f}s")
-    print(f"Average process velocity is {round((total_rows_in_source/(total_seconds_for_process/60)), 1):,.1f}")
+    print(f"Average process velocity is {round((total_rows_in_source/(total_seconds_for_process/60)), 1):,.1f} rows/minute")
 
 ### DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER |
 ### DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER |
