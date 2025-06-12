@@ -49,7 +49,7 @@ begin
     query_id := last_query_id();
     
     -- log 
-    insert into bluesky_db.main.sproc_log (
+    insert into bluesky_db.main.process_firehose_sproc_log (
     select  :call_id as call_id
            ,:step_id as step_id 
            ,:query_id as query_id 
@@ -156,7 +156,7 @@ begin
     query_id := last_query_id();
     
     -- log 
-    insert into bluesky_db.main.sproc_log (
+    insert into bluesky_db.main.process_firehose_sproc_log (
     select  :call_id as call_id
            ,:step_id as step_id 
            ,:query_id as query_id 
@@ -181,7 +181,7 @@ begin
     row_count := SQLROWCOUNT;
 
     -- log 
-    insert into bluesky_db.main.sproc_log (
+    insert into bluesky_db.main.process_firehose_sproc_log (
     select  :call_id as call_id
            ,:step_id as step_id 
            ,:query_id as query_id 
@@ -204,7 +204,7 @@ exception
         row_count := null;
         
         -- log 
-        insert into bluesky_db.main.sproc_log (
+        insert into bluesky_db.main.process_firehose_sproc_log (
         select  :call_id as call_id
                ,:step_id as step_id 
                ,:query_id as query_id 
