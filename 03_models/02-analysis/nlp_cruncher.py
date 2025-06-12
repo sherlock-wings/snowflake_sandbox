@@ -256,7 +256,7 @@ if __name__ == "__main__":
       and content_id not in (select content_id from {SF_DB}.{SF_SC}.firehose_nlp_labeled)
       and content_id not in (select content_id from {SF_DB}.{SF_SC}.int_firehose_nlp)
       ;"""
-    nlp_params = {'nlp_metric': 'NER_ANALYSIS'
+    nlp_params = {'nlp_metric': 'SENTIMENT_ANALYSIS'
                  ,'transformer_pipeline': PIPL_SNT
                  ,'target_text_colname': 'POST_TEXT'
                  }
