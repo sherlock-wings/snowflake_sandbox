@@ -55,7 +55,7 @@ We collect data with the following tech stack:
 
 4. Once the extraction completes, the resulting .jsonl files are written to an S3 bucket
 
-5. That S3 bucket is visible in Snowflake as an External Stage
+5. That S3 bucket is visible in Snowflake as a5427n External Stage
 
 6. From that stage, a stored procedure copies files into a Raw landing table called `INT_FIREHOSE_RAW`
 

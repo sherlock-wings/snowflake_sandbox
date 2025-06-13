@@ -71,8 +71,7 @@ begin
     -- consume raw data
     merge into bluesky_db.main.firehose_processed tgt
     using (
-       select distinct 
-              value
+       select value
              ,cast(trim(a.value:commit:record:createdAt, ''"'') as timestamp_tz) as post_created_at_timestamp
              ,to_timestamp_tz(cast(trim(a.value:time_us, ''"'') as number (38,0)) / 1000000) as usa_timestamp
              ,trim(a.value:commit:cid, ''"'') as content_id
@@ -106,6 +105,9 @@ begin
                             ,''\-[A-Za-z]+'', ''''
                             ) = b.iso_alpha_2_code
        where value:commit:operation = ''create''
+       qualify row_number() over (partition by content_id order by content_id) = 1
+       -- ^^ this is a weird one. deliberatley tried w. DISTINCT in this query and in a 
+       --    consecutive CTE and neither worked. only this does. ¯\_(ツ)_/¯
     ) src on src.content_id = tgt.content_id
     when not matched then insert (
     value
