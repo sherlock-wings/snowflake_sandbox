@@ -1,3 +1,9 @@
+create or replace function remove_stopwords(stopword_list variant, input_text varchar)
+returns variant
+language python
+runtime_version = '3.9'
+handler = 'remove_stopwords'
+as $$
 import re
 
 def remove_stopwords(stopword_list: list, POST_TEXT: str):
@@ -13,3 +19,4 @@ def remove_stopwords(stopword_list: list, POST_TEXT: str):
         else:
             txt_ls.append(POST_TEXT[i])
     return [word for word in txt_ls if word not in stopword_list]
+$$;
