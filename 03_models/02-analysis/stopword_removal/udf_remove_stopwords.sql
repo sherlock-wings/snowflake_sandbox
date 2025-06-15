@@ -7,11 +7,12 @@ as $$
 import re
 
 def remove_stopwords(stopword_list: list, POST_TEXT: str):
-    special_char_pat = r'[\\\`\~\!\@\#\$\%\^\&\*\(\)\-\_\+\=\/\<\>\,\.\|\[\]\{\}]+'
-    POST_TEXT = re.sub(special_char_pat, '', POST_TEXT).lower().split()
+    special_char_pat = r'[\\\`\~\!\@\#\$\%\^\&\*\?\(\)\-\_\+\=\/\<\>\,\.\|\[\]\{\}]+'
+    POST_TEXT = POST_TEXT.replace('"', "'").lower().replace("don't", '').replace("doesn't", '')
+    POST_TEXT = re.sub(special_char_pat, '', POST_TEXT).split()
     txt_ls = []
     for i in range(len(POST_TEXT)):
-        if "'" in POST_TEXT[i]:
+        if re.search(r"'", POST_TEXT[i]) and POST_TEXT[i]:
             pair = POST_TEXT[i].split("'")
             newval = "'" + pair[1]
             txt_ls.append(pair[0])

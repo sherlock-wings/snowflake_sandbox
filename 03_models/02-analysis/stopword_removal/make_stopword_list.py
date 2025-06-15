@@ -9,7 +9,7 @@ import pandas as pd
 nlp = spacy.load('en_core_web_sm')
 
 stop_words_ls = stop_words.STOP_WORDS
-stop_words_ls = [word.replace('‘', "'").replace("’", "'") for word in stop_words_ls]
+stop_words_ls = [word.replace('‘', "'").replace("’", "'").replace('"', "'") for word in stop_words_ls]
 tmp = set(stop_words_ls)
 stop_words_ls = list(tmp)
 stop_words_ls.sort()
