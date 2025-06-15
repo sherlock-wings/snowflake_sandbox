@@ -12,6 +12,7 @@ stop_words_ls = stop_words.STOP_WORDS
 stop_words_ls = [word.replace('‘', "'").replace("’", "'").replace('"', "'") for word in stop_words_ls]
 tmp = set(stop_words_ls)
 stop_words_ls = list(tmp)
+stop_words_ls.append("'t")
 stop_words_ls.sort()
 
 index = 0 

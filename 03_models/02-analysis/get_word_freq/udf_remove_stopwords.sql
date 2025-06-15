@@ -7,7 +7,8 @@ as $$
 import re
 
 def remove_stopwords(stopword_list: list, POST_TEXT: str):
-    special_char_pat = r'[\\\`\~\!\@\#\$\%\^\&\*\?\(\)\-\_\+\=\/\<\>\,\.\|\[\]\{\}]+'
+    special_char_pat = r'[~`\!\@\#\$\%\^\&\*\(\)\-\_\+\=\/\|\\\{\}\[\]\:\;|<\>\,\.\?]+'
+    POST_TEXT = re.sub('[‘’]', "'", POST_TEXT)
     POST_TEXT = POST_TEXT.replace('"', "'").lower().replace("don't", '').replace("doesn't", '')
     POST_TEXT = re.sub(special_char_pat, '', POST_TEXT).split()
     txt_ls = []
@@ -19,5 +20,6 @@ def remove_stopwords(stopword_list: list, POST_TEXT: str):
             txt_ls.append(newval)
         else:
             txt_ls.append(POST_TEXT[i])
-    return [word for word in txt_ls if word not in stopword_list]
+    dead_tokens = ['', "'", '—']
+    return [word for word in txt_ls if word not in stopword_list and word not in dead_tokens]
 $$;
