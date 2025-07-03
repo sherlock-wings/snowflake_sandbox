@@ -1,7 +1,9 @@
 datasets
+gensim
 ipykernel
 ipywidgets
+nltk
 pandas
+sklearn
 snowflake-connector-python[pandas]
-spacy
 transformers[torch]
