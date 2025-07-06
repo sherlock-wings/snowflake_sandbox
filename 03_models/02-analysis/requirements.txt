@@ -1,5 +1,5 @@
 datasets
-gensim
+bertopic
 ipykernel
 ipywidgets
 nltk
