@@ -99,6 +99,17 @@ begin
              ,current_user() as record_inserted_by_user
              ,current_role() as record_inserted_with_role 
              ,b.language_name_in_english as first_detected_language
+             ,''at://'' || 
+                trim(value:did, ''"'') || 
+                trim(value:commit:collection, ''"'') || 
+                ''/'' ||
+                trim(value:commit:rkey, ''"'') as post_uri
+             ,trim(value:did, ''"'') as post_author_did
+             ,split_part(
+                         split_part(trim(value:commit:record:reply:root:uri, ''"''), ''at://'', 2)
+                                   ,''/''
+                                   ,1
+                       ) as root_author_did
        from bluesky_db.main.int_firehose_raw a
        left join bluesky_db.main.iso_language_codes b
               on regexp_replace(trim(parse_json(a.value:commit:record:langs)[0], ''"'')
@@ -130,6 +141,9 @@ begin
    ,record_inserted_by_user
    ,record_inserted_with_role
    ,first_detected_language
+   ,post_uri
+   ,post_author_did
+   ,root_author_did
    )
    values (
     src.value
@@ -152,6 +166,9 @@ begin
    ,src.record_inserted_by_user
    ,src.record_inserted_with_role
    ,src.first_detected_language
+   ,src.post_uri
+   ,src.post_author_did
+   ,src.root_author_did
    );
     
     row_count := SQLROWCOUNT;
