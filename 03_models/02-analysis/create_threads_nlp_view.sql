@@ -6,9 +6,9 @@
 --This table results in rows for summarizing data on keywords by author in a thread. 
 --3 authors, 1 post each, same sentiment = 3 flags. 
 --1 author, 6 posts, same sentiment = 1 flag.
---2 authors, 2 different sentiments = 2 flags.
+--2 authors, 2 different sentiments
 
---create or replace view BLUESKY_DB.STEETS.THREADS_NLP
+create or replace view BLUESKY_DB.STEETS.THREADS_NLP
 (
 keyword,
 topic,
@@ -37,16 +37,17 @@ WITH thread_matches AS (
     k.category,
     k.topic,
     CASE 
-      WHEN LOWER(f.POST_TEXT) LIKE CONCAT('%', LOWER(k.keyword), '%') THEN 1 
+      WHEN f.POST_TEXT ILIKE '%' || k.keyword || '%' THEN 1  
       ELSE 0 
     END AS text_match_flag
-  FROM steets.firehose_nlp_posts_vw f
-  JOIN steets."Keywords_Lookup" k
-    ON LOWER(f.POST_TEXT) LIKE CONCAT('%', LOWER(k.keyword), '%') 
-  JOIN BLUESKY_DB.MAIN.FIREHOSE_PROCESSED p
-    ON p.CONTENT_ID = f.CONTENT_ID
-  WHERE LOWER(f.POST_TEXT) LIKE CONCAT('%', LOWER(k.keyword), '%')
-  and p.value is not null
+FROM steets.firehose_nlp_posts_vw f
+JOIN BLUESKY_DB.MAIN.FIREHOSE_PROCESSED p ON p.CONTENT_ID = f.CONTENT_ID
+JOIN LATERAL (
+    SELECT keyword, topic, category
+    FROM steets."Keywords_Lookup" k
+    WHERE f.POST_TEXT ILIKE '%' || k.keyword || '%'
+) k
+WHERE p.value IS NOT NULL
 )
 , 
 --each row represents one author mentioning one keyword in one thread. 
@@ -63,10 +64,7 @@ thread_author_keyword_sentiment AS (
   FROM thread_matches
   GROUP BY THREAD_ROOT_URI, post_author_did, keyword, topic, category
 )
-select 
-,
 
-  thread_summary AS 
 (
   SELECT
     s.keyword,
@@ -87,5 +85,3 @@ select
   join thread_matches f on f.THREAD_ROOT_URI = s.THREAD_ROOT_URI
   GROUP BY s.THREAD_ROOT_URI, s.keyword, s.topic, s.category
 )
-select *
-from thread_summary
