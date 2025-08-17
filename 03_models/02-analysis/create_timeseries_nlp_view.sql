@@ -1,3 +1,5 @@
+
+
 create or replace view BLUESKY_DB.STEETS.TIMESERIES_NLP(
 	KEYWORD,
 	TOPIC,
