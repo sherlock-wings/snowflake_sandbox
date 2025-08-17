@@ -1,3 +1,5 @@
+
+
 create or replace view BLUESKY_DB.STEETS.AUTHORS_NLP 
 (
 author_did,
@@ -28,16 +30,17 @@ WITH thread_matches AS (
     k.category,
     k.topic,
     CASE 
-      WHEN LOWER(f.POST_TEXT) LIKE CONCAT('%', LOWER(k.keyword), '%') THEN 1 
+      WHEN f.POST_TEXT ILIKE '%' || k.keyword || '%' THEN 1  
       ELSE 0 
     END AS text_match_flag
-  FROM steets.firehose_nlp_posts_vw f
-  JOIN steets."Keywords_Lookup" k
-    ON LOWER(f.POST_TEXT) LIKE CONCAT('%', LOWER(k.keyword), '%') 
-  JOIN BLUESKY_DB.MAIN.FIREHOSE_PROCESSED p
-    ON p.CONTENT_ID = f.CONTENT_ID
-  WHERE LOWER(f.POST_TEXT) LIKE CONCAT('%', LOWER(k.keyword), '%')
-  and p.value is not null
+FROM steets.firehose_nlp_posts_vw f
+JOIN BLUESKY_DB.MAIN.FIREHOSE_PROCESSED p ON p.CONTENT_ID = f.CONTENT_ID
+JOIN LATERAL (
+    SELECT keyword, topic, category
+    FROM steets."Keywords_Lookup" k
+    WHERE f.POST_TEXT ILIKE '%' || k.keyword || '%'
+) k
+WHERE p.value IS NOT NULL
 )
 , 
 thread_author_keyword_sentiment AS (
