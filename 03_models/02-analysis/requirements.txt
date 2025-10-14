@@ -4,6 +4,6 @@ ipykernel
 ipywidgets
 nltk
 pandas
-sklearn
+scikit-learn
 snowflake-connector-python[pandas]
 transformers[torch]
