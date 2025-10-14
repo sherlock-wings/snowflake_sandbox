@@ -2,6 +2,7 @@ from datasets import Dataset
 from datetime import datetime, timedelta
 import os
 import re
+import argparse
 import snowflake.connector
 from snowflake.connector.pandas_tools import write_pandas
 from time import sleep
@@ -81,29 +82,36 @@ def execute_query(query: str
         cursor.execute(query)
         return cursor
     except snowflake.connector.errors.ProgrammingError as e:
+        # Programming errors should surface to the caller for correction
         print(f"Bad query. Encountered error: {e}\n... from this query:\n{query}")
-    except snowflake.connector.errors.ForbiddenError as e:
-        print(f"Connection to Snowflake went bad due to error: {e}\nAttempting to re-establish connection...")
+        raise
+    except (snowflake.connector.errors.ForbiddenError,
+            snowflake.connector.errors.DatabaseError,
+            snowflake.connector.errors.OperationalError,
+            snowflake.connector.errors.InterfaceError) as e:
+        print(f"Connection to Snowflake went bad due to error: {e}\nAttempting to re-establish connection with retries...")
         last_error_msg = e
 
-        for i in range(retry_attempts):
+        for attempt in range(1, retry_attempts + 1):
             try:
                 if conn:
-                    conn.close()
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
                 conn = snowflake.connector.connect(**connection_parameters)
                 cursor = conn.cursor()
                 cursor.execute(query)
-                print(f"Successfully re-established connection on attempt {i}")
+                print(f"Successfully re-established connection on attempt {attempt}")
                 return cursor
             except Exception as e:
-                print(f"Reconnection Attempt {i} Failed: {e}")
+                print(f"Reconnection attempt {attempt} failed: {e}")
                 last_error_msg = e
-                if i < retry_attempts: # only sleep & try again if you still have retries left
-                    sleep(2 ** i) #increase time between each reconnection attempt exponentially-- this maxes out at just over 1 min of total 'waiting to retry' time for 5 attempts
-        else: # i didn't know you could do `for... else` in python! cool!!
-            print(f"Failed to re-establish connection and execute query after {retry_attempts} attempts. Aborting.")
-            # Print the final error and then re-raise it
-            raise last_error_msg 
+                if attempt < retry_attempts:
+                    # backoff up to 16s
+                    sleep(2 ** (attempt - 1))
+        print(f"Failed to re-establish connection and execute query after {retry_attempts} attempts. Aborting.")
+        raise last_error_msg
   
 def writeback_batch(source_table_query: str
                    ,source_table_name: str
@@ -175,35 +183,61 @@ def writeback_batch(source_table_query: str
     rows_processed = 0
     pcnt_progress = 0
     
-    # retrieve source data
+    # retrieve and process source data in resumable, paginated batches
     source_table_query = re.sub(r'\s+', ' ', source_table_query)
-    cursor = execute_query(source_table_query
-                          ,conn=conn
-                          ,cursor=cursor
-                          ,connection_parameters=connection_parameters
-                          )
     process_started_at = datetime.now()
+    batch_size = nlp_params.get('batch_size', 1000)
+    num_batches = (total_rows_in_source + batch_size - 1) // batch_size
+    mode_msg = (
+        "Full refresh: starting from scratch (INT_FIREHOSE_NLP will be cleared)."
+        if nlp_params.get('full_refresh') else
+        "Resume: processing remaining rows not in INT_FIREHOSE_NLP or FIREHOSE_NLP_LABELED."
+    )
     print(f"\nInitiated NLP Workflow '{nlp_params['nlp_metric']}' at\n{process_started_at.strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"Downloading {(total_rows_in_source):,} total rows from {source_table_name.upper()}...\n\n")
+    print(mode_msg)
+    print(f"Remaining rows to process from {source_table_name.upper()}: {(total_rows_in_source):,}")
+    print(f"Batch size: {batch_size:,} | Estimated batches: {num_batches:,}\n")
 
-    for batch in cursor.fetch_pandas_batches():
+    # The selection query must already exclude rows present in INT and LABELED
+    # We'll page by LIMIT to avoid long-lived cursors; each page is independent and resumable
+    batch_size = nlp_params.get('batch_size', 1000)
+
+    while True:
+        paged_query = f"{source_table_query} limit {int(batch_size)}"
+        cursor = execute_query(paged_query
+                              ,conn=conn
+                              ,cursor=cursor
+                              ,connection_parameters=connection_parameters
+                              )
+        batch = cursor.fetch_pandas_all()
+        if batch is None or len(batch) == 0:
+            break
+
         batch_started_at = datetime.now()
         c              += 1
-        rows_processed += 1
-        pcnt_progress  += (len(batch)/total_rows_in_source) * 100
-        print(f"\n{len(batch):,} rows downloaded from batch {(c):,} at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        rows_processed += len(batch)
+        pcnt_progress   = min(100, (rows_processed/total_rows_in_source) * 100)
+        print(f"\n{len(batch):,} rows downloaded from page {(c):,} at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
-        # using this thing as input is more efficient than using `batch` directly for whatever reason
-        batch_dataset = Dataset.from_pandas(batch[[nlp_params['target_text_colname']]], preserve_index=False)
-        # execute NER analysis 
-        nlp_output = nlp_params['transformer_pipeline'](batch_dataset[nlp_params['target_text_colname']])
+        # Prepare clean text inputs for the transformer: list[str]
+        text_col = nlp_params['target_text_colname']
+        texts = (
+            batch[text_col]
+            .astype("string")
+            .fillna("")
+            .tolist()
+        )
+        # Replace any accidental None values post-conversion
+        texts = [t if isinstance(t, str) and t != "<NA>" else "" for t in texts]
+
+        nlp_output = nlp_params['transformer_pipeline'](texts)
         batch[nlp_params['nlp_metric'].upper()] = nlp_output
         
-        # match col order before writing
         try:
             batch = batch[target_columns]
         except KeyError as e:
             print(f"Attempted to select these columns in batch:\n{target_columns}\nActual columns in this batch are:\n{batch.columns}")
+
         write_pandas(SF_XCT
                     ,batch
                     ,table_name        = target_table_name.replace('"', '').upper()
@@ -214,8 +248,10 @@ def writeback_batch(source_table_query: str
                     ,overwrite         = False
             )
         
-        #### more prints to show velocity 
-        # ... of this specific batch
+        # After writing the page, update the source query to continue excluding what's in INT
+        # This keeps the next page small even after interruptions
+        # Nothing to do here as the source query already excludes INT on each loop
+
         batch_finished_at = datetime.now()
         print(f"Batch {(c):,} completed at {batch_finished_at.strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"{len(batch):,} rows from batch written to {target_table_name} ({(pcnt_progress):,.1f}% of source rows processed)")
@@ -236,33 +272,44 @@ def writeback_batch(source_table_query: str
 ### DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER | DRIVER |
 
 if __name__ == "__main__":
-    ## NER ANALYSIS
-    CSR = execute_query(f'truncate table {SF_DB}.{SF_SC}.INT_FIREHOSE_NLP')
-    query = f"""
+    parser = argparse.ArgumentParser(description="Run NLP cruncher with resumable batching")
+    parser.add_argument("--full-refresh", action="store_true", dest="full_refresh", help="Truncate INT table and reprocess from scratch")
+    parser.add_argument("--batch-size", type=int, default=1000, dest="batch_size", help="Rows per page to fetch from source")
+    args = parser.parse_args()
+
+    ## Setup filters based on refresh mode
+    if args.full_refresh:
+        CSR = execute_query(f'truncate table {SF_DB}.{SF_SC}.INT_FIREHOSE_NLP')
+
+    language_filter = "(first_detected_language = 'English' or first_detected_language is null)"
+    exclude_labeled = f"content_id not in (select content_id from {SF_DB}.{SF_SC}.firehose_nlp_labeled)"
+    exclude_int = f"content_id not in (select content_id from {SF_DB}.{SF_SC}.int_firehose_nlp)" if not args.full_refresh else "1=1"
+
+    base_select = f"""
     select content_id
           ,usa_timestamp as POST_CREATED_USA_TIMESTAMP
           ,post_text
     from {SF_DB}.{SF_SC}.firehose_processed
-    where (first_detected_language = 'English'
-           or first_detected_language is null
-          )
-      and content_id not in (select content_id from {SF_DB}.{SF_SC}.firehose_nlp_labeled)
-      ; 
+    where {language_filter}
+      and {exclude_labeled}
+      and {exclude_int}
     """
-    src_filter = f"""
-    where (first_detected_language = 'English'
-           or first_detected_language is null
-          )
-      and content_id not in (select content_id from {SF_DB}.{SF_SC}.firehose_nlp_labeled)
-      and content_id not in (select content_id from {SF_DB}.{SF_SC}.int_firehose_nlp)
-      ;"""
+
+    # Full query string used by the paginated loop (LIMIT applied inside the loop)
+    query = base_select
+
+    # Filter string used for counting rows remaining
+    src_filter = f"where {language_filter} and {exclude_labeled} and {exclude_int}"
+
     nlp_params = {'nlp_metric': 'SENTIMENT_ANALYSIS'
                  ,'transformer_pipeline': PIPL_SNT
                  ,'target_text_colname': 'POST_TEXT'
+                 ,'batch_size': args.batch_size
+                 ,'full_refresh': args.full_refresh
                  }
     target_cols = ['CONTENT_ID', 'POST_CREATED_USA_TIMESTAMP', 'POST_TEXT', 'SENTIMENT_ANALYSIS']
 
-    # writeback NER
+    # writeback NLP in resumable pages
     writeback_batch(query, 'FIREHOSE_PROCESSED', 'INT_FIREHOSE_NLP', target_cols, nlp_params, source_table_filter=src_filter)
 
     # At this point, we have the NER data in INT_FIREHOSE_NLP. We have the SENT data in TMP_MERGE_SRC. So we have to
@@ -305,7 +352,7 @@ if __name__ == "__main__":
     # make sure you actually inserted something before clearing the table
     inserted_rows = CSR.fetchone()[0]
     if inserted_rows > 0:
-        # if you inserted rows then you're good to truncate
+        # After successful merge, it's safe to clear INT so the next run resumes with fresh deltas
         CSR = execute_query(f'truncate table {SF_DB}.{SF_SC}.INT_FIREHOSE_NLP')
         print(f"Operation completed at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\nSuccessfully cleared INT_FIREHOSE_NLP and inserted all data to FIREHOSE_NLP_LABELED")
         CSR.close()
