@@ -1,4 +1,4 @@
-CREATE OR REPLACE table BLUESKY_DB.PFC.MONTHLY_NGRAM_SENTIMENT AS
+insert into BLUESKY_DB.PFC.MONTHLY_NGRAM_SENTIMENT
 WITH ngram_sentiment_base AS (
   SELECT 
     n.CONTENT_ID,
@@ -11,6 +11,8 @@ WITH ngram_sentiment_base AS (
   FROM BLUESKY_DB.PFC.post_ngrams n
   JOIN BLUESKY_DB.MAIN.FIREHOSE_NLP_LABELED s
     ON n.CONTENT_ID = s.CONTENT_ID
+  where n.post_month > (select nvl(max(post_month), '1900-01-01 00:00:00 +1000') from BLUESKY_DB.PFC.MONTHLY_NGRAM_SENTIMENT)
+    and n.post_month < date_trunc(month, current_date())
 ),
 monthly_aggregates AS (
   SELECT 
