@@ -7,11 +7,16 @@
   
   Features:
   - Normalizes text (lowercase, removes special chars except spaces)
-  - Extracts 1-grams (single words)
-  - Extracts 2-grams (word pairs)
-  - Extracts 3-grams (three-word phrases)
+  - Extracts 1-grams (single words) - FILTERED to exclude stop words
+  - Extracts 2-grams (word pairs) - keeps stop words for context
+  - Extracts 3-grams (three-word phrases) - keeps stop words for context
   - Filters out very short tokens
   - Preserves CONTENT_ID and POST_MONTH for joining with sentiment data
+  
+  Stop Word Filtering:
+  - 1-grams: Filters common English stop words (the, and, to, a, of, in, is, etc.)
+  - 2-grams & 3-grams: Keeps all phrases (stop words provide context)
+  - Excludes pure stop-word combinations like "the the", "and and"
 */
 
 CREATE OR REPLACE VIEW BLUESKY_DB.PFC.VW_POST_NGRAMS AS
@@ -56,17 +61,23 @@ words_flat AS (
   LATERAL FLATTEN(INPUT => t.WORDS_ARRAY) w
   WHERE LENGTH(TRIM(CAST(w.VALUE AS VARCHAR))) >= 2  -- Minimum 2 characters per word
 ),
--- 1-grams (single words)
+-- Common English stop words from reference table
+stop_words AS (
+  SELECT WORD FROM BLUESKY_DB.PFC.STOPWORDS_ENGLISH
+),
+-- 1-grams (single words) - FILTER STOP WORDS
 unigrams AS (
   SELECT 
-    CONTENT_ID,
-    POST_MONTH,
-    WORD AS NGRAM,
+    w.CONTENT_ID,
+    w.POST_MONTH,
+    w.WORD AS NGRAM,
     1 AS NGRAM_SIZE,
-    WORD_POSITION AS START_POSITION
-  FROM words_flat
+    w.WORD_POSITION AS START_POSITION
+  FROM words_flat w
+  LEFT JOIN stop_words s ON w.WORD = s.WORD
+  WHERE s.WORD IS NULL  -- Exclude stop words from 1-grams
 ),
--- 2-grams (word pairs)
+-- 2-grams (word pairs) - KEEP STOP WORDS (they add context in phrases)
 bigrams AS (
   SELECT 
     w1.CONTENT_ID,
@@ -79,8 +90,14 @@ bigrams AS (
     ON w1.CONTENT_ID = w2.CONTENT_ID
     AND w1.POST_MONTH = w2.POST_MONTH
     AND w2.WORD_POSITION = w1.WORD_POSITION + 1
+  -- Filter out pure stop-word combinations (e.g., "the the", "and and")
+  WHERE NOT (
+    w1.WORD IN (SELECT WORD FROM stop_words) 
+    AND w2.WORD IN (SELECT WORD FROM stop_words)
+    AND w1.WORD = w2.WORD
+  )
 ),
--- 3-grams (three-word phrases)
+-- 3-grams (three-word phrases) - KEEP STOP WORDS (they add context in phrases)
 trigrams AS (
   SELECT 
     w1.CONTENT_ID,
@@ -97,6 +114,14 @@ trigrams AS (
     ON w1.CONTENT_ID = w3.CONTENT_ID
     AND w1.POST_MONTH = w3.POST_MONTH
     AND w3.WORD_POSITION = w2.WORD_POSITION + 1
+  -- Filter out pure stop-word combinations (e.g., "the the the")
+  WHERE NOT (
+    w1.WORD IN (SELECT WORD FROM stop_words)
+    AND w2.WORD IN (SELECT WORD FROM stop_words)
+    AND w3.WORD IN (SELECT WORD FROM stop_words)
+    AND w1.WORD = w2.WORD 
+    AND w2.WORD = w3.WORD
+  )
 ),
 -- Combine all n-grams
 all_ngrams AS (

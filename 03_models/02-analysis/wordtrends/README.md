@@ -14,6 +14,7 @@ The solution is built as a series of SQL views that build upon each other:
    - Extracts and normalizes text from posts
    - Generates 1-grams (words), 2-grams (phrases), and 3-grams (three-word phrases)
    - Cleans text (removes URLs, normalizes case, handles punctuation)
+   - **Stop word filtering**: Filters common stop words from 1-grams only (keeps them in phrases for context)
 
 2. **`02_monthly_ngram_counts.sql`** - `VW_MONTHLY_NGRAM_SENTIMENT`
    - Joins n-grams with sentiment data
@@ -136,6 +137,15 @@ Key thresholds can be adjusted in the views:
 ### In `01_extract_ngrams.sql`:
 - Minimum word length: `LENGTH(TRIM(w.VALUE)) >= 2`
 - Text cleaning rules (URL removal, punctuation handling)
+- **Stop word filtering**:
+  - **1-grams**: Filters ~80 common English stop words (the, and, to, a, of, in, is, it, you, that, was, etc.)
+  - **2-grams & 3-grams**: Keeps all phrases (stop words provide context, e.g., "not good", "is not")
+  - Excludes pure stop-word combinations like "the the", "and and", "the the the"
+  
+  **Why this approach?**
+  - Single stop words dominate frequency but aren't meaningful trends
+  - Stop words in phrases carry semantic meaning ("not good" vs "good")
+  - Social media context benefits from keeping phrases intact
 
 ## Performance Considerations
 
@@ -154,9 +164,9 @@ This implementation covers **Approach 2** (n-grams). Planned enhancements includ
 
 - **Approach 5 elements**: Rolling baseline comparison (3-month average instead of single previous month)
 - **Approach 3 elements**: Statistical significance testing (z-scores, p-values) to filter noise
-- Stop word filtering to reduce common term noise
 - Language-specific processing for multi-language posts
 - Customizable n-gram size parameters
+- Optional stop word list from external table (currently uses inline VALUES list)
 
 ## Output Schema
 
