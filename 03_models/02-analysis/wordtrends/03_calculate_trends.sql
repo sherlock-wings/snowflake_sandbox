@@ -5,11 +5,8 @@
   - Newly emerging n-grams (zero to something)
   - Growing n-grams (significant month-over-month increase)
   - Growth rates and absolute increases
-  - Statistical measures (growth percentage, absolute difference)
   
-  Requirements:
-  - Trends can only be calculated for months after the first month of data
-  - Compares current month to previous month
+  Works with post-level aggregated data for efficiency.
 */
 
 CREATE OR REPLACE VIEW BLUESKY_DB.PFC.VW_NGRAM_TRENDS AS
@@ -25,7 +22,7 @@ WITH monthly_totals AS (
   QUALIFY ROW_NUMBER() OVER (
     PARTITION BY POST_MONTH, NGRAM, NGRAM_SIZE 
     ORDER BY POST_MONTH, NGRAM, NGRAM_SIZE
-  ) = 1  -- Get one row per month/ngram (we only need totals)
+  ) = 1
 ),
 month_comparison AS (
   SELECT 
@@ -34,7 +31,6 @@ month_comparison AS (
     curr.NGRAM_SIZE,
     curr.TOTAL_OCCURRENCES AS CURRENT_COUNT,
     curr.TOTAL_POSTS AS CURRENT_POSTS,
-    -- Previous month data
     prev.POST_MONTH AS PREVIOUS_MONTH,
     COALESCE(prev.TOTAL_OCCURRENCES, 0) AS PREVIOUS_COUNT,
     COALESCE(prev.TOTAL_POSTS, 0) AS PREVIOUS_POSTS
@@ -54,23 +50,19 @@ trend_metrics AS (
     PREVIOUS_MONTH,
     PREVIOUS_COUNT,
     PREVIOUS_POSTS,
-    -- Absolute change
     CURRENT_COUNT - PREVIOUS_COUNT AS ABSOLUTE_CHANGE,
-    -- Growth rate (handle division by zero)
     CASE 
-      WHEN PREVIOUS_COUNT = 0 AND CURRENT_COUNT > 0 THEN 999999  -- New emergence (use large number)
+      WHEN PREVIOUS_COUNT = 0 AND CURRENT_COUNT > 0 THEN 999999
       WHEN PREVIOUS_COUNT > 0 THEN 
         ROUND((CURRENT_COUNT - PREVIOUS_COUNT) * 100.0 / PREVIOUS_COUNT, 2)
       ELSE 0
     END AS GROWTH_RATE_PERCENT,
-    -- Growth multiplier (how many times more than previous)
     CASE 
-      WHEN PREVIOUS_COUNT = 0 AND CURRENT_COUNT > 0 THEN NULL  -- Cannot calculate multiplier for new
+      WHEN PREVIOUS_COUNT = 0 AND CURRENT_COUNT > 0 THEN NULL
       WHEN PREVIOUS_COUNT > 0 THEN 
         ROUND(CURRENT_COUNT * 1.0 / PREVIOUS_COUNT, 2)
       ELSE NULL
     END AS GROWTH_MULTIPLIER,
-    -- Is this a new trend? (didn't exist in previous month)
     CASE WHEN PREVIOUS_COUNT = 0 AND CURRENT_COUNT > 0 THEN TRUE ELSE FALSE END AS IS_NEW_EMERGENCE
   FROM month_comparison
 )
@@ -87,7 +79,6 @@ SELECT
   GROWTH_RATE_PERCENT,
   GROWTH_MULTIPLIER,
   IS_NEW_EMERGENCE,
-  -- Trend classification
   CASE 
     WHEN IS_NEW_EMERGENCE THEN 'NEW'
     WHEN GROWTH_RATE_PERCENT >= 100 THEN 'RAPID_GROWTH'

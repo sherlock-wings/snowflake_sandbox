@@ -1,12 +1,8 @@
 /*
   Main analysis view: Trending words and phrases with sentiment breakdown
   
-  This view combines trend data with sentiment information to provide a complete
-  picture of newly trending n-grams, including:
-  - Trend metrics (growth, emergence status)
-  - Sentiment distribution (Positive, Negative, Neutral percentages)
-  - Average sentiment confidence
-  - Filtering for significant trends only
+  This view combines trend data with sentiment information from post-level
+  aggregated n-grams. Provides a complete picture of newly trending n-grams.
   
   Usage:
   Filter by TREND_CATEGORY in ('NEW', 'RAPID_GROWTH', 'STRONG_GROWTH') to see
@@ -33,18 +29,15 @@ sentiment_pivot AS (
     POST_MONTH,
     NGRAM,
     NGRAM_SIZE,
-    -- Pivot sentiment labels into columns
     SUM(CASE WHEN SENTIMENT_LABEL = 'Positive' THEN SENTIMENT_PERCENTAGE ELSE 0 END) AS PCT_POSITIVE,
     SUM(CASE WHEN SENTIMENT_LABEL = 'Negative' THEN SENTIMENT_PERCENTAGE ELSE 0 END) AS PCT_NEGATIVE,
     SUM(CASE WHEN SENTIMENT_LABEL = 'Neutral' THEN SENTIMENT_PERCENTAGE ELSE 0 END) AS PCT_NEUTRAL,
-    -- Weighted average confidence (weighted by occurrence count)
     SUM(CASE WHEN SENTIMENT_LABEL = 'Positive' THEN AVG_CONFIDENCE * OCCURRENCE_COUNT ELSE 0 END) / 
       NULLIF(SUM(CASE WHEN SENTIMENT_LABEL = 'Positive' THEN OCCURRENCE_COUNT ELSE 0 END), 0) AS AVG_CONF_POSITIVE,
     SUM(CASE WHEN SENTIMENT_LABEL = 'Negative' THEN AVG_CONFIDENCE * OCCURRENCE_COUNT ELSE 0 END) / 
       NULLIF(SUM(CASE WHEN SENTIMENT_LABEL = 'Negative' THEN OCCURRENCE_COUNT ELSE 0 END), 0) AS AVG_CONF_NEGATIVE,
     SUM(CASE WHEN SENTIMENT_LABEL = 'Neutral' THEN AVG_CONFIDENCE * OCCURRENCE_COUNT ELSE 0 END) / 
       NULLIF(SUM(CASE WHEN SENTIMENT_LABEL = 'Neutral' THEN OCCURRENCE_COUNT ELSE 0 END), 0) AS AVG_CONF_NEUTRAL,
-    -- Overall average confidence
     AVG(AVG_CONFIDENCE) AS AVG_CONFIDENCE_OVERALL
   FROM BLUESKY_DB.PFC.VW_MONTHLY_NGRAM_SENTIMENT
   GROUP BY 
@@ -61,16 +54,13 @@ SELECT
   t.GROWTH_RATE_PERCENT,
   t.IS_NEW_EMERGENCE,
   t.TREND_CATEGORY,
-  -- Sentiment percentages
   ROUND(COALESCE(s.PCT_POSITIVE, 0), 2) AS PCT_POSITIVE,
   ROUND(COALESCE(s.PCT_NEGATIVE, 0), 2) AS PCT_NEGATIVE,
   ROUND(COALESCE(s.PCT_NEUTRAL, 0), 2) AS PCT_NEUTRAL,
-  -- Average confidence scores
   ROUND(COALESCE(s.AVG_CONF_POSITIVE, 0), 4) AS AVG_CONF_POSITIVE,
   ROUND(COALESCE(s.AVG_CONF_NEGATIVE, 0), 4) AS AVG_CONF_NEGATIVE,
   ROUND(COALESCE(s.AVG_CONF_NEUTRAL, 0), 4) AS AVG_CONF_NEUTRAL,
   ROUND(COALESCE(s.AVG_CONFIDENCE_OVERALL, 0), 4) AS AVG_CONFIDENCE_OVERALL,
-  -- Dominant sentiment (highest percentage)
   CASE 
     WHEN COALESCE(s.PCT_POSITIVE, 0) >= GREATEST(
       COALESCE(s.PCT_NEGATIVE, 0), 

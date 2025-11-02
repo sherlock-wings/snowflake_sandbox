@@ -1,14 +1,11 @@
 /*
-  Calculate monthly counts for each n-gram, aggregated by sentiment
+  Calculate monthly counts for each n-gram from post-level aggregated data
+  with sentiment breakdown
   
-  This view joins n-grams with sentiment data and provides monthly statistics
-  including:
-  - Total occurrences of each n-gram per month
-  - Count by sentiment (Positive, Negative, Neutral)
-  - Percentage distribution of sentiment
-  - Average confidence scores
+  This view joins post-level n-grams (from VW_POST_NGRAMS_EFFICIENT) with 
+  sentiment data and provides monthly statistics.
   
-  Note: This view can be materialized for performance if needed.
+  Uses post-level aggregation to reduce data explosion (~70-80% reduction).
 */
 
 CREATE OR REPLACE VIEW BLUESKY_DB.PFC.VW_MONTHLY_NGRAM_SENTIMENT AS
@@ -18,9 +15,10 @@ WITH ngram_sentiment_base AS (
     n.POST_MONTH,
     n.NGRAM,
     n.NGRAM_SIZE,
+    n.OCCURRENCES_IN_POST,
     COALESCE(s.SENTIMENT_DETECTED_LABEL, 'Unknown') AS SENTIMENT_LABEL,
     COALESCE(s.SENTIMENT_CONFIDENCE_SCORE, 0) AS SENTIMENT_CONFIDENCE
-  FROM BLUESKY_DB.PFC.VW_POST_NGRAMS n
+  FROM BLUESKY_DB.PFC.VW_POST_NGRAMS_EFFICIENT n
   LEFT JOIN BLUESKY_DB.MAIN.FIREHOSE_NLP_LABELED s
     ON n.CONTENT_ID = s.CONTENT_ID
 ),
@@ -30,7 +28,7 @@ monthly_aggregates AS (
     NGRAM,
     NGRAM_SIZE,
     SENTIMENT_LABEL,
-    COUNT(*) AS OCCURRENCE_COUNT,
+    SUM(OCCURRENCES_IN_POST) AS OCCURRENCE_COUNT,
     COUNT(DISTINCT CONTENT_ID) AS POST_COUNT,
     AVG(SENTIMENT_CONFIDENCE) AS AVG_CONFIDENCE,
     MIN(SENTIMENT_CONFIDENCE) AS MIN_CONFIDENCE,
@@ -67,7 +65,6 @@ SELECT
   m.MAX_CONFIDENCE,
   t.TOTAL_OCCURRENCES,
   t.TOTAL_POSTS,
-  -- Calculate sentiment percentage
   ROUND(
     (m.OCCURRENCE_COUNT * 100.0 / NULLIF(t.TOTAL_OCCURRENCES, 0)),
     2

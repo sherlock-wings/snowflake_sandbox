@@ -1,5 +1,6 @@
 /*
   Example queries for using the trending words analysis views
+  Using Post-Level Aggregation approach
   
   Run these queries after executing 00_run_all_views.sql to test the implementation
 */
@@ -41,25 +42,7 @@ WHERE NGRAM_SIZE >= 2
 ORDER BY CURRENT_MONTH DESC, PCT_NEGATIVE DESC
 LIMIT 100;
 
--- Example 3: Track a specific term over time
--- Replace 'your_term' with the word/phrase you want to track
-SELECT 
-  CURRENT_MONTH,
-  NGRAM,
-  CURRENT_COUNT,
-  PREVIOUS_COUNT,
-  ABSOLUTE_CHANGE,
-  GROWTH_RATE_PERCENT,
-  PCT_POSITIVE,
-  PCT_NEGATIVE,
-  DOMINANT_SENTIMENT,
-  TREND_CATEGORY
-FROM BLUESKY_DB.PFC.VW_TRENDING_WORDS_WITH_SENTIMENT
-WHERE NGRAM ILIKE '%ai%'  -- Example: track mentions of "ai"
-ORDER BY CURRENT_MONTH DESC
-LIMIT 50;
-
--- Example 4: Top 20 most rapidly growing trends across all months
+-- Example 3: Top 20 most rapidly growing trends across all months
 SELECT 
   CURRENT_MONTH,
   NGRAM,
@@ -77,24 +60,7 @@ WHERE TREND_CATEGORY = 'RAPID_GROWTH'
 ORDER BY GROWTH_RATE_PERCENT DESC
 LIMIT 20;
 
--- Example 5: New emergences with positive sentiment
-SELECT 
-  CURRENT_MONTH,
-  NGRAM,
-  NGRAM_SIZE,
-  CURRENT_COUNT,
-  PCT_POSITIVE,
-  PCT_NEGATIVE,
-  PCT_NEUTRAL,
-  AVG_CONFIDENCE_OVERALL
-FROM BLUESKY_DB.PFC.VW_TRENDING_WORDS_WITH_SENTIMENT
-WHERE IS_NEW_EMERGENCE = TRUE
-  AND PCT_POSITIVE > PCT_NEGATIVE
-  AND PCT_POSITIVE > PCT_NEUTRAL
-ORDER BY CURRENT_MONTH DESC, CURRENT_COUNT DESC
-LIMIT 50;
-
--- Example 6: Summary statistics by trend category
+-- Example 4: Summary statistics by trend category
 SELECT 
   TREND_CATEGORY,
   COUNT(*) AS TREND_COUNT,
@@ -114,7 +80,7 @@ ORDER BY
     ELSE 5
   END;
 
--- Example 7: Trends by n-gram size (compare words vs phrases)
+-- Example 5: Trends by n-gram size (compare words vs phrases)
 SELECT 
   NGRAM_SIZE,
   COUNT(*) AS TREND_COUNT,
@@ -125,17 +91,4 @@ SELECT
 FROM BLUESKY_DB.PFC.VW_TRENDING_WORDS_WITH_SENTIMENT
 GROUP BY NGRAM_SIZE
 ORDER BY NGRAM_SIZE;
-
--- Example 8: Monthly trend summary
-SELECT 
-  CURRENT_MONTH,
-  COUNT(*) AS TOTAL_TRENDS,
-  COUNT(CASE WHEN TREND_CATEGORY = 'NEW' THEN 1 END) AS NEW_TRENDS,
-  COUNT(CASE WHEN TREND_CATEGORY = 'RAPID_GROWTH' THEN 1 END) AS RAPID_GROWTH,
-  SUM(CURRENT_COUNT) AS TOTAL_OCCURRENCES,
-  AVG(PCT_POSITIVE) AS AVG_PCT_POSITIVE,
-  AVG(PCT_NEGATIVE) AS AVG_PCT_NEGATIVE
-FROM BLUESKY_DB.PFC.VW_TRENDING_WORDS_WITH_SENTIMENT
-GROUP BY CURRENT_MONTH
-ORDER BY CURRENT_MONTH DESC;
 
