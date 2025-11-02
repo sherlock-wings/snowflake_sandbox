@@ -1,14 +1,4 @@
-/*
-  Calculate monthly counts for each n-gram from post-level aggregated data
-  with sentiment breakdown
-  
-  This view joins post-level n-grams (from VW_POST_NGRAMS_EFFICIENT) with 
-  sentiment data and provides monthly statistics.
-  
-  Uses post-level aggregation to reduce data explosion (~70-80% reduction).
-*/
-
-CREATE OR REPLACE VIEW BLUESKY_DB.PFC.VW_MONTHLY_NGRAM_SENTIMENT AS
+CREATE OR REPLACE table BLUESKY_DB.PFC.MONTHLY_NGRAM_SENTIMENT AS
 WITH ngram_sentiment_base AS (
   SELECT 
     n.CONTENT_ID,
@@ -16,10 +6,10 @@ WITH ngram_sentiment_base AS (
     n.NGRAM,
     n.NGRAM_SIZE,
     n.OCCURRENCES_IN_POST,
-    COALESCE(s.SENTIMENT_DETECTED_LABEL, 'Unknown') AS SENTIMENT_LABEL,
-    COALESCE(s.SENTIMENT_CONFIDENCE_SCORE, 0) AS SENTIMENT_CONFIDENCE
-  FROM BLUESKY_DB.PFC.VW_POST_NGRAMS_EFFICIENT n
-  LEFT JOIN BLUESKY_DB.MAIN.FIREHOSE_NLP_LABELED s
+    s.SENTIMENT_DETECTED_LABEL as SENTIMENT_LABEL,
+    s.SENTIMENT_CONFIDENCE_SCORE as sentiment_confidence
+  FROM BLUESKY_DB.PFC.post_ngrams n
+  JOIN BLUESKY_DB.MAIN.FIREHOSE_NLP_LABELED s
     ON n.CONTENT_ID = s.CONTENT_ID
 ),
 monthly_aggregates AS (
@@ -78,4 +68,3 @@ ORDER BY
   m.POST_MONTH,
   t.TOTAL_OCCURRENCES DESC,
   m.SENTIMENT_LABEL;
-
