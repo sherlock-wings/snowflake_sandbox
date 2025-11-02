@@ -1,0 +1,7 @@
+---
+alwaysApply: true
+globs: "*.sql"
+alwaysApply: true
+---
+
+When executing queries using a Snowflake MCP server, never ever execute any DML outside of the schema BLUESKY_NLP.PFC. All other SQL statements outside of this schema must be read-only operations. 

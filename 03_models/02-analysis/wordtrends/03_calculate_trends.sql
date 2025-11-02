@@ -1,0 +1,105 @@
+/*
+  Calculate month-over-month trends for n-grams
+  
+  This view compares n-gram usage between consecutive months to identify:
+  - Newly emerging n-grams (zero to something)
+  - Growing n-grams (significant month-over-month increase)
+  - Growth rates and absolute increases
+  - Statistical measures (growth percentage, absolute difference)
+  
+  Requirements:
+  - Trends can only be calculated for months after the first month of data
+  - Compares current month to previous month
+*/
+
+CREATE OR REPLACE VIEW BLUESKY_DB.PFC.VW_NGRAM_TRENDS AS
+WITH monthly_totals AS (
+  -- Get total occurrences per n-gram per month (regardless of sentiment)
+  SELECT 
+    POST_MONTH,
+    NGRAM,
+    NGRAM_SIZE,
+    TOTAL_OCCURRENCES,
+    TOTAL_POSTS
+  FROM BLUESKY_DB.PFC.VW_MONTHLY_NGRAM_SENTIMENT
+  QUALIFY ROW_NUMBER() OVER (
+    PARTITION BY POST_MONTH, NGRAM, NGRAM_SIZE 
+    ORDER BY POST_MONTH, NGRAM, NGRAM_SIZE
+  ) = 1  -- Get one row per month/ngram (we only need totals)
+),
+month_comparison AS (
+  SELECT 
+    curr.POST_MONTH AS CURRENT_MONTH,
+    curr.NGRAM,
+    curr.NGRAM_SIZE,
+    curr.TOTAL_OCCURRENCES AS CURRENT_COUNT,
+    curr.TOTAL_POSTS AS CURRENT_POSTS,
+    -- Previous month data
+    prev.POST_MONTH AS PREVIOUS_MONTH,
+    COALESCE(prev.TOTAL_OCCURRENCES, 0) AS PREVIOUS_COUNT,
+    COALESCE(prev.TOTAL_POSTS, 0) AS PREVIOUS_POSTS
+  FROM monthly_totals curr
+  LEFT JOIN monthly_totals prev
+    ON curr.NGRAM = prev.NGRAM
+    AND curr.NGRAM_SIZE = prev.NGRAM_SIZE
+    AND prev.POST_MONTH = DATEADD(MONTH, -1, curr.POST_MONTH)
+),
+trend_metrics AS (
+  SELECT 
+    CURRENT_MONTH,
+    NGRAM,
+    NGRAM_SIZE,
+    CURRENT_COUNT,
+    CURRENT_POSTS,
+    PREVIOUS_MONTH,
+    PREVIOUS_COUNT,
+    PREVIOUS_POSTS,
+    -- Absolute change
+    CURRENT_COUNT - PREVIOUS_COUNT AS ABSOLUTE_CHANGE,
+    -- Growth rate (handle division by zero)
+    CASE 
+      WHEN PREVIOUS_COUNT = 0 AND CURRENT_COUNT > 0 THEN 999999  -- New emergence (use large number)
+      WHEN PREVIOUS_COUNT > 0 THEN 
+        ROUND((CURRENT_COUNT - PREVIOUS_COUNT) * 100.0 / PREVIOUS_COUNT, 2)
+      ELSE 0
+    END AS GROWTH_RATE_PERCENT,
+    -- Growth multiplier (how many times more than previous)
+    CASE 
+      WHEN PREVIOUS_COUNT = 0 AND CURRENT_COUNT > 0 THEN NULL  -- Cannot calculate multiplier for new
+      WHEN PREVIOUS_COUNT > 0 THEN 
+        ROUND(CURRENT_COUNT * 1.0 / PREVIOUS_COUNT, 2)
+      ELSE NULL
+    END AS GROWTH_MULTIPLIER,
+    -- Is this a new trend? (didn't exist in previous month)
+    CASE WHEN PREVIOUS_COUNT = 0 AND CURRENT_COUNT > 0 THEN TRUE ELSE FALSE END AS IS_NEW_EMERGENCE
+  FROM month_comparison
+)
+SELECT 
+  CURRENT_MONTH,
+  NGRAM,
+  NGRAM_SIZE,
+  CURRENT_COUNT,
+  CURRENT_POSTS,
+  PREVIOUS_MONTH,
+  PREVIOUS_COUNT,
+  PREVIOUS_POSTS,
+  ABSOLUTE_CHANGE,
+  GROWTH_RATE_PERCENT,
+  GROWTH_MULTIPLIER,
+  IS_NEW_EMERGENCE,
+  -- Trend classification
+  CASE 
+    WHEN IS_NEW_EMERGENCE THEN 'NEW'
+    WHEN GROWTH_RATE_PERCENT >= 100 THEN 'RAPID_GROWTH'
+    WHEN GROWTH_RATE_PERCENT >= 50 THEN 'STRONG_GROWTH'
+    WHEN GROWTH_RATE_PERCENT >= 20 THEN 'MODERATE_GROWTH'
+    WHEN GROWTH_RATE_PERCENT > 0 THEN 'SLOW_GROWTH'
+    WHEN GROWTH_RATE_PERCENT = 0 THEN 'STABLE'
+    ELSE 'DECLINING'
+  END AS TREND_CATEGORY
+FROM trend_metrics
+ORDER BY 
+  CURRENT_MONTH DESC,
+  ABSOLUTE_CHANGE DESC,
+  GROWTH_RATE_PERCENT DESC;
+
