@@ -8,21 +8,19 @@
   
   Works with post-level aggregated data for efficiency.
 */
-
-CREATE OR REPLACE VIEW BLUESKY_DB.PFC.VW_NGRAM_TRENDS AS
+insert into bluesky_db.pfc.ngram_trends
 WITH monthly_totals AS (
   -- Get total occurrences per n-gram per month (regardless of sentiment)
   SELECT 
     POST_MONTH,
     NGRAM,
     NGRAM_SIZE,
-    TOTAL_OCCURRENCES,
-    TOTAL_POSTS
-  FROM BLUESKY_DB.PFC.VW_MONTHLY_NGRAM_SENTIMENT
-  QUALIFY ROW_NUMBER() OVER (
-    PARTITION BY POST_MONTH, NGRAM, NGRAM_SIZE 
-    ORDER BY POST_MONTH, NGRAM, NGRAM_SIZE
-  ) = 1
+    sum(TOTAL_OCCURRENCES) as TOTAL_OCCURRENCES,
+    sum(TOTAL_POSTS) as TOTAL_POSTS
+  FROM BLUESKY_DB.PFC.MONTHLY_NGRAM_SENTIMENT
+  where post_month > (select nvl(max(post_month), '1900-01-01 00:00:00 +1000') from BLUESKY_DB.PFC.MONTHLY_NGRAM_SENTIMENT)
+    and post_month < date_trunc(month, current_date())
+  group by all
 ),
 month_comparison AS (
   SELECT 
@@ -89,8 +87,5 @@ SELECT
     ELSE 'DECLINING'
   END AS TREND_CATEGORY
 FROM trend_metrics
-ORDER BY 
-  CURRENT_MONTH DESC,
-  ABSOLUTE_CHANGE DESC,
-  GROWTH_RATE_PERCENT DESC;
+;
 
