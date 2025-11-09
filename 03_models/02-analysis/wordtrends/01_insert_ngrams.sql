@@ -84,17 +84,18 @@ join unigrams b
 )
 
 ,union_tbl as (
-select * exclude(unigram), unigram as n_gram, 1 as n_gram_size 
+select * exclude(unigram), trim(unigram, ' ') as n_gram, 1 as n_gram_size 
 from unigrams 
 union
-select * exclude(bigram), bigram as n_gram, 2 as n_gram_size 
+select * exclude(bigram), trim(bigram, ' ') as n_gram, 2 as n_gram_size 
 from bigrams
 union
-select * exclude(trigram), trigram as n_gram, 3 as n_gram_size 
+select * exclude(trigram), trim(trigram, ' ') as n_gram, 3 as n_gram_size 
 from trigrams
 )
 
 select *
       ,md5(content_id || '||' || n_gram || '||' || token_positions) as record_key
 from union_tbl
+where length(n_gram) > 0
 ;
