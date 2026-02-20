@@ -1,6 +1,17 @@
 """
 Bluesky Analytics Dashboard
-A Streamlit application for exploring Bluesky social media data.
+A Streamlit application for exploring Bluesky social media data with NLP sentiment analysis.
+
+Data sources (pre-computed in Snowflake for performance):
+- RPT_DAILY_SUMMARY: Daily post counts and sentiment
+- RPT_SENTIMENT_BY_LANGUAGE: Sentiment breakdown by language
+- RPT_EXTERNAL_DOMAINS: Most shared external links
+- RPT_POSTING_HEATMAP: Activity patterns by day/hour
+- RPT_CONFIDENCE_DISTRIBUTION: Model confidence histogram
+- RPT_DAILY_TOP_NGRAMS: Trending keywords over time
+- RPT_THREAD_SENTIMENT: Reply thread sentiment patterns
+- RPT_HIGH_CONFIDENCE_POSTS: Sample high-confidence posts
+- RPT_NGRAM_SENTIMENT: Keyword sentiment summary
 """
 
 import streamlit as st
@@ -8,12 +19,13 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+import numpy as np
 
 # ============================================
 # Page Configuration
 # ============================================
 st.set_page_config(
-    page_title="Bluesky Analytics",
+    page_title="Bluesky NLP Analytics",
     page_icon="🦋",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -26,9 +38,6 @@ st.set_page_config(
 def get_snowflake_connection():
     """
     Establish connection to Snowflake using Streamlit secrets.
-    
-    Add your credentials in .streamlit/secrets.toml (local) or
-    Streamlit Cloud's Secrets Management (production).
     """
     try:
         import snowflake.connector
@@ -40,6 +49,7 @@ def get_snowflake_connection():
             warehouse=st.secrets["snowflake"]["warehouse"],
             database=st.secrets["snowflake"]["database"],
             schema=st.secrets["snowflake"]["schema"],
+            role=st.secrets["snowflake"].get("role", "DEV_FR"),
         )
         return conn
     except Exception as e:
@@ -66,223 +76,465 @@ def run_query(query: str) -> pd.DataFrame:
 
 
 # ============================================
-# Demo Data (for development/preview)
+# Data Loading Functions (from pre-computed tables)
 # ============================================
-def get_demo_data():
-    """Generate sample data for demo purposes."""
-    import numpy as np
-    
-    # Generate date range
-    dates = pd.date_range(start='2025-01-01', end='2026-02-18', freq='D')
-    
-    # Posts over time
-    posts_data = pd.DataFrame({
-        'date': dates,
-        'posts': np.random.poisson(500, len(dates)) + np.linspace(100, 300, len(dates)).astype(int),
-        'unique_users': np.random.poisson(150, len(dates)) + np.linspace(50, 150, len(dates)).astype(int),
-    })
-    
-    # Top hashtags
-    hashtags_data = pd.DataFrame({
-        'hashtag': ['#tech', '#python', '#dataengineering', '#bluesky', '#ai', 
-                   '#datascience', '#coding', '#opensource', '#devops', '#analytics'],
-        'count': [15234, 12456, 9876, 8765, 7654, 6543, 5432, 4321, 3210, 2109]
-    })
-    
-    # Engagement by hour
-    hours = list(range(24))
-    engagement_data = pd.DataFrame({
-        'hour': hours,
-        'avg_likes': [10 + 30 * np.sin((h - 6) * np.pi / 12) + np.random.normal(0, 5) for h in hours],
-        'avg_reposts': [5 + 15 * np.sin((h - 6) * np.pi / 12) + np.random.normal(0, 2) for h in hours],
-    })
-    engagement_data['avg_likes'] = engagement_data['avg_likes'].clip(lower=0)
-    engagement_data['avg_reposts'] = engagement_data['avg_reposts'].clip(lower=0)
-    
-    # User growth
-    user_growth = pd.DataFrame({
-        'date': dates,
-        'cumulative_users': np.cumsum(np.random.poisson(50, len(dates))) + 10000
-    })
-    
-    return {
-        'posts': posts_data,
-        'hashtags': hashtags_data,
-        'engagement': engagement_data,
-        'user_growth': user_growth
-    }
+@st.cache_data(ttl=3600)
+def load_daily_summary():
+    return run_query("SELECT * FROM BLUESKY_DB.MAIN.RPT_DAILY_SUMMARY ORDER BY POST_DATE")
+
+@st.cache_data(ttl=3600)
+def load_sentiment_by_language():
+    return run_query("SELECT * FROM BLUESKY_DB.MAIN.RPT_SENTIMENT_BY_LANGUAGE WHERE TOTAL_POSTS >= 1000 ORDER BY TOTAL_POSTS DESC")
+
+@st.cache_data(ttl=3600)
+def load_external_domains(limit=50):
+    return run_query(f"SELECT * FROM BLUESKY_DB.MAIN.RPT_EXTERNAL_DOMAINS ORDER BY SHARE_COUNT DESC LIMIT {limit}")
+
+@st.cache_data(ttl=3600)
+def load_posting_heatmap():
+    return run_query("SELECT * FROM BLUESKY_DB.MAIN.RPT_POSTING_HEATMAP")
+
+@st.cache_data(ttl=3600)
+def load_confidence_distribution():
+    return run_query("SELECT * FROM BLUESKY_DB.MAIN.RPT_CONFIDENCE_DISTRIBUTION")
+
+@st.cache_data(ttl=3600)
+def load_daily_top_ngrams(ngram_type='unigram', limit=20):
+    return run_query(f"""
+        SELECT * FROM BLUESKY_DB.MAIN.RPT_DAILY_TOP_NGRAMS 
+        WHERE NGRAM_TYPE = '{ngram_type}' AND RANK <= {limit}
+        ORDER BY POST_DATE DESC, RANK
+    """)
+
+@st.cache_data(ttl=3600)
+def load_thread_sentiment():
+    return run_query("SELECT * FROM BLUESKY_DB.MAIN.RPT_THREAD_SENTIMENT")
+
+@st.cache_data(ttl=3600)
+def load_high_confidence_posts(sentiment='Positive', limit=10):
+    return run_query(f"""
+        SELECT POST_TEXT, SENTIMENT_CONFIDENCE_SCORE, USA_TIMESTAMP 
+        FROM BLUESKY_DB.MAIN.RPT_HIGH_CONFIDENCE_POSTS 
+        WHERE SENTIMENT_DETECTED_LABEL = '{sentiment}'
+        ORDER BY SENTIMENT_CONFIDENCE_SCORE DESC
+        LIMIT {limit}
+    """)
+
+@st.cache_data(ttl=3600)
+def load_ngram_sentiment(ngram_type='bigram', limit=50):
+    return run_query(f"""
+        SELECT * FROM BLUESKY_DB.MAIN.RPT_NGRAM_SENTIMENT 
+        WHERE NGRAM_TYPE = '{ngram_type}'
+        ORDER BY TOTAL_OCCURRENCES DESC
+        LIMIT {limit}
+    """)
+
+@st.cache_data(ttl=3600)
+def search_keyword_sentiment(keyword: str):
+    """Search for sentiment of a specific keyword/phrase."""
+    return run_query(f"""
+        SELECT * FROM BLUESKY_DB.MAIN.RPT_NGRAM_SENTIMENT 
+        WHERE LOWER(NGRAM) LIKE '%{keyword.lower()}%'
+        ORDER BY TOTAL_OCCURRENCES DESC
+        LIMIT 50
+    """)
 
 
 # ============================================
 # Sidebar
 # ============================================
-st.sidebar.title("🦋 Bluesky Analytics")
+st.sidebar.title("🦋 Bluesky NLP Analytics")
 st.sidebar.markdown("---")
 
-# Data source toggle
-use_demo = st.sidebar.checkbox("Use Demo Data", value=True, 
-                                help="Toggle off to use live Snowflake data")
-
-# Date range filter
-st.sidebar.subheader("Filters")
-date_range = st.sidebar.date_input(
-    "Date Range",
-    value=(datetime.now() - timedelta(days=30), datetime.now()),
-    max_value=datetime.now()
+# Navigation
+page = st.sidebar.radio(
+    "Navigate",
+    ["📊 Overview", "📈 Trends", "🗣️ Sentiment", "🔑 Keywords", "🔗 External Links", "💬 Sample Posts"]
 )
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("""
 **About this dashboard**
 
-This dashboard analyzes Bluesky social media data 
-stored in Snowflake. Built with Streamlit.
+Analyzes ~18.6M Bluesky posts with NLP 
+sentiment analysis using RoBERTa.
 
-[View Source Code](https://github.com/patrickfcallahan/bluesky-analytics)
+Data: May - Nov 2025
+
+Built with Streamlit + Snowflake
 """)
 
+# ============================================
+# PAGE: Overview
+# ============================================
+if page == "📊 Overview":
+    st.title("🦋 Bluesky NLP Analytics Dashboard")
+    st.markdown("Analyzing sentiment and trends across 18.6M Bluesky posts using RoBERTa NLP model.")
+    
+    # Load data
+    daily_data = load_daily_summary()
+    lang_data = load_sentiment_by_language()
+    
+    if daily_data.empty:
+        st.warning("⚠️ Unable to load data. Check your Snowflake connection in `.streamlit/secrets.toml`")
+        st.stop()
+    
+    # KPI Cards
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        total_posts = int(daily_data['TOTAL_POSTS'].sum())
+        st.metric("Total Posts", f"{total_posts:,}")
+    
+    with col2:
+        labeled_posts = int(daily_data['LABELED_POSTS'].sum())
+        st.metric("Labeled Posts", f"{labeled_posts:,}")
+    
+    with col3:
+        avg_sentiment = daily_data['WEIGHTED_SENTIMENT_SCORE'].mean()
+        st.metric("Avg Sentiment", f"{avg_sentiment:.3f}", 
+                  delta="Positive" if avg_sentiment > 0 else "Negative")
+    
+    with col4:
+        days_of_data = len(daily_data)
+        st.metric("Days of Data", f"{days_of_data}")
+    
+    st.markdown("---")
+    
+    # Charts Row 1: Posts Over Time + Sentiment Over Time
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("📈 Posts Per Day")
+        fig = px.area(
+            daily_data, 
+            x='POST_DATE', 
+            y='TOTAL_POSTS',
+            color_discrete_sequence=['#1DA1F2']
+        )
+        fig.update_layout(xaxis_title="", yaxis_title="Posts", hovermode='x unified')
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        st.subheader("😊 Sentiment Trend")
+        fig = px.line(
+            daily_data,
+            x='POST_DATE',
+            y='WEIGHTED_SENTIMENT_SCORE',
+            color_discrete_sequence=['#10B981']
+        )
+        fig.add_hline(y=0, line_dash="dash", line_color="gray")
+        fig.update_layout(xaxis_title="", yaxis_title="Weighted Sentiment", hovermode='x unified')
+        st.plotly_chart(fig, use_container_width=True)
+    
+    # Charts Row 2: Sentiment Distribution + By Language
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("📊 Overall Sentiment Distribution")
+        totals = {
+            'Positive': int(daily_data['POSITIVE_COUNT'].sum()),
+            'Neutral': int(daily_data['NEUTRAL_COUNT'].sum()),
+            'Negative': int(daily_data['NEGATIVE_COUNT'].sum())
+        }
+        fig = px.pie(
+            values=list(totals.values()),
+            names=list(totals.keys()),
+            color=list(totals.keys()),
+            color_discrete_map={'Positive': '#10B981', 'Neutral': '#6B7280', 'Negative': '#EF4444'}
+        )
+        fig.update_traces(textposition='inside', textinfo='percent+label')
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        st.subheader("🌍 Sentiment by Language (Top 10)")
+        top_langs = lang_data.head(10)
+        fig = px.bar(
+            top_langs,
+            x='LANGUAGE',
+            y=['POSITIVE_PCT', 'NEUTRAL_PCT', 'NEGATIVE_PCT'],
+            barmode='stack',
+            color_discrete_map={
+                'POSITIVE_PCT': '#10B981', 
+                'NEUTRAL_PCT': '#6B7280', 
+                'NEGATIVE_PCT': '#EF4444'
+            }
+        )
+        fig.update_layout(xaxis_title="", yaxis_title="Percentage", legend_title="Sentiment")
+        st.plotly_chart(fig, use_container_width=True)
+
 
 # ============================================
-# Main Dashboard
+# PAGE: Trends
 # ============================================
-st.title("🦋 Bluesky Analytics Dashboard")
-st.markdown("Exploring trends and engagement patterns on the Bluesky social network.")
+elif page == "📈 Trends":
+    st.title("📈 Posting Trends & Patterns")
+    
+    # Load data
+    heatmap_data = load_posting_heatmap()
+    
+    if heatmap_data.empty:
+        st.warning("⚠️ Unable to load heatmap data.")
+        st.stop()
+    
+    # Day of Week x Hour Heatmap
+    st.subheader("🗓️ Activity Heatmap (Day of Week × Hour)")
+    
+    # Pivot for heatmap
+    pivot_data = heatmap_data.groupby(['DAY_NAME', 'HOUR_OF_DAY'])['POST_COUNT'].sum().reset_index()
+    pivot_table = pivot_data.pivot(index='DAY_NAME', columns='HOUR_OF_DAY', values='POST_COUNT')
+    
+    # Reorder days
+    day_order = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    pivot_table = pivot_table.reindex([d for d in day_order if d in pivot_table.index])
+    
+    fig = px.imshow(
+        pivot_table,
+        labels=dict(x="Hour of Day (EST)", y="Day of Week", color="Posts"),
+        color_continuous_scale='Blues',
+        aspect='auto'
+    )
+    fig.update_layout(height=400)
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Monthly Pattern
+    st.subheader("📅 Monthly Posting Volume")
+    monthly_data = heatmap_data.groupby(['MONTH_NUM', 'MONTH_NAME'])['POST_COUNT'].sum().reset_index()
+    monthly_data = monthly_data.sort_values('MONTH_NUM')
+    
+    fig = px.bar(
+        monthly_data,
+        x='MONTH_NAME',
+        y='POST_COUNT',
+        color_discrete_sequence=['#6366F1']
+    )
+    fig.update_layout(xaxis_title="", yaxis_title="Total Posts")
+    st.plotly_chart(fig, use_container_width=True)
 
-# Load data
-if use_demo:
-    data = get_demo_data()
-    st.info("📊 Showing demo data. Uncheck 'Use Demo Data' in the sidebar to connect to Snowflake.")
-else:
-    # Replace these with your actual queries
-    st.warning("⚠️ Configure your Snowflake connection in `.streamlit/secrets.toml`")
-    data = get_demo_data()  # Fallback to demo
 
 # ============================================
-# KPI Cards
+# PAGE: Sentiment
 # ============================================
-col1, col2, col3, col4 = st.columns(4)
+elif page == "🗣️ Sentiment":
+    st.title("🗣️ Sentiment Analysis Deep Dive")
+    
+    # Load data
+    confidence_data = load_confidence_distribution()
+    thread_data = load_thread_sentiment()
+    lang_data = load_sentiment_by_language()
+    
+    # Confidence Distribution
+    st.subheader("📊 Model Confidence Distribution")
+    st.markdown("How confident is the RoBERTa model in its sentiment predictions?")
+    
+    if not confidence_data.empty:
+        fig = px.bar(
+            confidence_data,
+            x='CONFIDENCE_BUCKET',
+            y='POST_COUNT',
+            color='SENTIMENT_DETECTED_LABEL',
+            barmode='group',
+            color_discrete_map={'Positive': '#10B981', 'Neutral': '#6B7280', 'Negative': '#EF4444'}
+        )
+        fig.update_layout(
+            xaxis_title="Confidence Score",
+            yaxis_title="Number of Posts",
+            legend_title="Sentiment"
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    
+    st.markdown("---")
+    
+    # Thread Sentiment Analysis
+    st.subheader("💬 Reply Thread Sentiment Patterns")
+    st.markdown("When someone replies to a post, how does sentiment change?")
+    
+    if not thread_data.empty:
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Heatmap of sentiment transitions
+            pivot = thread_data.pivot(index='ROOT_SENTIMENT', columns='REPLY_SENTIMENT', values='REPLY_COUNT')
+            fig = px.imshow(
+                pivot,
+                labels=dict(x="Reply Sentiment", y="Original Post Sentiment", color="Count"),
+                color_continuous_scale='YlOrRd',
+                text_auto=True
+            )
+            fig.update_layout(height=350)
+            st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            st.dataframe(thread_data, use_container_width=True, height=300)
+    
+    st.markdown("---")
+    
+    # Sentiment by Language Table
+    st.subheader("🌍 Sentiment by Language (Full Table)")
+    if not lang_data.empty:
+        st.dataframe(
+            lang_data[['LANGUAGE', 'TOTAL_POSTS', 'POSITIVE_PCT', 'NEUTRAL_PCT', 'NEGATIVE_PCT', 'WEIGHTED_SENTIMENT_SCORE']],
+            use_container_width=True,
+            height=400
+        )
 
-with col1:
-    total_posts = data['posts']['posts'].sum()
-    st.metric("Total Posts", f"{total_posts:,}")
-
-with col2:
-    avg_daily_posts = data['posts']['posts'].mean()
-    st.metric("Avg Daily Posts", f"{avg_daily_posts:,.0f}")
-
-with col3:
-    unique_users = data['posts']['unique_users'].sum()
-    st.metric("Unique Posters", f"{unique_users:,}")
-
-with col4:
-    latest_users = data['user_growth']['cumulative_users'].iloc[-1]
-    st.metric("Total Users", f"{latest_users:,}")
-
-st.markdown("---")
 
 # ============================================
-# Charts Row 1
+# PAGE: Keywords
 # ============================================
-col1, col2 = st.columns(2)
+elif page == "🔑 Keywords":
+    st.title("🔑 Keyword & N-gram Analysis")
+    
+    # Keyword search
+    st.subheader("🔍 Search Keyword Sentiment")
+    search_term = st.text_input("Enter a keyword or phrase to analyze:", placeholder="e.g., trump, climate, love")
+    
+    if search_term:
+        results = search_keyword_sentiment(search_term)
+        if not results.empty:
+            st.dataframe(
+                results[['NGRAM_TYPE', 'NGRAM', 'TOTAL_OCCURRENCES', 'POSITIVE_PCT', 'NEGATIVE_PCT', 'WEIGHTED_SENTIMENT_SCORE']],
+                use_container_width=True
+            )
+        else:
+            st.info("No results found for that keyword.")
+    
+    st.markdown("---")
+    
+    # Top N-grams
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("📊 Top Unigrams (Single Words)")
+        ngram_type = 'unigram'
+        unigrams = load_ngram_sentiment(ngram_type, 30)
+        if not unigrams.empty:
+            fig = px.bar(
+                unigrams.head(20).sort_values('TOTAL_OCCURRENCES'),
+                x='TOTAL_OCCURRENCES',
+                y='NGRAM',
+                orientation='h',
+                color='WEIGHTED_SENTIMENT_SCORE',
+                color_continuous_scale='RdYlGn',
+                color_continuous_midpoint=0
+            )
+            fig.update_layout(yaxis_title="", xaxis_title="Occurrences", height=500)
+            st.plotly_chart(fig, use_container_width=True)
+    
+    with col2:
+        st.subheader("📊 Top Bigrams (Two-Word Phrases)")
+        bigrams = load_ngram_sentiment('bigram', 30)
+        if not bigrams.empty:
+            fig = px.bar(
+                bigrams.head(20).sort_values('TOTAL_OCCURRENCES'),
+                x='TOTAL_OCCURRENCES',
+                y='NGRAM',
+                orientation='h',
+                color='WEIGHTED_SENTIMENT_SCORE',
+                color_continuous_scale='RdYlGn',
+                color_continuous_midpoint=0
+            )
+            fig.update_layout(yaxis_title="", xaxis_title="Occurrences", height=500)
+            st.plotly_chart(fig, use_container_width=True)
+    
+    st.markdown("---")
+    
+    # Trending keywords over time
+    st.subheader("📈 Trending Keywords Over Time")
+    
+    selected_ngram_type = st.selectbox("Select n-gram type:", ['unigram', 'bigram', 'trigram'])
+    trending = load_daily_top_ngrams(selected_ngram_type, 10)
+    
+    if not trending.empty:
+        # Get unique top ngrams
+        top_ngrams = trending.groupby('NGRAM')['FREQUENCY'].sum().nlargest(10).index.tolist()
+        filtered = trending[trending['NGRAM'].isin(top_ngrams)]
+        
+        fig = px.line(
+            filtered,
+            x='POST_DATE',
+            y='FREQUENCY',
+            color='NGRAM',
+            title=f"Top 10 {selected_ngram_type}s Over Time"
+        )
+        fig.update_layout(xaxis_title="", yaxis_title="Daily Frequency", legend_title="Keyword")
+        st.plotly_chart(fig, use_container_width=True)
 
-with col1:
-    st.subheader("📈 Posts Over Time")
-    fig = px.area(
-        data['posts'], 
-        x='date', 
-        y='posts',
-        color_discrete_sequence=['#1DA1F2']
+
+# ============================================
+# PAGE: External Links
+# ============================================
+elif page == "🔗 External Links":
+    st.title("🔗 External Link Analysis")
+    st.markdown("What websites are Bluesky users sharing most?")
+    
+    # Load data
+    domain_limit = st.slider("Number of domains to show:", 10, 100, 30)
+    domains = load_external_domains(domain_limit)
+    
+    if domains.empty:
+        st.warning("⚠️ Unable to load domain data.")
+        st.stop()
+    
+    # Top domains chart
+    st.subheader(f"🔝 Top {domain_limit} Shared Domains")
+    
+    fig = px.bar(
+        domains.head(30).sort_values('SHARE_COUNT'),
+        x='SHARE_COUNT',
+        y='DOMAIN',
+        orientation='h',
+        color='SHARE_COUNT',
+        color_continuous_scale='Viridis'
     )
     fig.update_layout(
-        xaxis_title="",
-        yaxis_title="Posts",
-        hovermode='x unified',
+        yaxis_title="",
+        xaxis_title="Share Count",
+        height=600,
         showlegend=False
     )
     st.plotly_chart(fig, use_container_width=True)
-
-with col2:
-    st.subheader("👥 User Growth")
-    fig = px.line(
-        data['user_growth'],
-        x='date',
-        y='cumulative_users',
-        color_discrete_sequence=['#6366F1']
-    )
-    fig.update_layout(
-        xaxis_title="",
-        yaxis_title="Cumulative Users",
-        hovermode='x unified'
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-# ============================================
-# Charts Row 2
-# ============================================
-col1, col2 = st.columns(2)
-
-with col1:
-    st.subheader("#️⃣ Top Hashtags")
-    fig = px.bar(
-        data['hashtags'].sort_values('count', ascending=True),
-        x='count',
-        y='hashtag',
-        orientation='h',
-        color='count',
-        color_continuous_scale='Blues'
-    )
-    fig.update_layout(
-        xaxis_title="Usage Count",
-        yaxis_title="",
-        showlegend=False,
-        coloraxis_showscale=False
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-with col2:
-    st.subheader("⏰ Engagement by Hour")
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=data['engagement']['hour'],
-        y=data['engagement']['avg_likes'],
-        name='Avg Likes',
-        mode='lines+markers',
-        line=dict(color='#10B981', width=2)
-    ))
-    fig.add_trace(go.Scatter(
-        x=data['engagement']['hour'],
-        y=data['engagement']['avg_reposts'],
-        name='Avg Reposts',
-        mode='lines+markers',
-        line=dict(color='#F59E0B', width=2)
-    ))
-    fig.update_layout(
-        xaxis_title="Hour of Day (UTC)",
-        yaxis_title="Average Count",
-        hovermode='x unified',
-        legend=dict(orientation='h', yanchor='bottom', y=1.02)
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-# ============================================
-# Data Table
-# ============================================
-st.markdown("---")
-st.subheader("📋 Raw Data Preview")
-
-tab1, tab2 = st.tabs(["Daily Posts", "Hashtags"])
-
-with tab1:
+    
+    # Domain table
+    st.subheader("📋 Full Domain Data")
     st.dataframe(
-        data['posts'].sort_values('date', ascending=False).head(30),
-        use_container_width=True
+        domains[['DOMAIN', 'SHARE_COUNT', 'UNIQUE_SHARERS', 'FIRST_SHARED', 'LAST_SHARED']],
+        use_container_width=True,
+        height=400
     )
 
-with tab2:
-    st.dataframe(
-        data['hashtags'].sort_values('count', ascending=False),
-        use_container_width=True
-    )
+
+# ============================================
+# PAGE: Sample Posts
+# ============================================
+elif page == "💬 Sample Posts":
+    st.title("💬 High-Confidence Sample Posts")
+    st.markdown("Real posts where the model had >90% confidence in its sentiment classification.")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("😊 Most Positive Posts")
+        positive_posts = load_high_confidence_posts('Positive', 15)
+        if not positive_posts.empty:
+            for _, row in positive_posts.iterrows():
+                with st.container():
+                    st.markdown(f"**Confidence: {row['SENTIMENT_CONFIDENCE_SCORE']:.1%}**")
+                    st.markdown(f"> {row['POST_TEXT'][:500]}...")
+                    st.caption(f"Posted: {row['USA_TIMESTAMP']}")
+                    st.markdown("---")
+    
+    with col2:
+        st.subheader("😠 Most Negative Posts")
+        negative_posts = load_high_confidence_posts('Negative', 15)
+        if not negative_posts.empty:
+            for _, row in negative_posts.iterrows():
+                with st.container():
+                    st.markdown(f"**Confidence: {row['SENTIMENT_CONFIDENCE_SCORE']:.1%}**")
+                    st.markdown(f"> {row['POST_TEXT'][:500]}...")
+                    st.caption(f"Posted: {row['USA_TIMESTAMP']}")
+                    st.markdown("---")
+
 
 # ============================================
 # Footer
@@ -291,6 +543,7 @@ st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: #6B7280; font-size: 0.875rem;'>
     Built by <a href='https://patrick-f-callahan.com' target='_blank'>Patrick F. Callahan</a> | 
-    <a href='https://github.com/patrickfcallahan/bluesky-analytics' target='_blank'>Source Code</a>
+    Data: Bluesky Firehose (May-Nov 2025) | 
+    NLP Model: <a href='https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment' target='_blank'>RoBERTa</a>
 </div>
 """, unsafe_allow_html=True)
