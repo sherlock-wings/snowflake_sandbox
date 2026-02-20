@@ -11,3 +11,4 @@ helper.txt
 .env*
 snowcli_env*
 config.toml
+secrets.toml

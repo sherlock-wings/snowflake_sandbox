@@ -38,19 +38,57 @@ st.set_page_config(
 def get_snowflake_connection():
     """
     Establish connection to Snowflake using Streamlit secrets.
+    Supports both password and key-pair authentication.
     """
     try:
         import snowflake.connector
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.backends import default_backend
         
-        conn = snowflake.connector.connect(
-            user=st.secrets["snowflake"]["user"],
-            password=st.secrets["snowflake"]["password"],
-            account=st.secrets["snowflake"]["account"],
-            warehouse=st.secrets["snowflake"]["warehouse"],
-            database=st.secrets["snowflake"]["database"],
-            schema=st.secrets["snowflake"]["schema"],
-            role=st.secrets["snowflake"].get("role", "DEV_FR"),
-        )
+        sf_config = st.secrets["snowflake"]
+        
+        # Base connection parameters
+        conn_params = {
+            "user": sf_config["user"],
+            "account": sf_config["account"],
+            "warehouse": sf_config["warehouse"],
+            "database": sf_config["database"],
+            "schema": sf_config["schema"],
+            "role": sf_config.get("role", "DEV_FR"),
+        }
+        
+        # Key-pair authentication
+        if "private_key_path" in sf_config:
+            with open(sf_config["private_key_path"], "rb") as key_file:
+                passphrase = sf_config.get("private_key_passphrase", "").encode() or None
+                private_key = serialization.load_pem_private_key(
+                    key_file.read(),
+                    password=passphrase,
+                    backend=default_backend()
+                )
+                conn_params["private_key"] = private_key.private_bytes(
+                    encoding=serialization.Encoding.DER,
+                    format=serialization.PrivateFormat.PKCS8,
+                    encryption_algorithm=serialization.NoEncryption()
+                )
+        elif "private_key" in sf_config:
+            # Inline private key (for Streamlit Cloud)
+            passphrase = sf_config.get("private_key_passphrase", "").encode() or None
+            private_key = serialization.load_pem_private_key(
+                sf_config["private_key"].encode(),
+                password=passphrase,
+                backend=default_backend()
+            )
+            conn_params["private_key"] = private_key.private_bytes(
+                encoding=serialization.Encoding.DER,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption()
+            )
+        else:
+            # Password authentication fallback
+            conn_params["password"] = sf_config["password"]
+        
+        conn = snowflake.connector.connect(**conn_params)
         return conn
     except Exception as e:
         st.error(f"Failed to connect to Snowflake: {e}")
@@ -117,6 +155,21 @@ def load_high_confidence_posts(sentiment='Positive', limit=10):
         FROM BLUESKY_DB.MAIN.RPT_HIGH_CONFIDENCE_POSTS 
         WHERE SENTIMENT_DETECTED_LABEL = '{sentiment}'
         ORDER BY SENTIMENT_CONFIDENCE_SCORE DESC
+        LIMIT {limit}
+    """)
+
+def load_random_high_confidence_posts(sentiment: str, limit: int, _refresh_key: int = 0):
+    """Load random posts with confidence >= 90%. The _refresh_key param busts the cache."""
+    return run_query(f"""
+        SELECT POST_TEXT, SENTIMENT_CONFIDENCE_SCORE, USA_TIMESTAMP,
+               SENTIMENT_DETECTED_LABEL
+        FROM BLUESKY_DB.MAIN.FIREHOSE_NLP_LABELED n
+        JOIN BLUESKY_DB.MAIN.FIREHOSE_PROCESSED p ON n.CONTENT_ID = p.CONTENT_ID
+        WHERE n.SENTIMENT_DETECTED_LABEL = '{sentiment}'
+          AND n.SENTIMENT_CONFIDENCE_SCORE >= 0.90
+          AND p.POST_TEXT IS NOT NULL
+          AND LEN(p.POST_TEXT) > 20
+        ORDER BY RANDOM()
         LIMIT {limit}
     """)
 
@@ -509,31 +562,54 @@ elif page == "🔗 External Links":
 # ============================================
 elif page == "💬 Sample Posts":
     st.title("💬 High-Confidence Sample Posts")
-    st.markdown("Real posts where the model had >90% confidence in its sentiment classification.")
+    st.markdown("Random posts where the model had ≥90% confidence in its sentiment classification.")
+    
+    # Initialize refresh counter in session state
+    if 'sample_refresh_key' not in st.session_state:
+        st.session_state.sample_refresh_key = 0
+    
+    # Refresh button
+    col_btn, col_spacer = st.columns([1, 5])
+    with col_btn:
+        if st.button("🔄 Refresh Samples", type="primary"):
+            st.session_state.sample_refresh_key += 1
+            st.rerun()
+    
+    st.markdown("---")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        st.subheader("😊 Most Positive Posts")
-        positive_posts = load_high_confidence_posts('Positive', 15)
+        st.subheader("😊 Random Positive Posts")
+        positive_posts = load_random_high_confidence_posts(
+            'Positive', 10, st.session_state.sample_refresh_key
+        )
         if not positive_posts.empty:
             for _, row in positive_posts.iterrows():
                 with st.container():
                     st.markdown(f"**Confidence: {row['SENTIMENT_CONFIDENCE_SCORE']:.1%}**")
-                    st.markdown(f"> {row['POST_TEXT'][:500]}...")
+                    post_text = row['POST_TEXT'][:500] if len(row['POST_TEXT']) > 500 else row['POST_TEXT']
+                    st.markdown(f"> {post_text}")
                     st.caption(f"Posted: {row['USA_TIMESTAMP']}")
                     st.markdown("---")
+        else:
+            st.info("No posts found.")
     
     with col2:
-        st.subheader("😠 Most Negative Posts")
-        negative_posts = load_high_confidence_posts('Negative', 15)
+        st.subheader("😠 Random Negative Posts")
+        negative_posts = load_random_high_confidence_posts(
+            'Negative', 10, st.session_state.sample_refresh_key
+        )
         if not negative_posts.empty:
             for _, row in negative_posts.iterrows():
                 with st.container():
                     st.markdown(f"**Confidence: {row['SENTIMENT_CONFIDENCE_SCORE']:.1%}**")
-                    st.markdown(f"> {row['POST_TEXT'][:500]}...")
+                    post_text = row['POST_TEXT'][:500] if len(row['POST_TEXT']) > 500 else row['POST_TEXT']
+                    st.markdown(f"> {post_text}")
                     st.caption(f"Posted: {row['USA_TIMESTAMP']}")
                     st.markdown("---")
+        else:
+            st.info("No posts found.")
 
 
 # ============================================
