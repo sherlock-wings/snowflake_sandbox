@@ -21,7 +21,7 @@ Interactive analytics dashboard for exploring Bluesky social media data, built w
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/patrickfcallahan/bluesky-analytics.git
+   git clone https://github.com/sherlock-wings/bluesky_nlp.git
    cd bluesky-analytics
    ```
 

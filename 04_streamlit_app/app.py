@@ -618,7 +618,7 @@ elif page == "💬 Sample Posts":
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: #6B7280; font-size: 0.875rem;'>
-    Built by <a href='https://patrick-f-callahan.com' target='_blank'>Patrick F. Callahan</a> | 
+    Built by <a href='https://patrick-f-callahan.net' target='_blank'>Patrick F. Callahan</a> | 
     Data: Bluesky Firehose (May-Nov 2025) | 
     NLP Model: <a href='https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment' target='_blank'>RoBERTa</a>
 </div>
